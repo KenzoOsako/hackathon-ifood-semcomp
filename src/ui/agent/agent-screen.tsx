@@ -6,8 +6,9 @@ import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
-import { Orb, type OrbState } from "@/ui/components/orb";
+import type { OrbState } from "@/ui/components/orb";
 import { useAgent } from "./agent-context";
+import { OrbStage } from "./orb-stage";
 
 // Estados vindos da voz (Felipe). Enquanto não houver voz, a UI só usa idle/thinking/error.
 export type VoiceState = "idle" | "listening" | "speaking" | "error";
@@ -42,11 +43,10 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
         <Badge variant="simulated" className="ml-auto">Simulado</Badge>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center">
-        <h1 className="font-display text-3xl font-bold leading-tight">Qual a sua vibe de hoje?</h1>
-        <div className="flex size-44 shrink-0 items-center justify-center">
-          <Orb state={orbState} className="size-40" />
-        </div>
+      <div className="agent-bg flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col items-center gap-3 overflow-y-auto px-6 py-6 text-center">
+        <h1 className="font-display text-balance text-3xl font-bold leading-tight">Qual a sua vibe de hoje?</h1>
+        <OrbStage state={orbState} />
         <p role="status" aria-live="polite" className="text-sm font-semibold text-muted-foreground">{STATE_LABEL[orbState]}</p>
 
         {lastReply && <p className="whitespace-pre-wrap text-base leading-snug">{lastReply}</p>}
@@ -83,6 +83,7 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
           </ul>
         )}
       </main>
+      </div>
 
       <footer className="border-t border-border bg-background px-3 pb-3 pt-2">
         {msgs.length > 0 && (
