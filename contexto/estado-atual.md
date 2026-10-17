@@ -1,25 +1,30 @@
-# Estado atual
+# Estado atual — 17/10/2026
 
-_Atualizar a cada PR._
+Base auditada: main 0867abc; esqueleto no PR #4 / 6c1b414. Esta atualização reconcilia documentação e limpa o template; não implementa a proposta inteira.
 
-- **Fase:** hackathon em andamento (17-18/10). Visão completa em `contexto/contexto.md`.
-- **Stack:** não definida.
-- **Integrador:** _a definir_ · **Construtores:** _a definir_
+## Decisões e fontes
+[Proposta final](../docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md): decisões 1–39 aprovadas, sem resultados experimentais inventados.
+[Auditoria](../docs/AUDITORIA-ALINHAMENTO-2026-10-17.md): matriz completa de 39 decisões, 22 RF, 12 RNF e 15 AC, evidências e lacunas.
+Stack definida: Next.js 16, React e TypeScript. Kenzo integra/revisa; Terossi, Malveste e Hyago compõem o time. Novas frentes ainda sem atribuição.
 
-## Funciona
-- Nada ainda.
+## Existe na main
+Texto, parser de palavras-chave, ranking determinístico, fixtures, carrinho/pedido/status simulados e memória RAM. Guia técnico documenta 24 ferramentas; isso não prova autenticação nem disponibilidade real.
+MCP_MODE=real lança erro. Voz, LLM, OAuth, Supabase/RLS, feedback completo e deploy público não comprovados/implementados.
 
-## Em andamento
-- Nada ainda.
+## Divergências prioritárias
+Compra aprovada termina no iFood, mas mock usa submitOrder. createCart acontece antes de aprovação. Faltam vínculo de versão/revalidação, total com taxas, filtros rígidos de alergia e seleção de endereço real.
+Não conectar escritas reais antes de corrigir contratos e guardrails. Próximo P0 precisa de contexto MCP real relevante; mock sozinho não satisfaz D37.
 
-## Quebrado / bloqueios
-- Nada.
+## GitHub/Trello e limites
+Trello lido: 13 cards (8 A Desenvolver, 2 Desenvolvendo, 0 Em Revisão, 3 Pronto). Nenhum card alterado ou nova tarefa atribuída.
+Branch remota feat/esqueleto-andante em c64eff2 possui medidor de consumo ainda fora da main; não incorporado automaticamente. Preparações locais antigas não commitadas foram preservadas.
+Arquivo humano regras-de-negocio.md intacto e ainda incompleto; formalização humana pendente.
+Valores com formato de credenciais removidos de .env.example. Se eram válidos, exigem revogação/rotação; histórico Git não foi reescrito.
+Sem nova compra, autenticação MCP, deploy, teste de usuários ou alteração de produção nesta auditoria.
 
-## Evento (17-18/10/2026)
-- Dev termina dom 12h30; pitches 13h–16h; resultado 17h. Detalhes em `AGENTS.md`.
-- Bloqueio atual: cadastro no MCP Portal com erro de SMS (iFood resolvendo). Card `[infra]` no Trello.
+## Próximo
+Equipe revisa auditoria, valida operações MCP e define recorte P0/responsáveis antes da distribuição. Revisão/merge deste PR pelo integrador. Testes e limitações registrados na seção de validação da auditoria.
 
-## Referência técnica do MCP — 17/10/2026
-- Guia em docs/mcp-ifood-referencia.md, vinculado no README e no contexto: 27 páginas oficiais de navegação consultadas, além do índice de autenticação; catálogo de 24 ferramentas documentadas.
-- Card relacionado: https://trello.com/c/ymJqCQH3. Esta entrega é documental e não conclui o aceite do card de conexão dos quatro integrantes.
-- Sem mudanças executáveis ou credenciais. OAuth e schemas efetivamente concedidos ao agente precisam de validação própria; o guia registra as divergências encontradas.
+## Verificações desta revisão
+Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferidos. Lint e quatro testes passaram. Typecheck recebeu geração prévia dos tipos do Next após falha em checkout limpo; resultado final e build na auditoria. npm audit aponta 5 entradas high na cadeia ESLint, pendentes de revisão de compatibilidade.
+- Resultado final: typecheck, lint, quatro testes e build passaram. Nenhuma validação externa MCP/checkout decorre desses resultados.

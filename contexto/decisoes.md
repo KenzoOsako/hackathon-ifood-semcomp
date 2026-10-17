@@ -20,3 +20,23 @@
 - **Proposta:** copiloto de voz com personalização e recomendação explicada (nome provisório FoodPilot). Núcleo = voz, intenção, recomendação explicada, memória e contexto, ação segura via MCP, interface multimodal. Mercado e extras só se sobrar tempo.
 - **Regra de proveniência proposta:** todo motivo falado pelo agente vem de um campo real do MCP.
 - **Detalhes e cruzamento com o MCP:** `docs/produto-v1.md`.
+
+## D-006 — Proposta final aprovada substitui o rascunho (17/10/2026)
+- Fonte: documento fornecido pelo usuário, preservado integralmente em docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md.
+- Decisões 1–38 são requisitos aprovados; D39 exige auditoria GitHub/Trello antes de atribuir tarefas.
+- Supera o status aguardando aprovação de D-005 e o produto-v1 como orientação de produto. Não alega implementação nem altera o arquivo humano de regras.
+
+## D-007 — Stack definida e limites do esqueleto (17/10/2026)
+- D-002 foi resolvida pelo código integrado no PR #4: Next.js 16, React e TypeScript.
+- Supabase/PostgreSQL e ElevenLabs são direções aprovadas ainda não implementadas; modelo LLM não escolhido. Não derivar direito de API de assinatura de produto.
+- D-004 continua proposta de configuração: redirect, escopos e homologação exigem validação por ambiente.
+
+## D-008 — Separar carrinho proposto, operação remota e compra (17/10/2026)
+- Compra final no iFood; aprovação explícita antes de adicionar remotamente, vinculada à versão e invalidada por mudança material.
+- Fallback: transferência validada, link confirmado ou resumo manual. submitOrder documentado no guia não é requisito para o FoodPilot.
+- Fluxo atual de createCart/submitOrder é simulado e divergente. Não promovê-lo a integração real sem corrigir guardrails e contratos.
+
+## D-009 — Reconciliação documental e segurança do template (17/10/2026)
+- Auditoria versionada separa requisitos, código, testes e Trello; nenhuma nova responsabilidade atribuída.
+- Removidos valores com formato de credenciais de .env.example. Se válidos, revogar/rotacionar; remoção do arquivo atual não remove exposição no histórico.
+- Preparações não commitadas no checkout antigo preservadas; não fazem parte desta atualização.

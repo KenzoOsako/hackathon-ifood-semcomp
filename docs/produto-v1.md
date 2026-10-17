@@ -1,3 +1,5 @@
+> **OBSOLETO como orientação de produto em 17/10/2026.** Rascunho histórico preservado. A [proposta final aprovada](PROPOSTA_DE_NEGOCIO_FOODPILOT.md) o substitui. Metas numéricas, checkout interno, modelo fixo e atribuições abaixo não devem ser usados como decisões atuais. Consulte a [auditoria](AUDITORIA-ALINHAMENTO-2026-10-17.md).
+
 # FoodPilot — Produto V1 (rascunho para decisão do time)
 
 > Nome provisório. Status: **rascunho de 17/10/2026, ~15h**. Cruza a ideia do grupo com `docs/mcp-ifood-referencia.md` (guia do Kenzo, baseado na documentação, **ainda não validado com `tools/list` real**). Pontos marcados `[DECIDIR]` e `[VERIFICAR]` precisam de resposta antes de virar código. Regras de negócio só entram em `contexto/regras-de-negocio.md` por PR humano.

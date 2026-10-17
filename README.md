@@ -1,26 +1,31 @@
-# Hackathon iFood — SEMCOMP 29
+# FoodPilot — Hackathon iFood SEMCOMP 29
 
-Tema: vendendo com agentes. Equipe de 4.
+Copiloto conversacional para escolher refeições, comparar até três opções relevantes e preparar uma proposta de carrinho. A compra final ocorre no iFood.
 
-## Como começar (todo mundo)
-```bash
-git clone https://github.com/KenzoOsako/hackathon-ifood-semcomp.git
-cd hackathon-ifood-semcomp
-claude   # abre o Claude Code nesta pasta; ele lê CLAUDE.md -> AGENTS.md sozinho
+## Leitura inicial
+1. [Proposta final aprovada: decisões 1–39](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md).
+2. [Auditoria e lacunas verificadas](docs/AUDITORIA-ALINHAMENTO-2026-10-17.md).
+3. [Estado da implementação](contexto/estado-atual.md), [contexto do time](contexto/contexto.md) e [instruções para agentes](AGENTS.md).
+4. [Guia técnico MCP](docs/mcp-ifood-referencia.md) e [frentes candidatas](docs/frentes.md).
+5. [Resumo de negócio — entregável 01](docs/entregaveis/01-proposta-de-negocio.md).
+
+## Execução local
+Requer Node.js e npm compatíveis com o lockfile. No PowerShell:
+```powershell
+npm ci
+Copy-Item .env.example .env
+npm run dev
 ```
-No Codex, o `AGENTS.md` é lido direto. Antes de codar, leia `contexto/`.
+Abra http://localhost:3000 no Chrome. O padrão é **MCP simulado**. Não há OAuth, LLM, voz ou persistência real implementados. O fluxo de pedido/status simulado ainda corresponde ao esqueleto antigo e diverge do checkout externo aprovado. Não conectar esse fluxo diretamente a operações reais.
 
-## Fluxo
-Branch `feat/<nome>-<assunto>` → PR pequeno → o integrador revisa e faz merge na `main`. Detalhes em `AGENTS.md`.
-
-## Referência técnica do MCP
-
-[Guia técnico do MCP iFood](docs/mcp-ifood-referencia.md) para os quatro desenvolvedores e agentes de código: 24 ferramentas documentadas, OAuth, escopos, erros, fluxos e divergências a validar na conexão real.
-
-## Rodar o projeto
-```bash
-npm install
-cp .env.example .env
-npm run dev   # http://localhost:3000 (Chrome). Por padrao usa MCP simulado
+```powershell
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
-Frentes, regras e pastas de cada pessoa: [docs/frentes.md](docs/frentes.md). Produto V1: [docs/produto-v1.md](docs/produto-v1.md).
+
+## Colaboração
+Branch própria → PR → revisão e merge pelo integrador, conforme AGENTS.md. A proposta aprovada define requisitos; a auditoria define o que existe. A atribuição de novas frentes depende do alinhamento da equipe após a auditoria. O rascunho produto-v1 é histórico.
+
+Credenciais somente em ambiente local/cofre; .env.example contém campos vazios. Valores com formato de credenciais foram removidos do template nesta atualização: se eram válidos, precisam de revogação/rotação nos provedores, pois permanecem no histórico Git.
