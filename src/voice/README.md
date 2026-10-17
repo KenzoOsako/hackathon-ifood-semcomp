@@ -1,6 +1,6 @@
 # src/voice — Conversação e Voz
 
-**Dono:** Felipe. **Status:** não implementado (o esqueleto só tem texto).
+**Dono:** Felipe. **Status:** parcial. Pronto e testado: texto falado (`speech-text.ts`), guardas (`guard.ts`), sinais (`signals.ts`), gasto (`budget.ts`), síntese ElevenLabs no servidor (`tts.ts` e `/api/voice/tts`). Falta: hook do microfone no navegador, reconhecimento (lote ou tempo real), interrupção e integração com `/api/converse`. Prompt do agente de teste: `agent-prompt.md`.
 
 **Responsabilidade:** o usuário fala e ouve o FoodPilot, com baixa latência e sem atrito.
 
