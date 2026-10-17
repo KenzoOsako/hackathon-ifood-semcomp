@@ -2,7 +2,7 @@
 
 _Atualizar a cada PR._
 
-- **Fase:** pré-hackathon (harness pronto, aguardando o tema às 14:00).
+- **Fase:** pré-hackathon (harness pronto, fluxo de PR em teste).
 - **Stack:** não definida.
 - **Integrador:** _a definir_ · **Construtores:** _a definir_
 
