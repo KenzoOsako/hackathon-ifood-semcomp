@@ -112,3 +112,6 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 ## UI: palco do orbe e fundo da tela do agente — 17/10/2026
 - Na branch `feat/malveste-ui-opcoes`: `OrbStage` (halo, dois anéis, pontos em órbita e ondas) ao redor do orbe e fundo `agent-bg` (brilho rosado + grade de pontos que some nas bordas), tudo em CSS com as cores dos tokens. O estado (`data-state`) só muda o ritmo: órbita acelera ao pensar, ondas ao ouvir/falar, tudo em cinza no erro. Movimento respeita `prefers-reduced-motion`.
 - Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px (idle, listening, speaking, error) e desktop, console limpo, sem rolagem horizontal.
+
+## UI: ondas no lugar da órbita — 17/10/2026
+- O palco do orbe trocou os pontos em órbita por duas formas líquidas que ondulam (border-radius animado) e três ondas que se expandem a partir do orbe. Ritmo por estado: ondas mais rápidas ao ouvir e ao responder, formas mais agitadas ao pensar, tudo parado e cinza no erro. Só CSS; respeita `prefers-reduced-motion`. Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
