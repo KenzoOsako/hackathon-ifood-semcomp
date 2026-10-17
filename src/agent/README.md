@@ -1,0 +1,15 @@
+# Propostas locais — FP-06
+
+`ProposalStore` é um domínio de servidor independente do MCP. Recebe `subjectRef` de uma sessão emitida pelo servidor; não pode ser exposto diretamente a um body contendo identidade do cliente. As rotas chat/confirm agora usam este módulo e a sessão efêmera do visitante. Isso não é login nem OAuth; todas as leituras são mock e não há escrita remota.
+
+Uso: criar rascunho com campos de proposta, revisar, aprovar com proposta/versão/interação/canal. O ID é gerado no servidor. Todas as leituras retornam cópias; alterações externas não afetam o armazenamento. Edição exige versão vigente, incrementa versão e remove aprovação. Cancelamento é terminal; expiração é verificada pelo relógio injetável a cada acesso. Aprovar duas vezes, mesmo com interações diferentes, é negado. Interação já aprovada não pode ser reutilizada após edição.
+
+O construtor exige capacidade explícita. Ao atingir o limite, remove registros cancelados/vencidos antes de negar com `UNAVAILABLE`; IDs antigos passam a ser inexistentes e nunca são reutilizados. Registros ativos não são descartados. Instância efêmera: reinício perde dados e invalida continuidade. Uma instância não coordena outra. A aprovação síncrona é atômica apenas no processo; múltiplas instâncias e qualquer execução remota exigem armazenamento transacional/idempotência apropriados. Uma proposta aprovada não é um token de autorização para escrita.
+
+Erros de acesso usam código genérico para não distinguir ID inexistente de sujeito alheio. Erros de formato são ZodError: futura borda HTTP deve convertê-los para resposta sanitizada, sem ecoar dados brutos. Relógio, TTL, identidade e capacidade precisam ser definidos na integração; não há TTL comercial inventado pelo módulo.
+
+`visitor-session.ts` emite cookie opaco e mantém conversa por 30 minutos absolutos, com máximo de 1000 sessões por processo. Sessão ocupada rejeita requisição concorrente. `http.ts` exige Origin correspondente ao Host recebido, JSON limitado a 16 KiB e retorna erros sanitizados sem cache. O agente limita propostas criadas pelo chat a cinco minutos. São políticas provisórias para a demo mock, não parâmetros de negócio aprovados.
+
+`agent.ts` só usa leitura mock. Seleção monta snapshot local com taxas/total desconhecidos; aprovação fica bloqueada até resolver as pendências. Chat aceita aprovação textual vinculada por `aprovar <id> v<versão>`; a API confirm exige ApprovalRequest completo. `submitOrder`, `createCart` e `trackOrder` não são chamados por agente/rotas. A rota order responde 410. Cancelamento e refinamento invalidam a proposta antes de nova leitura externa.
+
+Pendências FP-06/P0 real: identidade e OAuth de Hyago, contrato completo de custos/endereços/estoque, revalidação externa próxima da ação e UI de aprovação versionada. Escrita opcional precisa de gate próprio, coordenação entre instâncias e reconciliação de timeout; permanece desabilitada. Antes de deploy público, mitigar preenchimento da capacidade por visitantes anônimos com rate limit e definir armazenamento/retention. Não tomar estado approved como permissão para escrita.

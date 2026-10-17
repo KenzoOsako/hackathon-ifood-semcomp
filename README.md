@@ -11,6 +11,8 @@ Copiloto conversacional para escolher refeições, comparar até três opções 
 
 Plano operacional e tarefas por responsável: [Plano de execução da equipe](docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md).
 
+Sequência, dependências e critérios das tarefas de Kenzo: [Plano de implementação de Kenzo](docs/PLANO_IMPLEMENTACAO_KENZO.md).
+
 ## Execução local
 Requer Node.js e npm compatíveis com o lockfile. No PowerShell:
 ```powershell
@@ -18,7 +20,9 @@ npm ci
 Copy-Item .env.example .env
 npm run dev
 ```
-Abra http://localhost:3000 no Chrome. O padrão é **MCP simulado**. Não há OAuth, LLM, voz ou persistência real implementados. O fluxo de pedido/status simulado ainda corresponde ao esqueleto antigo e diverge do checkout externo aprovado. Não conectar esse fluxo diretamente a operações reais.
+Abra http://localhost:3000 no Chrome. O padrão é **MCP simulado**. Não há OAuth, LLM, voz ou persistência real implementados. O fluxo textual cria apenas proposta local: não cria carrinho remoto, não envia pedido e não consulta tracking. Taxas ausentes no contrato legado deixam o total pendente e impedem aprovação. Compra final no iFood; integração real permanece bloqueada.
+
+Sessão de visitante emitida pelo servidor em cookie HttpOnly (30 minutos absolutos); proposta local válida por cinco minutos. Reinício do processo exige nova conversa. Detalhes e payloads para integrar UI/MCP em [Integração da proposta local](docs/INTEGRACAO_PROPOSTA_LOCAL.md).
 
 ```powershell
 npm run typecheck

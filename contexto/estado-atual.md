@@ -33,3 +33,38 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - PR #5 integrado na main em 88e72d1. Novo documento fornecido pelo usuário: docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md, preservado integralmente.
 - O plano define 24 tarefas: Kenzo integração/contratos/guardrails/ranking/revisão e merge; Terossi voz/LLM; Malveste UI/UX; Hyago MCP/OAuth/dados. Supera o status histórico de atribuições pendentes; tarefas não estão executadas por sua publicação.
 - Esta atualização somente publica o Markdown e seu link de entrada. Não altera Trello, runtime ou regras humanas; não executa as tarefas do plano.
+
+## Plano de implementação de Kenzo — 17/10/2026
+- Base remota consultada: origin/main e85cd2b, merge do PR #6. Plano local em docs/PLANO_IMPLEMENTACAO_KENZO.md organiza as 12 tarefas de Kenzo, com contratos e guardrails antes da integração real.
+- FP-01 segue parcial: base e código conferidos; fila de PRs/cards, coordenação com colegas e baseline ainda pendentes. Nenhuma FP de implementação concluída nesta documentação.
+- Próximo: concluir FP-01, preparar FP-02 e revisão independente. Sem alteração de runtime, Trello, deploy ou regras humanas.
+
+## FP-02 — contratos mínimos, fatia 1 (17/10/2026)
+- Branch feat/kenzo-contratos-minimos, base e85cd2b; plano local anterior preservado. Consulta gh pr list retornou zero PRs abertos nesta execução; Trello/coordenação e aceite dos consumidores ainda pendentes, FP-01 parcial.
+- Contratos aditivos em src/contracts/proposal.ts: centavos seguros, custo com ausências explícitas, restrições, snapshot versionado, pedido de aprovação sem identidade do cliente e erros normalizados. Exemplos/testes e limites em src/contracts/README.md.
+- Validação final: typecheck, lint, 18 testes e build passaram; git diff --check sem erros. Nenhuma rota foi conectada ao novo contrato; guardrails de servidor continuam pendentes na FP-06. FP-02 parcial, aguardando demais fronteiras e revisão.
+- Recuperados HEAD e referência da branch com bytes nulos após interrupção: base exata confirmada no reflog, cópias preservadas fora do repo em work/evidence/git-recovery-contracts. git status voltou a funcionar, alterações locais preservadas.
+
+## FP-02 — intenção, contexto e resposta pública (17/10/2026)
+- Contratos aditivos em src/contracts/recommendation.ts e proposal-state.ts: intenção sem execução transacional, propósitos autorizados internos, origem real/mock, razões ligadas a evidências, projeção pública mínima e grafo de estados. Formato validado não prova autorização, atualidade nem veracidade; domínio e adaptadores precisam validar essas condições.
+- Trello lido: KEN-01 (https://trello.com/c/WJYltPQt) em Desenvolvendo. Nenhum card alterado nesta implementação. FP-01 ainda depende de coordenação/aceite humano das fronteiras.
+- Revisor independente temporário encontrou duas inconsistências de aprovação no schema público; corrigidas com validação cruzada de estado/snapshot e invariantes de subtotal/pendências, cobertas por testes negativos diretos.
+- Validação final: typecheck, lint, 25 testes e build passaram após correções; git diff --check sem erros. FP-02 aguarda revisão dos consumidores e migração; rotas legadas não alteradas. Próximo: alinhar os contratos com Hyago/Terossi/Malveste e implementar guardrails de servidor na FP-06.
+
+## FP-06 — domínio de proposta local (17/10/2026)
+- src/agent/proposals.ts implementa criação, revisão, edição com nova versão, cancelamento e aprovação vinculada a sujeito/versão/interação, com validade e cópias defensivas. Não recebe cliente MCP nem executa operação remota. Identidade deve vir de sessão de servidor validada na integração futura.
+- Armazenamento efêmero com capacidade configurada; libera registros cancelados/vencidos ao atingir limite. Aprovação atômica só na instância local; múltiplas instâncias e execução remota continuam bloqueadas até coordenação transacional apropriada.
+- Revisão independente de segurança apontou retenção de capacidade e sobrescrita de estado terminal; corrigidas. Testes cobrem sessão alheia, versão, replay, expiração exata, cancelamento, remoção de endereço e capacidade.
+- FP-06 parcial: rotas/identidade real, remoção do alcance legado de submitOrder e revalidação externa ainda pendentes. Nenhuma escrita real habilitada. Validação final: typecheck, lint, 35 testes, build e git diff --check passaram. Revisor confirmou as correções por leitura. Alterações locais sem publicação.
+
+## FP-06 — rotas e jornada mock integradas (17/10/2026)
+- Supera as pendências locais de rotas/alcance legado acima: chat/confirm usam sessão opaca emitida pelo servidor, aprovação por sujeito/versão e operações serializadas por visitante. sessionId legado é ignorado para identidade; explicit=true não aprova. JSON limitado, origem validada e erros sanitizados sem cache.
+- O agente não chama createCart, submitOrder ou trackOrder; order responde 410. Busca/refinamento cancela proposta antes de I/O; troca de endereço descarta opções anteriores. Sem OAuth/MCP real; o modo real falha fechado. Seleção exibe proposta local; taxas ausentes deixam total desconhecido e bloqueiam aprovação.
+- Políticas locais e integração para Malveste/Hyago em docs/INTEGRACAO_PROPOSTA_LOCAL.md. Única edição em page.tsx: efeito de rolagem sem retorno, expressamente autorizado pelo usuário após erro de cleanup React no navegador; layout intacto.
+- Validação final: typecheck, lint, 49 testes em oito arquivos, build e diff passaram. Smoke HTTP servido passou em localhost e 127.0.0.1; navegador confirmou busca → seleção → proposta pendente → cancelamento. Aprovação positiva testada apenas com fixture completa no servidor, sem operação remota. Captura fora do checkout: work/evidence/fp06-proposta-local.png.
+- Revisor security não confirmou bypass nos limites revisados; risco de esgotamento de sessões anônimas é pendência antes de deploy público. Persistência entre instâncias, identidade/OAuth, dados completos/revalidação MCP e aceite humano continuam pendentes; FP-06/P0 real não concluídos. Contraste do tema escuro observado na captura segue para UI. Nenhum commit, PR, Trello, compra ou deploy nesta fatia.
+
+## Preparação de PR — FP-02/FP-06 (17/10/2026)
+- Usuário solicitou publicação do PR para realizar o merge pessoalmente. Reconfirmada origin/main em e85cd2b e nenhuma outra PR aberta na consulta; branch feat/kenzo-contratos-minimos.
+- Entrega coesa: contratos e proposta local necessários para retirar compra interna do fluxo textual mock. Card: https://trello.com/c/WJYltPQt (KEN-01). A proposta não fecha FP-05 nem P0 real; aceite humano/consumidores e merge seguem pendentes.
+- Validações e limites na seção anterior e em docs/INTEGRACAO_PROPOSTA_LOCAL.md. Preparação em commits separados para contratos, domínio, rotas e documentação; nenhuma alteração em src/mcp, src/reco ou regras humanas.
