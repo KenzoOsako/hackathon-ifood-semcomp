@@ -12,6 +12,9 @@
 | 4 | "[happy]" e "[calm]" aparecem no texto | Expressive mode ligado | Voz (Felipe) |
 | 5 | Voz muito doce e teatral; o desejado é "assistente receptiva e objetiva, mais fina" | Voz e configuração | Voz (Felipe) |
 | 6 | Ritmo rápido funcionou: pedido específico → proposta em um turno | Regra L0 do prompt | Mantém |
+| 7 | **"Escola Cucurbita"** era provavelmente "escolhe a calabresa". O agente não fingiu entender (bom), mas fez pergunta **aberta** e recomeçou a oferta, em vez de confirmar a hipótese mais provável ("Foi a calabresa?") | Sem uso do contexto como prior; sem hipóteses alternativas do reconhecimento | Fluxo (Hyago) + Voz (Felipe) |
+| 8 | Enrolação: "Pizza é sempre uma ótima escolha", "Ah, desculpa" | Prompt sem regra de objetividade | Fluxo (Hyago) |
+| 9 | **Dois erros graves de reconhecimento em português** nos primeiros testes ("espíritas", "Escola Cucurbita") | O reconhecimento é o ponto frágil do produto | Voz (Felipe) e a decisão da seção 7 |
 
 **Conclusão:** o prompt isolado não sustenta o produto. O agente precisa de um **fluxo com estados e regras de transição**, de **ferramentas** com contrato e de uma **camada de voz** sem lógica de negócio.
 
@@ -78,9 +81,11 @@ Entrada do fluxo por turno:
   "texto": "…",
   "origem": "voz|texto",
   "sinais": { "velocidadeFala": 2.8, "silencioMs": 400, "interrompeu": false, "palavras": 7,
-              "confiancaReconhecimento": 0.62 }   // [VERIFICAR] se o provedor entrega
+              "confiancaReconhecimento": 0.62 },  // [VERIFICAR] se o provedor entrega
+  "hipoteses": ["escola cucurbita", "escolhe a calabresa"]  // alternativas do reconhecimento, da mais à menos provável
 }
 ```
+**Por que `hipoteses`:** a Web Speech API do navegador devolve alternativas e confiança por frase. Com elas, o fluxo escolhe a interpretação que combina com o **contexto** (as opções que acabou de propor). Se o reconhecimento rodar só dentro da plataforma da ElevenLabs, recebemos apenas o texto final `[VERIFICAR]`.
 Saída para a voz (em fluxo): `resposta_parcial`, `evento_de_tela`, `resposta_final`. A voz fala `resposta_*` e **não interpreta** o conteúdo. Já implementado no esqueleto de voz: `src/voice/signals.ts`.
 
 ### 4.2 Fluxo → Domínio (Hyago → Kenzo): as ferramentas
@@ -121,6 +126,8 @@ Rodar com o agente de prompt (ElevenLabs Preview) agora e, depois, contra o flux
 | C1 | "Pizza calabresa grande, pede logo." | Zero perguntas; proposta em um turno | ✅ |
 | C2 | Após a proposta: "tanto faz, só faz isso logo" | **Avança**: "O plano está na sua tela…". Sem repetir | ❌ |
 | C3 | Reconhecimento duvidoso ("espíritas") | Confirma em poucas palavras | ❌ |
+| C11 | Depois de uma proposta, fala curta e estranha ("Escola Cucurbita") | Trata como **escolha entre as opções ditas** e confirma sim/não: "Foi a calabresa?" | ⚠️ pergunta aberta |
+| C12 | Sem elogio nem pedido de desculpa em excesso | Vai direto à próxima ação | ⚠️ |
 | C4 | Nunca perguntar "no local ou entrega?" | Assume entrega | ❌ |
 | C5 | Nenhum colchete ou tag no texto | Texto limpo | ❌ |
 | C6 | "Aniversário de um amigo, pizza e filme" | No máximo 2 perguntas; plano com 3 blocos | a testar |
@@ -136,6 +143,8 @@ Rodar com o agente de prompt (ElevenLabs Preview) agora e, depois, contra o flux
 | **A. Agente do ElevenLabs com ferramentas** | O modelo roda na plataforma e chama nossas ferramentas por webhook | Mais rápido de montar; voz e interrupção prontas | A lógica fica dividida entre a plataforma e o código; difícil provar as regras |
 | **B. Só STT e TTS** | O nosso orquestrador roda tudo; a ElevenLabs só fala e ouve | Controle total das regras e dos eventos | Mais trabalho: turnos e interrupção são nossos |
 | **C. ElevenLabs (voz) + nosso cérebro como "LLM personalizado"** | A plataforma cuida da voz e dos turnos; as respostas vêm do endpoint do Hyago | Voz natural **e** regras no nosso código | Exige endpoint público (túnel) e compatibilidade de formato `[VERIFICAR]` |
+
+**Peso do reconhecimento de fala (achado 9):** quem controla o reconhecimento controla as **hipóteses alternativas**, o vocabulário esperado e a confiança. Isso favorece **B** (ou um modo híbrido: reconhecimento nosso, voz e turnos da ElevenLabs). Em **A** e **C**, a plataforma reconhece sozinha. **[VERIFICAR]** na aba Advanced do agente se existe opção de reconhecimento com **palavras-chave** (para ensinar nomes como "Forno e Cia", "calabresa", "Mercado do Bairro") e qual provedor de reconhecimento está em uso.
 
 **Recomendação:** **C**, com **A** como reserva (já funciona no Preview) e **B** como reserva final. O teste de viabilidade do C é pequeno: um endpoint de eco compatível, ligado ao agente. Se falhar em 1 hora, seguimos com A.
 
