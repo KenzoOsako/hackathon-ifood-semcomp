@@ -14,7 +14,7 @@
 | 6 | Ritmo rápido funcionou: pedido específico → proposta em um turno | Regra L0 do prompt | Mantém |
 | 7 | **"Escola Cucurbita"** era provavelmente "escolhe a calabresa". O agente não fingiu entender (bom), mas fez pergunta **aberta** e recomeçou a oferta, em vez de confirmar a hipótese mais provável ("Foi a calabresa?") | Sem uso do contexto como prior; sem hipóteses alternativas do reconhecimento | Fluxo (Hyago) + Voz (Felipe) |
 | 8 | Enrolação: "Pizza é sempre uma ótima escolha", "Ah, desculpa" | Prompt sem regra de objetividade | Fluxo (Hyago) |
-| 9 | **Dois erros graves de reconhecimento em português** nos primeiros testes ("espíritas", "Escola Cucurbita") | O reconhecimento é o ponto frágil do produto | Voz (Felipe) e a decisão da seção 7 |
+| 9 | Dois erros de reconhecimento nos primeiros testes ("espíritas", "Escola Cucurbita") | **O usuário disse errado**; quando fala normalmente, o agente entende. Fica como **risco a monitorar**, não como bloqueio | Voz (Felipe); ver seção 7.1 |
 
 **Conclusão:** o prompt isolado não sustenta o produto. O agente precisa de um **fluxo com estados e regras de transição**, de **ferramentas** com contrato e de uma **camada de voz** sem lógica de negócio.
 
@@ -144,7 +144,16 @@ Rodar com o agente de prompt (ElevenLabs Preview) agora e, depois, contra o flux
 | **B. Só STT e TTS** | O nosso orquestrador roda tudo; a ElevenLabs só fala e ouve | Controle total das regras e dos eventos | Mais trabalho: turnos e interrupção são nossos |
 | **C. ElevenLabs (voz) + nosso cérebro como "LLM personalizado"** | A plataforma cuida da voz e dos turnos; as respostas vêm do endpoint do Hyago | Voz natural **e** regras no nosso código | Exige endpoint público (túnel) e compatibilidade de formato `[VERIFICAR]` |
 
-**Peso do reconhecimento de fala (achado 9):** quem controla o reconhecimento controla as **hipóteses alternativas**, o vocabulário esperado e a confiança. Isso favorece **B** (ou um modo híbrido: reconhecimento nosso, voz e turnos da ElevenLabs). Em **A** e **C**, a plataforma reconhece sozinha. **[VERIFICAR]** na aba Advanced do agente se existe opção de reconhecimento com **palavras-chave** (para ensinar nomes como "Forno e Cia", "calabresa", "Mercado do Bairro") e qual provedor de reconhecimento está em uso.
+**Reconhecimento de fala (achado 9):** quem controla o reconhecimento controla as **hipóteses alternativas**, o vocabulário esperado e a confiança. Isso é uma vantagem de **B** (ou do modo híbrido: reconhecimento nosso, voz e turnos da ElevenLabs); em **A** e **C**, a plataforma reconhece sozinha. **[VERIFICAR]** na aba Advanced do agente se existe opção de reconhecimento com palavras-chave.
+
+### 7.1 ElevenLabs como TTS e STT na nossa demo (testado em 17/10/2026, ~22h)
+Com a chave do time (permissões TTS e STT), pela API:
+- **TTS:** funciona; primeiro byte em ~250–530 ms e fala completa em ~350–620 ms para frases curtas (modelo `eleven_flash_v2_5`, voz brasileira da conta, saída mp3).
+- **STT em lote (`scribe_v1` e `scribe_v2`):** funciona em português (`language_code: por`), ~380–550 ms para 2 a 3 s de áudio. Teste de ida e volta (TTS → STT) acertou "Forno e Cia" e "espetinho". **Limite do teste:** áudio sintético limpo; não prova ruído de sala nem sotaques.
+- **STT em tempo real (Scribe v2 Realtime):** segundo a documentação da ElevenLabs, usa WebSocket, entrega transcrição parcial enquanto o usuário fala e confirmada ao fim do trecho, com ~150 ms de latência (sem rede), aceita **palavras-chave** (até 50 no tempo real, 20 caracteres cada) e controle de fim de fala. **Não testei** o tempo real nem o suporte a palavras-chave em português.
+- **Conclusão:** dá para operar a demo **só com a ElevenLabs** (voz e reconhecimento). Para conversa fluida, o reconhecimento deve ser o **tempo real**; o lote serve para "segurar para falar". Em qualquer caso a Web Speech API do Chrome continua como reserva gratuita.
+
+**Recomendação:** começar com **reconhecimento em lote + TTS** (já testado, simples, fala curta) para fechar o ciclo da demo; trocar para o **tempo real** na frente de voz quando o fluxo do Hyago estiver estável, e usar as palavras-chave para os nomes de lojas e itens.
 
 **Recomendação:** **C**, com **A** como reserva (já funciona no Preview) e **B** como reserva final. O teste de viabilidade do C é pequeno: um endpoint de eco compatível, ligado ao agente. Se falhar em 1 hora, seguimos com A.
 
