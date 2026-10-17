@@ -15,3 +15,6 @@ Resumo da [proposta final aprovada](../PROPOSTA_DE_NEGOCIO_FOODPILOT.md). Implem
 **Negócio e validação.** Gratuito ao usuário. Conversão, retenção, satisfação e recompra são benefícios indiretos hipotéticos, sem comissão, assinatura ou venda de dados aprovadas. Comparar com navegação tradicional: tempo, interações, relevância, satisfação e confiabilidade. Registrar somente resultados reais.
 
 **Estado e equipe.** Esqueleto textual com MCP/pedidos/status simulados; P0 real, voz, LLM, persistência e deploy pendentes. Kenzo, Terossi, Malveste e Hyago alinharão responsáveis após auditoria (D39). Nenhuma parceria/aprovação iFood alegada.
+
+## Atualização proposta (Direção V2, aguarda aceite)
+**Dono sugerido: Felipe.** O resumo deve refletir: (1) ocasião em várias verticais (restaurante, mercado, shopping se o catálogo sustentar); (2) diferencial = contexto rico gerado pela fala e feedback estruturado e agregado útil ao iFood, **como hipótese, sem números inventados**; (3) FoodPilot não finaliza compra; (4) nada é vendido ou compartilhado sem consentimento. Fonte: [Direção V2](../DIRECAO_V2_OCASIAO.md).

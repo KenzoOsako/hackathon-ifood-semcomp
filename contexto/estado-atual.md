@@ -33,3 +33,11 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - PR #5 integrado na main em 88e72d1. Novo documento fornecido pelo usuário: docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md, preservado integralmente.
 - O plano define 24 tarefas: Kenzo integração/contratos/guardrails/ranking/revisão e merge; Terossi voz/LLM; Malveste UI/UX; Hyago MCP/OAuth/dados. Supera o status histórico de atribuições pendentes; tarefas não estão executadas por sua publicação.
 - Esta atualização somente publica o Markdown e seu link de entrada. Não altera Trello, runtime ou regras humanas; não executa as tarefas do plano.
+
+## Direção V2 e reorganização do repositório — 17/10/2026, ~20h
+- **Proposta, aguardando aceite do integrador:** `docs/DIRECAO_V2_OCASIAO.md` (D-007) e `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md` (D-008). Índice dos documentos em `docs/INDEX.md`.
+- **Funções propostas:** Felipe (Conversação e Voz), Hyago (System Prompt e Fluxo de Agentes), Kenzo (Request e Dados), Malveste (Interface e Front-End).
+- **Trello:** 8 cards novos (OCS-01 a 04, INS-01/02, UX-01, DEMO-01) e comentários em 5 cards antigos. Donos nos títulos ainda seguem o plano anterior; renomear só após o aceite.
+- **Repositório:** README, AGENTS.md, `docs/frentes.md`, contexto e pastas novas com README (`src/voice`, `src/prompts`, `src/evals`, `src/domain`, `src/data`, `src/ui`) e esqueletos dos entregáveis 02 a 06. **Nenhum código de runtime foi alterado.**
+- **Pendente:** gate das verticais (21h), contratos de Ocasião, Necessidade e Plano (21h30), provedor de LLM e dono da chave, endereço da demo, regra de revisão de PR (CODEOWNERS), medidor de consumo (ainda na branch `feat/esqueleto-andante`).
+- **Segurança:** valores com formato de credencial permanecem no histórico Git; revogar/rotacionar antes de tornar o repositório público.

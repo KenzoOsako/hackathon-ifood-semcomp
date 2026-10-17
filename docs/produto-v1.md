@@ -1,3 +1,5 @@
+> **HISTÓRICO:** rascunho anterior, superado pela proposta canônica e pela Direção V2 (`docs/INDEX.md`). Não orienta implementação.
+
 > **OBSOLETO como orientação de produto em 17/10/2026.** Rascunho histórico preservado. A [proposta final aprovada](PROPOSTA_DE_NEGOCIO_FOODPILOT.md) o substitui. Metas numéricas, checkout interno, modelo fixo e atribuições abaixo não devem ser usados como decisões atuais. Consulte a [auditoria](AUDITORIA-ALINHAMENTO-2026-10-17.md).
 
 # FoodPilot — Produto V1 (rascunho para decisão do time)
