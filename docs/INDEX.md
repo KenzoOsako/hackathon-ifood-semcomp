@@ -4,6 +4,7 @@ Atualizado em 17/10/2026, ~20h. Status: **canônico** (aprovado), **V2** (propos
 
 | Documento | Status | Para quê |
 |---|---|---|
+| [ROADMAP.md](ROADMAP.md) | **V2** | Caminho único até a submissão: marcos, entregáveis por pessoa, gates, plano B e ordem de corte |
 | [DIRECAO_V2_OCASIAO.md](DIRECAO_V2_OCASIAO.md) | **V2** | O que muda: ocasião multi-vertical, diferencial (contexto por voz + dados para o iFood), conversa adaptativa, dados e eventos |
 | [PLANO_V2_PAPEIS_E_CRONOGRAMA.md](PLANO_V2_PAPEIS_E_CRONOGRAMA.md) | **V2** | Quem faz o quê, interfaces entre as funções, cronograma, gates e riscos |
 | [REVISAO_PR7_E_BACKLOG_V2.md](REVISAO_PR7_E_BACKLOG_V2.md) | **V2** | Revisão do PR #7 (achados), auditoria das 34 tasks e backlog enxuto de 22 |

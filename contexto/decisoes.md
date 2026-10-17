@@ -64,3 +64,9 @@
 - **Decisão:** usar `@langchain/core` (1.x, compatível com Zod 4) + um pacote de provedor, com `withStructuredOutput`. Isolado em `src/agent/llm/` atrás de `LlmPort`; orquestrador não importa LangChain. **Sem LangGraph:** o grafo do turno é código próprio.
 - **Alternativa rejeitada:** `fetch` direto na API (menos dependência, mas troca de provedor e parsing estruturado manuais).
 - **Consequência:** dependência nova no `package.json`; validar `npm run build` no Next 16 ao instalar. Detalhes: `docs/BRIEFING_AGENTE.md` e `docs/PLANO_AGENTE.md`.
+
+## D-015 — ElevenLabs como provedor de voz por API; cérebro do agente por código (PROPOSTA, 17/10/2026 ~20h40, Felipe)
+- **Contexto:** o agente do painel da ElevenLabs funcionou no Preview, mas as regras (teto de perguntas, níveis, sem repetir, motivos só de dado real) precisam ser garantidas e testadas.
+- **Proposta:** usar a ElevenLabs só para **TTS e STT por API** e manter o orquestrador em código (`docs/PLANO_AGENTE.md`, Hyago). O agente do painel fica como laboratório de tom e voz e como plano B.
+- **Consequência:** interrupção, fim de fala e fila de áudio passam a ser nossos (R1 do roadmap). TTS e STT em lote foram testados com a chave do time; o reconhecimento em tempo real ainda não.
+- **Detalhes:** `docs/ROADMAP.md`.

@@ -5,11 +5,12 @@ Copiloto de compras por **voz** que resolve uma **ocasião**, e não só uma ref
 > **Status da direção:** a **Direção V2** (ocasião, contexto por voz, dados para o iFood) está **proposta e aguarda o aceite do integrador** (D-011 e D-012 em [`contexto/decisoes.md`](contexto/decisoes.md)). Onde houver conflito, valem a [proposta canônica](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e o [plano anterior](docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) até esse aceite. Mapa completo dos documentos: [`docs/INDEX.md`](docs/INDEX.md).
 
 ## Leitura inicial (nesta ordem)
-1. [Direção V2: ocasião, contexto por voz e dados para o iFood](docs/DIRECAO_V2_OCASIAO.md)
-2. [Plano V2: papéis, interfaces e cronograma](docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md)
-3. [Proposta canônica (decisões 1–39)](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e [auditoria](docs/AUDITORIA-ALINHAMENTO-2026-10-17.md)
-4. [Contexto do evento e do time](contexto/contexto.md), [estado atual](contexto/estado-atual.md) e [instruções para agentes](AGENTS.md)
-5. [Guia técnico do MCP do iFood](docs/mcp-ifood-referencia.md)
+1. [Roadmap operacional até a submissão](docs/ROADMAP.md)
+2. [Direção V2: ocasião, contexto por voz e dados para o iFood](docs/DIRECAO_V2_OCASIAO.md)
+3. [Plano V2: papéis, interfaces e cronograma](docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md)
+4. [Proposta canônica (decisões 1–39)](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e [auditoria](docs/AUDITORIA-ALINHAMENTO-2026-10-17.md)
+5. [Contexto do evento e do time](contexto/contexto.md), [estado atual](contexto/estado-atual.md) e [instruções para agentes](AGENTS.md)
+6. [Guia técnico do MCP do iFood](docs/mcp-ifood-referencia.md)
 
 ## Equipe e funções (proposta V2)
 
