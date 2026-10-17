@@ -1,15 +1,13 @@
 "use client";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, Send } from "lucide-react";
-import type { AgentTurn } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Orb, type OrbState } from "@/ui/components/orb";
-
-type Msg = { from: "voce" | "agente"; text: string };
+import { useAgent } from "./agent-context";
 
 // Estados vindos da voz (Felipe). Enquanto não houver voz, a UI só usa idle/thinking/error.
 export type VoiceState = "idle" | "listening" | "speaking" | "error";
@@ -27,40 +25,12 @@ const STATE_LABEL: Record<OrbState, string> = {
 const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
 
 export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
-  const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [turn, setTurn] = useState<AgentTurn | null>(null);
+  const { msgs, turn, busy, error, send, retry } = useAgent();
   const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(false);
-  const lastMessage = useRef("");
 
   const orbState: OrbState = busy ? "thinking" : error ? "error" : voiceState && voiceState !== "idle" ? voiceState : "idle";
   const lastReply = [...msgs].reverse().find((m) => m.from === "agente")?.text;
-
-  async function send(message: string) {
-    const text = message.trim();
-    if (!text || busy) return;
-    lastMessage.current = text;
-    setBusy(true);
-    setError(null);
-    setMsgs((m) => [...m, { from: "voce", text }]);
-    try {
-      // O servidor identifica o visitante pelo cookie de sessão; não enviamos sessionId.
-      const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
-      const body = (await r.json()) as AgentTurn;
-      if (!r.ok) {
-        setError(body.reply || "Não consegui responder agora.");
-        return;
-      }
-      setTurn(body);
-      setMsgs((m) => [...m, { from: "agente", text: body.reply }]);
-    } catch {
-      setError("Sem conexão com o servidor. Confira sua internet e tente de novo.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -68,12 +38,12 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início">
           <Link href="/"><ArrowLeft /></Link>
         </Button>
-        <span className="font-bold">FoodPilot</span>
+        <span className="font-display text-lg font-bold">FoodPilot</span>
         <Badge variant="simulated" className="ml-auto">Simulado</Badge>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-6 text-center">
-        <h1 className="text-2xl font-bold leading-tight">Qual a sua vibe de hoje?</h1>
+        <h1 className="font-display text-3xl font-bold leading-tight">Qual a sua vibe de hoje?</h1>
         <div className="flex size-44 shrink-0 items-center justify-center">
           <Orb state={orbState} className="size-40" />
         </div>
@@ -86,26 +56,28 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
             <AlertTriangle aria-hidden="true" />
             <div className="flex-1">
               <p>{error}</p>
-              <Button variant="outline" size="sm" className="mt-2" disabled={busy} onClick={() => send(lastMessage.current)}>
+              <Button variant="outline" size="sm" className="mt-2" disabled={busy} onClick={() => void retry()}>
                 Tentar de novo
               </Button>
             </div>
           </Alert>
         )}
 
+        {/* Voltando da tela de opções/proposta, o caminho de volta fica à vista. */}
         {turn?.state === "ESCOLHENDO_OPCAO" && turn.options && (
-          <Alert className="w-full items-center text-left">
-            <div className="flex-1">Encontrei {turn.options.length} {turn.options.length === 1 ? "opção" : "opções"} para você.</div>
-            {/* A tela de opções é o próximo PR. */}
-            <Button size="sm" disabled>Ver opções (em breve)</Button>
-          </Alert>
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/agente/opcoes">Ver as {turn.options.length} {turn.options.length === 1 ? "opção" : "opções"}</Link>
+          </Button>
+        )}
+        {turn?.state === "AGUARDANDO_CONFIRMACAO" && (
+          <Button asChild variant="outline" className="w-full"><Link href="/agente/proposta">Ver a proposta</Link></Button>
         )}
 
         {msgs.length === 0 && (
           <ul className="flex flex-wrap justify-center gap-2" aria-label="Sugestões">
             {SUGGESTIONS.map((s) => (
               <li key={s}>
-                <Button variant="outline" size="sm" disabled={busy} onClick={() => send(s)}>{s}</Button>
+                <Button variant="outline" size="sm" disabled={busy} onClick={() => void send(s)}>{s}</Button>
               </li>
             ))}
           </ul>
@@ -120,7 +92,7 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
               {showLog ? "Esconder conversa" : `Ver conversa (${msgs.length})`}
             </Button>
             {showLog && (
-              <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-48 gap-2 overflow-y-auto">
+              <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-36 gap-2 overflow-y-auto">
                 {msgs.map((m, i) => (
                   <li
                     key={i}
