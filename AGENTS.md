@@ -31,3 +31,8 @@ Regras de edição completas em `contexto/README.md`. Resumo:
 
 ## Aprendeu algo ou errou?
 Registre em `contexto/erros-aprendidos.md` (sintoma, causa, correção) para ninguém repetir.
+
+## Backlog (Trello)
+- As tarefas vivem no Trello (MCP configurado pelo Arthur). Antes de começar, pegue/peça um card; cite o card no PR.
+- Agentes podem criar cards de backlog e mover o próprio card (Fazendo → Revisão). Quem move para "Feito" é o integrador, após o merge.
+- Credenciais do Trello só em `.env` (ver `.env.example`), nunca no repo.
