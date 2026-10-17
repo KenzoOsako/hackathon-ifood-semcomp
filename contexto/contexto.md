@@ -46,7 +46,7 @@ Cada um é um card no Trello.
 
 ### Como conectar (resumo)
 1. **Uma pessoa** cria o agente no MCP Portal (perfil Estudante): logo, nome, descrição, **Redirect URL `http://localhost:8765/callback`**, links genéricos de termos e privacidade, **todos os escopos** (não dá para mudar depois). Vai para **homologação manual** do iFood.
-2. Aprovado, o portal mostra **Client ID** e **Client Secret** (o secret aparece **uma única vez**). Compartilhar por mensagem direta, nunca no repo, Trello ou grupo.
+2. Aprovado, o portal mostra **Client ID** e **Client Secret** (o secret aparece **uma única vez**). **Atenção:** os termos do portal (§6.1 e §9) restringem credenciais compartilhadas; confirmar com a organização se o time pode usar um único agente (ver `docs/mcp-ifood-referencia.md` §3.3). Nunca no repo, Trello ou grupo.
 3. Criar **usuários de teste** (máx. 10 por conta; um por pessoa).
 4. Cada pessoa conecta no Claude Code (a confirmar o comando assim que houver credenciais):
    `claude mcp add --transport http --client-id <CLIENT_ID> --client-secret --callback-port 8765 ifood https://consumer-mcp.ifood.com.br/marketplace`

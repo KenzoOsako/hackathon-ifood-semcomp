@@ -15,3 +15,8 @@
 
 ## D-004 — Conexão ao MCP do iFood (17/10/2026)
 - **Decisão (proposta):** URL `https://consumer-mcp.ifood.com.br/marketplace`; redirect `http://localhost:8765/callback` igual para os 4 (localhost é local a cada máquina). Confirmar quando o agente for aprovado.
+
+## D-005 — Direção do produto (PROPOSTA, 17/10/2026, aguardando aprovação do grupo)
+- **Proposta:** copiloto de voz com personalização e recomendação explicada (nome provisório FoodPilot). Núcleo = voz, intenção, recomendação explicada, memória e contexto, ação segura via MCP, interface multimodal. Mercado e extras só se sobrar tempo.
+- **Regra de proveniência proposta:** todo motivo falado pelo agente vem de um campo real do MCP.
+- **Detalhes e cruzamento com o MCP:** `docs/produto-v1.md`.
