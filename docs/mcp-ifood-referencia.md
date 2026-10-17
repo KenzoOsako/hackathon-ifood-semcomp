@@ -1,3 +1,5 @@
+> **Escopo FoodPilot atualizado em 17/10/2026:** este guia descreve capacidades da plataforma, incluindo submitOrder; a [proposta final](PROPOSTA_DE_NEGOCIO_FOODPILOT.md) determina compra final no iFood e aprovação antes de adicionar itens remotamente. Ferramenta documentada não comprova disponibilidade autenticada, autorização ou implementação. Leia a [auditoria](AUDITORIA-ALINHAMENTO-2026-10-17.md).
+
 # MCP iFood — guia técnico para desenvolvedores e agentes de código
 
 **Projeto:** Hackathon iFood × SEMCOMP 2026. **Consulta:** 17/10/2026. **Destino sugerido no GitHub:** `docs/mcp-ifood-referencia.md`.
