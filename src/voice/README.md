@@ -1,6 +1,6 @@
 # src/voice — Conversação e Voz
 
-**Dono:** Felipe. **Status:** parcial. Pronto e testado: texto falado (`speech-text.ts`), guardas (`guard.ts`), sinais (`signals.ts`), gasto (`budget.ts`), síntese ElevenLabs no servidor (`tts.ts` e `/api/voice/tts`). Falta: hook do microfone no navegador, reconhecimento (lote ou tempo real), interrupção e integração com `/api/converse`. Prompt do agente de teste: `agent-prompt.md`.
+**Dono:** Felipe. **Status:** funcional em lote. Pronto e testado: texto falado, guardas, sinais, gasto, síntese (`/api/voice/tts`), **reconhecimento em lote (`/api/voice/stt`)**, **hook do microfone** (`use-voice.ts`), **player com interrupção** (`player.ts`), detecção de voz (`vad.ts`) e a página de teste `/voz`. Falta: ligar ao `/api/converse` do Hyago (hoje a página usa o agente de texto atual), reconhecimento em tempo real e palavras-chave. **Não verificado:** microfone real (o navegador do painel bloqueia o acesso); precisa de teste em Chrome com microfone.
 
 **Responsabilidade:** o usuário fala e ouve o FoodPilot, com baixa latência e sem atrito.
 
@@ -29,3 +29,14 @@
 
 ## Testes
 Microfone negado, ruído, provedor fora do ar, interrupção, queda para texto (aceite AC-12 do plano).
+
+## Como testar agora
+`npm run dev` e abrir http://localhost:3000/voz no Chrome. Clique em **Falar**, diga algo e clique em **Parar**. Tocar no botão enquanto o Guide fala **interrompe** a fala. O campo de texto sempre funciona. O diagnóstico da última fala (texto, confiança, sinais, dados sensíveis removidos) aparece embaixo.
+
+## Variáveis (`.env`, nunca no repositório)
+`ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID` (padrão `eleven_flash_v2_5`), `ELEVENLABS_STT_MODEL` (padrão `scribe_v2`), `TTS_CHAR_BUDGET`, `STT_SECONDS_BUDGET`.
+
+## Rotas
+- `POST /api/voice/tts` `{ text }` → `audio/mpeg`. 503 se a voz estiver indisponível (a tela segue em texto).
+- `POST /api/voice/stt` (corpo = áudio de uma fala) → `{ texto, confianca, duracaoS, redacoes, injecao }`. O texto já vem **sem dados sensíveis** e `injecao` sinaliza tentativa de manipular o agente.
+- Ambas: origem same-origin, corpo limitado, erros sanitizados e **sem depender de `MCP_MODE`**.

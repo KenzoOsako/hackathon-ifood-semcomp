@@ -1,12 +1,10 @@
-// Controle mínimo de gasto de voz (caracteres sintetizados) por processo.
+// Controle mínimo de gasto de voz por processo (TTS em caracteres, STT em segundos).
 // Para o total do time, vale o painel da ElevenLabs. 0 = sem limite.
-const g = globalThis as unknown as { __voiceChars?: number };
+const g = globalThis as unknown as { __voiceChars?: number; __voiceSecs?: number };
 
-export const ttsBudget = () => {
-  const v = process.env.TTS_CHAR_BUDGET;
-  return v === undefined || v === "" ? 100_000 : Number(v);
-};
+const num = (v: string | undefined, def: number) => (v === undefined || v === "" ? def : Number(v));
 
+export const ttsBudget = () => num(process.env.TTS_CHAR_BUDGET, 100_000);
 export const ttsUsed = () => g.__voiceChars ?? 0;
 
 export function assertTtsBudget(chars: number): void {
@@ -18,6 +16,20 @@ export function recordTts(chars: number): void {
   g.__voiceChars = ttsUsed() + chars;
 }
 
+export const sttBudget = () => num(process.env.STT_SECONDS_BUDGET, 3_600);
+export const sttUsed = () => g.__voiceSecs ?? 0;
+
+// A duração só é conhecida depois da transcrição; antes, bloqueia se o limite já foi atingido.
+export function assertSttBudget(): void {
+  const limit = sttBudget();
+  if (limit > 0 && sttUsed() >= limit) throw new Error("STT_BUDGET_EXCEEDED");
+}
+
+export function recordStt(seconds: number): void {
+  g.__voiceSecs = sttUsed() + Math.max(0, seconds);
+}
+
 export function __resetTtsForTests(): void {
   g.__voiceChars = 0;
+  g.__voiceSecs = 0;
 }
