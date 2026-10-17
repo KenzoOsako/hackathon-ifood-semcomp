@@ -7,6 +7,7 @@ Atualizado em 17/10/2026, ~20h. Status: **canônico** (aprovado), **V2** (propos
 | [DIRECAO_V2_OCASIAO.md](DIRECAO_V2_OCASIAO.md) | **V2** | O que muda: ocasião multi-vertical, diferencial (contexto por voz + dados para o iFood), conversa adaptativa, dados e eventos |
 | [PLANO_V2_PAPEIS_E_CRONOGRAMA.md](PLANO_V2_PAPEIS_E_CRONOGRAMA.md) | **V2** | Quem faz o quê, interfaces entre as funções, cronograma, gates e riscos |
 | [REVISAO_PR7_E_BACKLOG_V2.md](REVISAO_PR7_E_BACKLOG_V2.md) | **V2** | Revisão do PR #7 (achados), auditoria das 34 tasks e backlog enxuto de 22 |
+| [AGENTE_CONVERSA_E_FLUXO.md](AGENTE_CONVERSA_E_FLUXO.md) | **V2** | Contrato entre voz (Felipe), fluxo (Hyago) e domínio (Kenzo): estados da conversa, ferramentas, guia de estilo e casos de teste |
 | [frentes.md](frentes.md) | **V2** | Mapa pastas × dono × entradas e saídas |
 | [PROPOSTA_DE_NEGOCIO_FOODPILOT.md](PROPOSTA_DE_NEGOCIO_FOODPILOT.md) | canônico | Decisões 1–39. A V2 propõe alterar o escopo (decisões 1 e 19) e o diferencial |
 | [PLANO_EXECUCAO_EQUIPE_FOODPILOT.md](PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) | canônico (donos podem mudar pela V2) | Tarefas FP-01 a FP-24, aceites AC-01 a AC-15, fluxo de PR |
