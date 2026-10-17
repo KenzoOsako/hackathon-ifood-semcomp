@@ -11,6 +11,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@langchain/anthropic": "^1.5.12",
+    "@langchain/core": "^1.2.18",
+    "@langchain/google-genai": "^2.3.2",
+    "@langchain/openai": "^1.6.2",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
