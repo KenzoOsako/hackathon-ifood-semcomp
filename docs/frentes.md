@@ -18,6 +18,13 @@ Antes de abrir PR: `npm run typecheck`, `npm run lint`, `npm test`, `npm run bui
 
 > Next.js 16 mudou APIs. Antes de usar algo novo, consulte `node_modules/next/dist/docs/`.
 
+## Chaves e controle de gastos
+
+- **Chaves compartilhadas** (LLM, ElevenLabs): o Felipe passa por mensagem direta; cada um coloca no **seu `.env`**, que **não vai para o git**. Credenciais do iFood (Client ID/Secret) são pessoais e idem.
+- **Limites por pessoa** no `.env`: `LLM_TOKEN_BUDGET`, `TTS_CHAR_BUDGET`, `STT_SECONDS_BUDGET` (0 = sem limite). Preços opcionais (`LLM_PRICE_IN_PER_MTOK`, `LLM_PRICE_OUT_PER_MTOK`) liberam a estimativa de custo.
+- **Medidor:** `src/usage/meter.ts`. Toda chamada a modelo ou voz deve fazer `assertBudget(kind)` antes e `record(...)` depois. O consumo desta máquina aparece em `GET /api/usage` e fica em `.usage/usage.jsonl` (ignorado pelo git).
+- O total do **time** está nos painéis dos provedores (Anthropic, ElevenLabs); o medidor só mostra a sua parte e para antes de estourar.
+
 ## Como as frentes não se atropelam
 
 - **Cada frente mexe só nas suas pastas.** Precisou de algo de outra? Abra um card ou peça mudança no contrato.

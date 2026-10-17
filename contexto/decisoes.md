@@ -20,3 +20,8 @@
 - **Proposta:** copiloto de voz com personalização e recomendação explicada (nome provisório FoodPilot). Núcleo = voz, intenção, recomendação explicada, memória e contexto, ação segura via MCP, interface multimodal. Mercado e extras só se sobrar tempo.
 - **Regra de proveniência proposta:** todo motivo falado pelo agente vem de um campo real do MCP.
 - **Detalhes e cruzamento com o MCP:** `docs/produto-v1.md`.
+
+## D-006 — Chaves e controle de gastos (17/10/2026)
+- **Decisão:** chaves compartilhadas (LLM, ElevenLabs) circulam por mensagem direta e ficam no `.env` local de cada pessoa, que não é versionado. Credenciais do iFood são pessoais (termos do portal restringem compartilhar).
+- **Controle de gastos:** medidor por pessoa em `src/usage/meter.ts`, com limites no `.env`; total do time nos painéis dos provedores.
+- **Alternativa considerada e não adotada:** versionar o `.env` com as chaves no repo privado (conveniência). Fica registrado o risco: o histórico do git é permanente e o repo pode ser tornado público na submissão.
