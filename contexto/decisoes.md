@@ -47,3 +47,8 @@
 - **Mantém:** não finalizar pedido, aprovação da versão da proposta, filtros rígidos, proveniência dos motivos, ownership de pastas.
 - **Gate:** só entram as verticais que o MCP real sustentar no endereço da demo.
 - **Detalhes:** `docs/DIRECAO_V2_OCASIAO.md`.
+
+## D-008 — Papéis da V2 (PROPOSTA, 17/10/2026 ~19h45, aguardando aceite do time)
+- **Funções:** Felipe = Conversação e Voz · Hyago = System Prompt e Fluxo de Agentes · Kenzo = Request e Dados · Malveste = Interface e Front-End.
+- **Lacunas redistribuídas:** pitch e Entregável 01 (Felipe), Entregável 02 (Hyago), Entregáveis 05 e 06 (Kenzo), Entregáveis 03 e 04 (Malveste), integração/QA/deploy (Kenzo, com testes de cada dono).
+- **Substitui, se aceita,** a distribuição de donos do plano anterior. Detalhes: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`.
