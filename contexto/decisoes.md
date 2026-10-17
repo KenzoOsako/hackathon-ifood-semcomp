@@ -59,8 +59,15 @@
 - **Lacunas redistribuídas:** pitch e Entregável 01 (Felipe), Entregável 02 (Hyago), Entregáveis 05 e 06 (Kenzo), Entregáveis 03 e 04 (Malveste), integração/QA/deploy (Kenzo, com testes de cada dono).
 - **Substitui, se aceita,** a distribuição de donos do plano anterior. Detalhes: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`.
 
-## D-013 — Stack de design da UI: Tailwind v4, shadcn/ui, lucide e Motion (17/10/2026)
+## D-013 — LangChain.js no adaptador de LLM (PROPOSTA, 17/10/2026 ~21h, Hyago)
+- **Contexto:** a frente de agente (D-012) precisa de saída estruturada validada e de trocar de modelo rápido para o comparativo de provedores.
+- **Decisão:** usar `@langchain/core` (1.x, compatível com Zod 4) + um pacote de provedor, com `withStructuredOutput`. Isolado em `src/agent/llm/` atrás de `LlmPort`; orquestrador não importa LangChain. **Sem LangGraph:** o grafo do turno é código próprio.
+- **Alternativa rejeitada:** `fetch` direto na API (menos dependência, mas troca de provedor e parsing estruturado manuais).
+- **Consequência:** dependência nova no `package.json`; validar `npm run build` no Next 16 ao instalar. Detalhes: `docs/BRIEFING_AGENTE.md` e `docs/PLANO_AGENTE.md`.
+
+## D-014 — Stack de design da UI: Tailwind v4, shadcn/ui, lucide e Motion (17/10/2026)
 - **Contexto:** frente de interface (Malveste) precisa de visual consistente iFood sem escrever CSS à mão em cada tela; a página atual usa estilos inline.
 - **Decisão:** Tailwind CSS v4 (`@tailwindcss/postcss`, conforme docs do Next instaladas), componentes no estilo shadcn/ui copiados para `src/ui/components` (button, card, badge, alert, input; sem CLI nem pacote `radix-ui` completo, só `@radix-ui/react-slot`), `lucide-react` para ícones e `motion` para transições pontuais. Auxiliares: `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`.
 - **Tokens:** em `src/app/globals.css`. Só o tema claro é entregue e verificado; dark mode fica fora (decisão do dono da UI). O vermelho de marca `#EA1D2C` dá 4,46:1 com branco, abaixo do AA; texto sobre vermelho usa `--primary` `#D91A29` (5,08:1) e `--brand` fica para áreas grandes. Selo `simulated` obrigatório em dado não real.
 - **Consequência:** `package.json`, lockfile e `postcss.config.mjs` mudam; coordenar com o integrador para não haver edição concorrente do lockfile. Motion só entra em tela no PR do fluxo.
+
