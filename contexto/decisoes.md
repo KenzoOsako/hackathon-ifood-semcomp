@@ -59,7 +59,13 @@
 - **Lacunas redistribuídas:** pitch e Entregável 01 (Felipe), Entregável 02 (Hyago), Entregáveis 05 e 06 (Kenzo), Entregáveis 03 e 04 (Malveste), integração/QA/deploy (Kenzo, com testes de cada dono).
 - **Substitui, se aceita,** a distribuição de donos do plano anterior. Detalhes: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`.
 
-## D-013 — Nome do produto: Guide (17/10/2026, escolhido pelo time)
-- **Contexto:** "FoodPilot" prendia o produto a comida; a V2 resolve ocasiões em várias verticais (refeição, mercado, presentes).
+## D-013 — LangChain.js no adaptador de LLM (PROPOSTA, 17/10/2026 ~21h, Hyago)
+- **Contexto:** a frente de agente (D-012) precisa de saída estruturada validada e de trocar de modelo rápido para o comparativo de provedores.
+- **Decisão:** usar `@langchain/core` (1.x, compatível com Zod 4) + um pacote de provedor, com `withStructuredOutput`. Isolado em `src/agent/llm/` atrás de `LlmPort`; orquestrador não importa LangChain. **Sem LangGraph:** o grafo do turno é código próprio.
+- **Alternativa rejeitada:** `fetch` direto na API (menos dependência, mas troca de provedor e parsing estruturado manuais).
+- **Consequência:** dependência nova no `package.json`; validar `npm run build` no Next 16 ao instalar. Detalhes: `docs/BRIEFING_AGENTE.md` e `docs/PLANO_AGENTE.md`.
+
+## D-014 — Nome do produto: Guide (17/10/2026, escolhido pelo time)
+- **Contexto:** "Guide" prendia o produto a comida; a V2 resolve ocasiões em várias verticais (refeição, mercado, presentes).
 - **Decisão:** o produto se chama **Guide**. Nomes de arquivos existentes (`*_FOODPILOT.md`) foram mantidos para não quebrar links; só o texto foi trocado. Identificadores internos de código em minúsculas (`foodpilot...`) não mudam.
 - **Pendências:** verificar marca (INPI) e domínio; testar a pronúncia na voz sintética (pode precisar de grafia fonética no texto falado).

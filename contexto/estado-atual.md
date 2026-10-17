@@ -87,3 +87,9 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - **Bloqueios para a demo:** aprovação inalcançável (toda proposta nasce com taxas e total não confirmados) e UI sem botão de aprovação. Detalhes e backlog enxuto (34 → 22 tasks) em `docs/REVISAO_PR7_E_BACKLOG_V2.md`.
 - **IDs de decisão:** as decisões da V2 foram renumeradas para **D-011 e D-012** (D-007 a D-010 são do Kenzo).
 - Nenhum card do Trello foi alterado; a poda é proposta.
+
+## Plano do agente (frente Hyago) — 17/10/2026, ~21h
+- `docs/BRIEFING_AGENTE.md`: arquitetura do agente na V2 (orquestrador guiado por código, saída estruturada, estado da sessão, funções de domínio, `/api/converse`, L0/L1/L2).
+- `docs/PLANO_AGENTE.md`: marcos M0–M4 alinhados aos gates G2–G5, divisão em dupla (Hyago + parceiro a definir), definição de pronto do core.
+- D-013 (proposta): LangChain.js isolado em `src/agent/llm/`, sem LangGraph. Nenhum código de runtime alterado; dependências ainda não instaladas.
+- Pendente: aceite de D-011/D-012/D-013, parceiro da dupla, provedor/chave de LLM; depende de K-1, K-3, K-5 (Kenzo) e M-1 (Malveste).
