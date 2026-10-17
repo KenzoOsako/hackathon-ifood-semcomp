@@ -68,3 +68,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Usuário solicitou publicação do PR para realizar o merge pessoalmente. Reconfirmada origin/main em e85cd2b e nenhuma outra PR aberta na consulta; branch feat/kenzo-contratos-minimos.
 - Entrega coesa: contratos e proposta local necessários para retirar compra interna do fluxo textual mock. Card: https://trello.com/c/WJYltPQt (KEN-01). A proposta não fecha FP-05 nem P0 real; aceite humano/consumidores e merge seguem pendentes.
 - Validações e limites na seção anterior e em docs/INTEGRACAO_PROPOSTA_LOCAL.md. Preparação em commits separados para contratos, domínio, rotas e documentação; nenhuma alteração em src/mcp, src/reco ou regras humanas.
+
+## PR de implementação aberto — 17/10/2026
+- PR #7: https://github.com/KenzoOsako/hackathon-ifood-semcomp/pull/7, branch feat/kenzo-contratos-minimos → main e85cd2b. Aberto para revisão/merge do usuário, sem conflitos na consulta; nenhum merge executado por este chat.
+- Revisão independente de e85cd2b..0a2e1f38205450860ddba4fea34befc2132ec99e não encontrou regressão acionável adicional; revisão por leitura, distinta do aceite humano. Typecheck/lint/49 testes/build passaram no código publicado. Commit posterior acrescenta apenas este registro documental.
+- Card KEN-01 vinculado ao PR; revisão dos consumidores e limites pré-deploy permanecem pendentes. Nenhum check de CI foi retornado pelo GitHub; resultados acima são locais, não CI aprovado.
