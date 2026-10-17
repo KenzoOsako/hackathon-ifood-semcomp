@@ -2,7 +2,7 @@
 
 _Atualizar a cada PR._
 
-- **Fase:** pré-hackathon (harness pronto, fluxo de PR em teste).
+- **Fase:** hackathon em andamento (17-18/10). Visão completa em `contexto/contexto.md`.
 - **Stack:** não definida.
 - **Integrador:** _a definir_ · **Construtores:** _a definir_
 

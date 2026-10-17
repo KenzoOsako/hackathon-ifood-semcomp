@@ -3,7 +3,7 @@
 Tema: **vendendo com agentes** (detalhado às 14:00 de 17/10/2026). Time de 4, 18h de desenvolvimento.
 
 ## Antes de qualquer coisa
-1. Leia a pasta `contexto/` inteira, nesta ordem: `regras-de-negocio.md`, `decisoes.md`, `erros-aprendidos.md`, `estado-atual.md`.
+1. Leia `contexto/contexto.md` (visão completa do evento e do time) e depois o restante de `contexto/`, nesta ordem: `regras-de-negocio.md`, `decisoes.md`, `erros-aprendidos.md`, `estado-atual.md`.
 2. Não invente requisito. Se faltar informação, pergunte à pessoa antes de codar.
 3. Responda em português (Brasil), direto ao ponto.
 
