@@ -93,3 +93,16 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - `docs/PLANO_AGENTE.md`: marcos M0–M4 alinhados aos gates G2–G5, divisão em dupla (Hyago + parceiro a definir), definição de pronto do core.
 - D-013 (proposta): LangChain.js isolado em `src/agent/llm/`, sem LangGraph. Nenhum código de runtime alterado; dependências ainda não instaladas.
 - Pendente: aceite de D-011/D-012/D-013, parceiro da dupla, provedor/chave de LLM; depende de K-1, K-3, K-5 (Kenzo) e M-1 (Malveste).
+
+## Agente: decisões de implementação e preocupações — 17/10/2026, ~20h30 (Hyago)
+- Cérebro no backend: orquestrador (Hyago) decide perguntar/buscar/montar/ajustar; domínio (Kenzo) busca no MCP e ranqueia; LLM interpreta e fala, sem aprovar nem comprar.
+- ElevenLabs só ouve e fala (STT + TTS), sem conduzir a conversa. O agente é entregue funcionando por texto; a voz conecta depois no mesmo endpoint. Provedor/modelo de LLM não fixado (configuração).
+- Prompt do spike (src/voice/agent-prompt.md) dividido em interpretar/responder; dados de exemplo viram fixtures do domínio fake; teto de perguntas, anti-repetição e S5 garantidos em código.
+- Preocupações registradas: latência (2 chamadas de LLM + MCP + TTS; medir por etapa desde o M1), erros de reconhecimento, fala inventando número, atraso de K-3/K-5/K-1/M-1, provedor e chave de LLM a confirmar.
+- Detalhes: docs/BRIEFING_AGENTE.md e docs/PLANO_AGENTE.md. Nenhum código de runtime alterado.
+
+## Agente Guide no backend — M0/M1 (17/10/2026, ~21h, Hyago)
+- Implementado em feat/hyago-agente: src/agent/types.ts, orquestrador (src/agent/orchestrator), domínio simulado com os dados do spike (src/agent/domain-fake), LLM via LangChain (src/agent/llm, provedor/modelo por LLM_PROVIDER/LLM_MODEL; sem eles, interpretador por regras), prompts (src/prompts), evals (src/evals) e POST /api/converse com os guardas de http.ts e sessão por cookie.
+- Regras em código: teto de 3 perguntas (1 em L1), nível só rebaixa, pressa força L0, aprovação só com frase explícita e só devolve planoId+versão, restrição rígida por sessão, plano vazio não é encaminhado, fala do LLM com número fora do snapshot cai para template.
+- Verificação: typecheck, lint, 100 testes (12 cenários de eval + testes do orquestrador) e build passaram; jornada do aniversário e caso rápido rodados no app servido. Revisão independente: 16 achados, altos e médios corrigidos com testes.
+- Não verificado: LLM real (sem LLM_PROVIDER configurado nesta máquina); compatibilidade do schema Zod com withStructuredOutput de cada provedor; domínio real (K-3/K-5) e aprovação na tela (K-1/M-1).
