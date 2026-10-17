@@ -1,6 +1,10 @@
 // CONTRATOS COMPARTILHADOS. Só o integrador altera este arquivo (via PR).
 // As frentes (agente/MCP, voz/UI, recomendação/memória) se falam por estes tipos.
 import { z } from "zod";
+import { PublicProposalSchema } from "./recommendation";
+export * from "./proposal";
+export * from "./recommendation";
+export * from "./proposal-state";
 
 // Regra de proveniência: todo motivo falado pelo agente nasce de um campo real.
 // `text` é gerado por código a partir de `value`; o modelo só verbaliza.
@@ -94,6 +98,7 @@ export const OrderStateSchema = z.enum([
   "ESCOLHENDO_OPCAO",
   "AGUARDANDO_CONFIRMACAO",
   "PEDIDO_CONFIRMADO",
+  "PROPOSTA_APROVADA",
   "FALHA",
 ]);
 export type OrderState = z.infer<typeof OrderStateSchema>;
@@ -105,6 +110,7 @@ export const AgentTurnSchema = z.object({
   options: z.array(OptionSchema).optional(),
   cart: CartSchema.optional(),
   order: OrderStatusSchema.optional(),
+  proposal: PublicProposalSchema.optional(),
 });
 export type AgentTurn = z.infer<typeof AgentTurnSchema>;
 

@@ -1,10 +1,18 @@
 import { handleMessage } from "@/agent/agent";
+import { z } from "zod";
+import { visitorSessions } from "@/agent/visitor-session";
+import { failureResponse, jsonBody, jsonResponse, requireMockRequest } from "@/agent/http";
+
+// sessionId legado aceito apenas para compatibilidade; nunca define identidade.
+const ChatSchema = z.strictObject({ message: z.string().trim().min(1).max(4000), sessionId: z.string().max(100).optional() });
 
 export async function POST(req: Request) {
-  const { sessionId, message } = (await req.json()) as { sessionId: string; message: string };
+  let cookie: string | undefined;
   try {
-    return Response.json(await handleMessage(sessionId, message));
-  } catch (e) {
-    return Response.json({ state: "FALHA", reply: `Algo deu errado: ${(e as Error).message}` }, { status: 500 });
-  }
+    requireMockRequest(req);
+    const { message } = ChatSchema.parse(await jsonBody(req));
+    const resolved = visitorSessions.resolve(req, true); cookie = resolved.cookie;
+    const turn = await visitorSessions.run(resolved.visitor, (conversation) => handleMessage(conversation, message));
+    return jsonResponse(turn, 200, cookie);
+  } catch (error) { return failureResponse(error, cookie); }
 }

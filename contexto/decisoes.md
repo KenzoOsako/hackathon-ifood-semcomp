@@ -40,3 +40,9 @@
 - Auditoria versionada separa requisitos, código, testes e Trello; nenhuma nova responsabilidade atribuída.
 - Removidos valores com formato de credenciais de .env.example. Se válidos, revogar/rotacionar; remoção do arquivo atual não remove exposição no histórico.
 - Preparações não commitadas no checkout antigo preservadas; não fazem parte desta atualização.
+
+## D-010 — Política provisória da proposta local/mock (17/10/2026)
+- Contexto: FP-06 precisa retirar compra interna e identidade confiada ao cliente antes de ligar integração real.
+- Implementação local: cookie opaco HttpOnly/SameSite Strict por 30 minutos absolutos, 1000 sessões máximas no processo; proposta de chat válida por cinco minutos. Mudanças são limitadas à demo mock; login/OAuth e escrita real continuam bloqueados.
+- São parâmetros técnicos provisórios revisáveis, não nova regra humana de negócio. Alternativa de confiar em sessionId/explicit do body foi rejeitada por não vincular aprovação ao servidor. Sem custo completo, não aprovar; resumo local explicita pendências.
+- Publicação exige resolver limite de visitantes anônimos, armazenamento entre instâncias e autorização real. Interface de Malveste só recebeu a correção pontual autorizada do efeito de rolagem. Integração descrita em docs/INTEGRACAO_PROPOSTA_LOCAL.md.

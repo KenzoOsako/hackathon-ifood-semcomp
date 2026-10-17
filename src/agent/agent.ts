@@ -1,101 +1,107 @@
-// AGENTE (versão do esqueleto): entende por palavras-chave, SEM modelo de linguagem.
-// A frente "Agente e MCP" troca `handleMessage` por um laço com LLM + tool use, mantendo:
-//   - a máquina de estados (OrderState) e a trava de confirmação;
-//   - os motivos vindos de `rank` (o modelo só verbaliza).
-import type { AgentTurn, Candidate, Option, OrderState } from "@/contracts";
+// Orquestração textual provisória: apenas leituras mock e proposta local.
+import { randomUUID } from "node:crypto";
+import { AddressSchema, CandidateSchema, HistoryEntrySchema, toPublicProposal, type Address, type AgentTurn, type Option } from "@/contracts";
 import { getMcp } from "@/mcp";
+import type { McpClient } from "@/mcp/types";
 import { rank } from "@/reco/rank";
+import { ProposalError, ProposalStore } from "./proposals";
 
-interface Session {
-  state: OrderState;
-  addressId: string;
+export interface Conversation {
+  subjectRef: string;
   options: Option[];
-  cartId?: string;
+  address?: Address;
+  proposal?: { id: string; version: number };
+  proposals: ProposalStore;
+}
+export const createConversation = (subjectRef: string): Conversation => ({ subjectRef, options: [], proposals: new ProposalStore(1) });
+type ReadPort = Pick<McpClient, "listAddresses" | "searchOffers" | "getRecentOrders">;
+const norm = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const brl = (amount: number) => `R$ ${(amount / 100).toFixed(2).replace(".", ",")}`;
+function cents(value: number): number {
+  const amount = Math.round(value * 100);
+  if (!Number.isFinite(value) || value < 0 || !Number.isSafeInteger(amount) || Math.abs(value * 100 - amount) > 0.000001) throw new ProposalError("INVALID_DATA");
+  return amount;
 }
 
-const g = globalThis as unknown as { __sessions?: Map<string, Session> };
-const sessions = (g.__sessions ??= new Map<string, Session>());
-
-function session(id: string): Session {
-  let s = sessions.get(id);
-  if (!s) {
-    s = { state: "DESCOBRINDO", addressId: "addr-1", options: [] };
-    sessions.set(id, s);
-  }
-  return s;
+function discardProposal(c: Conversation) {
+  if (!c.proposal) return;
+  try { c.proposals.cancel(c.proposal.id, c.subjectRef, c.proposal.version); }
+  catch (error) { if (!(error instanceof ProposalError) || error.code !== "EXPIRED") throw error; }
+  c.proposal = undefined;
 }
 
-const norm = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const FOODS = ["hamburguer", "pizza", "sushi", "acai", "lanche"];
+export function approveProposal(c: Conversation, request: unknown): AgentTurn {
+  const approved = c.proposals.approve(c.subjectRef, request);
+  return { state: "PROPOSTA_APROVADA", proposal: toPublicProposal(approved), reply: "Proposta local aprovada. Nenhum item foi adicionado e nenhum pedido foi enviado. Confira os itens e finalize a compra no iFood; transferência automática não está disponível nesta demo." };
+}
 
-function parseIntent(text: string) {
+export async function handleMessage(c: Conversation, text: string, readPort?: ReadPort): Promise<AgentTurn> {
+  // Visitante não é OAuth; bloquear real mesmo se getMcp tiver mock em cache.
+  if ((process.env.MCP_MODE ?? "mock") !== "mock") throw new ProposalError("UNAVAILABLE");
   const t = norm(text);
-  const food = FOODS.find((f) => t.includes(f)) ?? (t.includes("fome") ? "hamburguer" : "");
-  const budget = t.match(/ate\s*r?\$?\s*(\d+)/)?.[1];
-  const ordinal = /\b(1|primeir)/.test(t) ? 0 : /\b(2|segund)/.test(t) ? 1 : /\b(3|terceir)/.test(t) ? 2 : undefined;
-  return { food, maxItemPrice: budget ? Number(budget) : undefined, ordinal };
-}
+  if (/^(cancelar|cancela)$/.test(t)) {
+    discardProposal(c); c.options = [];
+    return { state: "DESCOBRINDO", reply: "Proposta local cancelada. Nenhuma operação remota foi executada." };
+  }
+  const approval = t.match(/^aprovar ([0-9a-f-]{36}) v([1-9]\d*)$/);
+  if (approval) return approveProposal(c, { proposalId: approval[1], version: Number(approval[2]), interactionId: randomUUID(), channel: "text" });
+  if (/^(sim|confirmo|aprovar)$/.test(t)) return { state: "DESCOBRINDO", reply: "Para aprovar, use a referência e a versão exibidas na proposta. Um sim isolado não aprova." };
 
-const brl = (n: number) => `R$ ${n.toFixed(2).replace(".", ",")}`;
-
-export async function handleMessage(sessionId: string, text: string): Promise<AgentTurn> {
-  const s = session(sessionId);
-  const mcp = getMcp();
-  const { food, maxItemPrice, ordinal } = parseIntent(text);
-
-  // Escolha de uma das opções já apresentadas.
-  if (s.state === "ESCOLHENDO_OPCAO" && ordinal !== undefined && s.options[ordinal]) {
-    const opt = s.options[ordinal];
-    const cart = await mcp.createCart({
-      merchantId: opt.candidate.merchantId,
-      addressId: s.addressId,
-      items: [{ itemId: opt.candidate.itemId, quantity: 1 }],
+  const selected = t.match(/^(?:quero (?:a |o )?)?([1-3])$/);
+  // Invalidar imediatamente mesmo se a leitura externa seguinte falhar.
+  discardProposal(c);
+  if (!selected) c.options = [];
+  const port = readPort ?? getMcp();
+  const addresses = (await port.listAddresses()).map((a) => AddressSchema.parse(a));
+  const addressChoice = t.match(/^endereco ([1-9]\d*)$/);
+  if (addressChoice) {
+    const address = addresses[Number(addressChoice[1]) - 1];
+    if (!address) throw new ProposalError("INVALID_DATA");
+    discardProposal(c); c.options = []; c.address = address;
+    return { state: "DESCOBRINDO", reply: `Endereço simulado selecionado: ${address.alias}. O que você quer comer?` };
+  }
+  if (addresses.length === 0) {
+    discardProposal(c); c.options = []; c.address = undefined;
+    return { state: "DESCOBRINDO", reply: "Nenhum endereço disponível no mock. Selecione um endereço pelo caminho suportado antes de buscar." };
+  }
+  const previous = c.address;
+  c.address = previous && addresses.find((a) => a.addressId === previous.addressId);
+  if (!c.address && addresses.length === 1) c.address = addresses[0];
+  if (previous && c.address?.addressId !== previous.addressId) c.options = [];
+  if (!c.address) {
+    discardProposal(c); c.options = [];
+    return { state: "DESCOBRINDO", reply: `Escolha um endereço simulado com “endereço N”:\n${addresses.map((a, i) => `${i + 1}. ${a.alias}`).join("\n")}` };
+  }
+  if (selected) {
+    const option = c.options[Number(selected[1]) - 1];
+    if (!option) throw new ProposalError("INVALID_DATA");
+    discardProposal(c);
+    const candidate = option.candidate;
+    const unit = { currency: "BRL" as const, cents: cents(candidate.promotionalPrice ?? candidate.price) };
+    const delivery = candidate.deliveryFee === undefined ? undefined : { currency: "BRL" as const, cents: cents(candidate.deliveryFee) };
+    const p = c.proposals.create(c.subjectRef, {
+      merchantRef: candidate.merchantId, addressRef: c.address.addressId,
+      items: [{ ref: candidate.itemId, quantity: 1, unitPrice: unit }],
+      // O contrato legado não informa taxas. Não inventar zero nem total.
+      cost: { items: unit, ...(delivery ? { delivery } : {}), status: "unknown" },
+      unresolved: ["Taxas e total não confirmados", ...(delivery ? [] : ["Frete desconhecido"])],
+      expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
     });
-    s.cartId = cart.cartId;
-    s.state = "AGUARDANDO_CONFIRMACAO";
-    return {
-      state: s.state,
-      cart,
-      reply: `${opt.candidate.itemName} da ${cart.merchantName}, total ${brl(cart.total)} com entrega, em ${cart.addressFormatted}, pagando no ${cart.paymentLabel}. Posso confirmar o pedido?`,
-    };
+    const reviewed = c.proposals.review(p.id, c.subjectRef, p.version);
+    c.proposal = { id: reviewed.id, version: reviewed.version };
+    return { state: "AGUARDANDO_CONFIRMACAO", proposal: toPublicProposal(reviewed), reply: `[Simulado] Proposta local: 1× ${candidate.itemName}, ${candidate.merchantName}. Item ${brl(unit.cents)}; frete ${delivery ? brl(delivery.cents) : "desconhecido"}; taxas e total pendentes. Endereço: ${c.address.alias}.\nAprovação bloqueada até resolver as pendências. Referência ${reviewed.id}, versão ${reviewed.version}. Digite “cancelar” ou refaça a busca para editar. Nenhum carrinho remoto foi criado; a compra final é no iFood.` };
   }
-
-  // Busca + recomendação.
-  const query = food || text;
+  // Busca/refinamento invalida a proposta anterior antes de I/O.
+  discardProposal(c); c.options = [];
+  const food = ["hamburguer", "pizza", "sushi", "acai", "lanche"].find((f) => t.includes(f)) ?? (t.includes("fome") ? "hamburguer" : text);
+  const budget = t.match(/ate\s*r?\$?\s*(\d+(?:[.,]\d{1,2})?)/)?.[1];
   const [candidates, history] = await Promise.all([
-    mcp.searchOffers({ query, addressId: s.addressId, maxItemPrice }),
-    mcp.getRecentOrders(s.addressId),
+    port.searchOffers({ query: food, addressId: c.address.addressId, maxItemPrice: budget ? Number(budget.replace(",", ".")) : undefined }),
+    port.getRecentOrders(c.address.addressId),
   ]);
-  const options = rank(candidates as Candidate[], history);
-  if (options.length === 0) {
-    s.state = "DESCOBRINDO";
-    return { state: s.state, reply: "Não encontrei nada com isso por perto. Quer tentar outro prato ou subir o orçamento?" };
-  }
-  s.options = options;
-  s.state = "ESCOLHENDO_OPCAO";
-  const falas = options.map((o, i) => `${i + 1}. ${o.candidate.merchantName}: ${o.reasons.slice(0, 3).map((r) => r.text).join(", ")}`);
-  return { state: s.state, options, reply: `Encontrei ${options.length} opções:\n${falas.join("\n")}\nQual você prefere?` };
-}
-
-// CONFIRMAÇÃO: único caminho que chama submitOrder. Exige ação explícita da pessoa (botão ou frase
-// validada pela interface). O modelo nunca preenche `explicit`.
-export async function confirmOrder(sessionId: string, explicit: boolean): Promise<AgentTurn> {
-  const s = session(sessionId);
-  if (s.state !== "AGUARDANDO_CONFIRMACAO" || !s.cartId) {
-    return { state: s.state, reply: "Não há pedido aguardando confirmação." };
-  }
-  if (!explicit) return { state: s.state, reply: "Preciso da sua confirmação explícita para fechar o pedido." };
-  const mcp = getMcp();
-  const { orderId } = await mcp.submitOrder({ cartId: s.cartId, userConsent: true });
-  s.state = "PEDIDO_CONFIRMADO";
-  const order = await mcp.trackOrder(orderId);
-  return { state: s.state, order, reply: `Pedido feito! Status: ${order.description}.` };
-}
-
-export async function orderStatus(orderId: string) {
-  return getMcp().trackOrder(orderId);
-}
-
-export function resetSession(sessionId: string) {
-  sessions.delete(sessionId);
+  const options = rank(candidates.map((item) => CandidateSchema.parse(item)), history.map((item) => HistoryEntrySchema.parse(item)));
+  c.options = options;
+  return options.length === 0 ? { state: "DESCOBRINDO", reply: "Não encontrei opções no mock. Quer refinar a busca? Limites rígidos não serão ampliados automaticamente." } : {
+    state: "ESCOLHENDO_OPCAO", options, reply: `[Simulado] Endereço: ${c.address.alias}. Encontrei ${options.length} opções. O limite informado filtra apenas o item neste esqueleto; não garante total com frete/taxas.\n${options.map((o, i) => `${i + 1}. ${o.candidate.merchantName}: ${o.candidate.itemName}`).join("\n")}\nQual você prefere?`,
+  };
 }

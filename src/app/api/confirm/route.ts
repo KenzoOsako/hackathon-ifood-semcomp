@@ -1,11 +1,14 @@
-import { confirmOrder } from "@/agent/agent";
+import { approveProposal } from "@/agent/agent";
+import { ApprovalRequestSchema } from "@/contracts";
+import { visitorSessions } from "@/agent/visitor-session";
+import { failureResponse, jsonBody, jsonResponse, requireMockRequest } from "@/agent/http";
 
-// `explicit` só é true quando a INTERFACE registrou uma ação clara da pessoa (botão ou frase validada).
+// Aprova apenas proposta local; não cria carrinho nem envia pedido.
 export async function POST(req: Request) {
-  const { sessionId, explicit } = (await req.json()) as { sessionId: string; explicit: boolean };
   try {
-    return Response.json(await confirmOrder(sessionId, explicit === true));
-  } catch (e) {
-    return Response.json({ state: "FALHA", reply: `Algo deu errado: ${(e as Error).message}` }, { status: 500 });
-  }
+    requireMockRequest(req);
+    const request = ApprovalRequestSchema.parse(await jsonBody(req));
+    const { visitor } = visitorSessions.resolve(req, false);
+    return jsonResponse(await visitorSessions.run(visitor, (conversation) => approveProposal(conversation, request)));
+  } catch (error) { return failureResponse(error); }
 }
