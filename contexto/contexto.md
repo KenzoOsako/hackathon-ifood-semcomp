@@ -86,3 +86,8 @@ Gravar um vídeo do fluxo funcionando assim que existir uma versão estável; us
 - Repo: https://github.com/KenzoOsako/hackathon-ifood-semcomp
 - Trello: https://trello.com/b/ZcLDfKqU/hackathon-ifood
 - Portal de docs: https://mcp-developer.ifood.com.br/pt-BR/docs/guides
+
+## 13. Referência técnica do MCP — 17/10/2026
+- Ler [docs/mcp-ifood-referencia.md](../docs/mcp-ifood-referencia.md) antes de implementar integrações; síntese das páginas oficiais dos quatro domínios, autenticação, escopos, erros e casos de uso.
+- As 24 ferramentas são documentadas, não uma comprovação de tools/list autenticado do time. Divergências de contrato e limites estão identificados no guia.
+- Distribuição de credenciais ao time requer confirmação expressa da organização conforme termos do portal; contas de teste distintas não autorizam, por si só, compartilhar secret ou login administrador.

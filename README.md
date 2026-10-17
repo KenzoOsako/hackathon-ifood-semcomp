@@ -12,3 +12,7 @@ No Codex, o `AGENTS.md` é lido direto. Antes de codar, leia `contexto/`.
 
 ## Fluxo
 Branch `feat/<nome>-<assunto>` → PR pequeno → o integrador revisa e faz merge na `main`. Detalhes em `AGENTS.md`.
+
+## Referência técnica do MCP
+
+[Guia técnico do MCP iFood](docs/mcp-ifood-referencia.md) para os quatro desenvolvedores e agentes de código: 24 ferramentas documentadas, OAuth, escopos, erros, fluxos e divergências a validar na conexão real.
