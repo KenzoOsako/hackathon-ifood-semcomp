@@ -40,3 +40,10 @@
 - Auditoria versionada separa requisitos, código, testes e Trello; nenhuma nova responsabilidade atribuída.
 - Removidos valores com formato de credenciais de .env.example. Se válidos, revogar/rotacionar; remoção do arquivo atual não remove exposição no histórico.
 - Preparações não commitadas no checkout antigo preservadas; não fazem parte desta atualização.
+
+## D-007 — Direção V2: ocasião, contexto por voz e dados para o iFood (PROPOSTA, 17/10/2026 ~19h30, aguardando aceite do Kenzo)
+- **Proposta:** manter o FoodPilot, mas passar de "escolher uma refeição" para "resolver uma ocasião" em várias verticais (restaurante e mercado no P0; shopping se o catálogo sustentar). Novo diferencial: (1) personalização por contexto rico gerado pela fala; (2) feedback estruturado e agregado útil ao iFood. Conversa com profundidade adaptativa (L0/L1/L2, no máximo 3 perguntas).
+- **Substitui parcialmente:** decisões 1 e 19 da proposta canônica (restaurante apenas; supermercado fora do MVP) e o diferencial anterior (acessibilidade e facilidade).
+- **Mantém:** não finalizar pedido, aprovação da versão da proposta, filtros rígidos, proveniência dos motivos, ownership de pastas.
+- **Gate:** só entram as verticais que o MCP real sustentar no endereço da demo.
+- **Detalhes:** `docs/DIRECAO_V2_OCASIAO.md`.
