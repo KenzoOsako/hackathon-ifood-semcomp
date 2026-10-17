@@ -9,7 +9,7 @@ import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { Orb, type OrbState } from "@/ui/components/orb";
 
-type Msg = { from: "voce" | "agente"; text: string };
+type Msg = { id: string; from: "voce" | "agente"; text: string };
 
 // Estados vindos da voz (Felipe). Enquanto não houver voz, a UI só usa idle/thinking/error.
 export type VoiceState = "idle" | "listening" | "speaking" | "error";
@@ -26,7 +26,24 @@ const STATE_LABEL: Record<OrbState, string> = {
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
 const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
 
+function resolveOrbState(busy: boolean, error: string | null, voiceState?: VoiceState): OrbState {
+  if (busy) return "thinking";
+  if (error) return "error";
+  if (voiceState && voiceState !== "idle") return voiceState;
+  return "idle";
+}
+
+function findLastAgentReply(msgs: readonly Msg[]): string | undefined {
+  for (let i = msgs.length - 1; i >= 0; i -= 1) {
+    if (msgs[i].from === "agente") {
+      return msgs[i].text;
+    }
+  }
+  return undefined;
+}
+
 export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
+  const nextMsgId = useRef(1);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [turn, setTurn] = useState<AgentTurn | null>(null);
   const [input, setInput] = useState("");
@@ -35,8 +52,8 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
   const [showLog, setShowLog] = useState(false);
   const lastMessage = useRef("");
 
-  const orbState: OrbState = busy ? "thinking" : error ? "error" : voiceState && voiceState !== "idle" ? voiceState : "idle";
-  const lastReply = [...msgs].reverse().find((m) => m.from === "agente")?.text;
+  const orbState = resolveOrbState(busy, error, voiceState);
+  const lastReply = findLastAgentReply(msgs);
 
   async function send(message: string) {
     const text = message.trim();
@@ -44,7 +61,8 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
     lastMessage.current = text;
     setBusy(true);
     setError(null);
-    setMsgs((m) => [...m, { from: "voce", text }]);
+    const userMsgId = `msg-${nextMsgId.current++}`;
+    setMsgs((m) => [...m, { id: userMsgId, from: "voce", text }]);
     try {
       // O servidor identifica o visitante pelo cookie de sessão; não enviamos sessionId.
       const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
@@ -53,8 +71,9 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
         setError(body.reply || "Não consegui responder agora.");
         return;
       }
+      const agentMsgId = `msg-${nextMsgId.current++}`;
       setTurn(body);
-      setMsgs((m) => [...m, { from: "agente", text: body.reply }]);
+      setMsgs((m) => [...m, { id: agentMsgId, from: "agente", text: body.reply }]);
     } catch {
       setError("Sem conexão com o servidor. Confira sua internet e tente de novo.");
     } finally {
@@ -86,7 +105,7 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
             <AlertTriangle aria-hidden="true" />
             <div className="flex-1">
               <p>{error}</p>
-              <Button variant="outline" size="sm" className="mt-2" disabled={busy} onClick={() => send(lastMessage.current)}>
+              <Button type="button" variant="outline" size="sm" className="mt-2" disabled={busy} onClick={() => { void send(lastMessage.current); }}>
                 Tentar de novo
               </Button>
             </div>
@@ -97,7 +116,7 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
           <Alert className="w-full items-center text-left">
             <div className="flex-1">Encontrei {turn.options.length} {turn.options.length === 1 ? "opção" : "opções"} para você.</div>
             {/* A tela de opções é o próximo PR. */}
-            <Button size="sm" disabled>Ver opções (em breve)</Button>
+            <Button type="button" size="sm" disabled>Ver opções (em breve)</Button>
           </Alert>
         )}
 
@@ -105,7 +124,7 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
           <ul className="flex flex-wrap justify-center gap-2" aria-label="Sugestões">
             {SUGGESTIONS.map((s) => (
               <li key={s}>
-                <Button variant="outline" size="sm" disabled={busy} onClick={() => send(s)}>{s}</Button>
+                <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => { void send(s); }}>{s}</Button>
               </li>
             ))}
           </ul>
@@ -115,15 +134,15 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
       <footer className="border-t border-border bg-background px-3 pb-3 pt-2">
         {msgs.length > 0 && (
           <>
-            <Button variant="ghost" size="sm" aria-expanded={showLog} aria-controls="conversa" onClick={() => setShowLog((v) => !v)}>
+            <Button type="button" variant="ghost" size="sm" aria-expanded={showLog} aria-controls="conversa" onClick={() => setShowLog((v) => !v)}>
               {showLog ? <ChevronDown /> : <ChevronUp />}
               {showLog ? "Esconder conversa" : `Ver conversa (${msgs.length})`}
             </Button>
             {showLog && (
-              <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-48 gap-2 overflow-y-auto">
-                {msgs.map((m, i) => (
+              <ul id="conversa" aria-label="Conversa" aria-live="polite" className="mb-2 grid max-h-48 gap-2 overflow-y-auto">
+                {msgs.map((m) => (
                   <li
-                    key={i}
+                    key={m.id}
                     className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${m.from === "voce" ? "justify-self-end bg-accent text-accent-foreground" : "justify-self-start bg-secondary text-secondary-foreground"}`}
                   >
                     <span className="sr-only">{m.from === "voce" ? "Você: " : "FoodPilot: "}</span>
