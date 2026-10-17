@@ -28,3 +28,8 @@ Equipe revisa auditoria, valida operações MCP e define recorte P0/responsávei
 ## Verificações desta revisão
 Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferidos. Lint e quatro testes passaram. Typecheck recebeu geração prévia dos tipos do Next após falha em checkout limpo; resultado final e build na auditoria. npm audit aponta 5 entradas high na cadeia ESLint, pendentes de revisão de compatibilidade.
 - Resultado final: typecheck, lint, quatro testes e build passaram. Nenhuma validação externa MCP/checkout decorre desses resultados.
+
+## Plano operacional publicado — 17/10/2026
+- PR #5 integrado na main em 88e72d1. Novo documento fornecido pelo usuário: docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md, preservado integralmente.
+- O plano define 24 tarefas: Kenzo integração/contratos/guardrails/ranking/revisão e merge; Terossi voz/LLM; Malveste UI/UX; Hyago MCP/OAuth/dados. Supera o status histórico de atribuições pendentes; tarefas não estão executadas por sua publicação.
+- Esta atualização somente publica o Markdown e seu link de entrada. Não altera Trello, runtime ou regras humanas; não executa as tarefas do plano.
