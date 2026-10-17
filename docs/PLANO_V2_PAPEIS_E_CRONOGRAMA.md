@@ -2,6 +2,8 @@
 
 > **Proposta de reorganização** (17/10/2026, ~19h45) para análise do time. Complementa `docs/DIRECAO_V2_OCASIAO.md` e **substitui, se aceita, a distribuição de donos** do `docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md`. Não altera nada sem o aceite do Kenzo. Marcações: **[DECIDIR]** precisa de resposta do time; **[VERIFICAR]** depende do MCP real. Prazo: **domingo 12h30** (~17 horas).
 
+> **Atualização (20h40):** após o PR #7 do Kenzo, ver [REVISAO_PR7_E_BACKLOG_V2.md](REVISAO_PR7_E_BACKLOG_V2.md): contratos e proposta local já existem; **o bloqueio da demo é a aprovação inalcançável (K-1) e a falta de botão de aprovação (M-1)**; backlog reduzido de 34 para 22 tasks.
+
 ## 1. As quatro funções
 
 | Pessoa | Função | Em uma frase |

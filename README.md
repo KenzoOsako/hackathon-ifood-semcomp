@@ -2,7 +2,7 @@
 
 Copiloto de compras por **voz** que resolve uma **ocasião**, e não só uma refeição. Exemplo: *"Hoje é aniversário de um amigo, vamos comer pizza em casa e ver um filme"* → pizza (restaurante), pipoca (mercado) e presente (shopping), cada um com até três opções e o motivo de cada escolha, em uma proposta única. A compra final ocorre no iFood.
 
-> **Status da direção:** a **Direção V2** (ocasião, contexto por voz, dados para o iFood) está **proposta e aguarda o aceite do integrador** (D-007 e D-008 em [`contexto/decisoes.md`](contexto/decisoes.md)). Onde houver conflito, valem a [proposta canônica](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e o [plano anterior](docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) até esse aceite. Mapa completo dos documentos: [`docs/INDEX.md`](docs/INDEX.md).
+> **Status da direção:** a **Direção V2** (ocasião, contexto por voz, dados para o iFood) está **proposta e aguarda o aceite do integrador** (D-011 e D-012 em [`contexto/decisoes.md`](contexto/decisoes.md)). Onde houver conflito, valem a [proposta canônica](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e o [plano anterior](docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) até esse aceite. Mapa completo dos documentos: [`docs/INDEX.md`](docs/INDEX.md).
 
 ## Leitura inicial (nesta ordem)
 1. [Direção V2: ocasião, contexto por voz e dados para o iFood](docs/DIRECAO_V2_OCASIAO.md)
@@ -46,6 +46,8 @@ src/
 
 Cada pasta nova tem um `README.md` com dono, entradas e saídas e regras.
 
+Sequência, dependências e critérios das tarefas de Kenzo: [Plano de implementação de Kenzo](docs/PLANO_IMPLEMENTACAO_KENZO.md).
+
 ## Execução local
 Requer Node.js e npm compatíveis com o lockfile. No PowerShell:
 ```powershell
@@ -53,7 +55,9 @@ npm ci
 Copy-Item .env.example .env
 npm run dev
 ```
-Abra http://localhost:3000 no Chrome. O padrão é **MCP simulado**. Não há OAuth, LLM, voz ou persistência real implementados. O fluxo de pedido/status simulado ainda corresponde ao esqueleto antigo e diverge do checkout externo aprovado. Não conectar esse fluxo diretamente a operações reais.
+Abra http://localhost:3000 no Chrome. O padrão é **MCP simulado**. Não há OAuth, LLM, voz ou persistência real implementados. O fluxo textual cria apenas proposta local: não cria carrinho remoto, não envia pedido e não consulta tracking. Taxas ausentes no contrato legado deixam o total pendente e impedem aprovação. Compra final no iFood; integração real permanece bloqueada.
+
+Sessão de visitante emitida pelo servidor em cookie HttpOnly (30 minutos absolutos); proposta local válida por cinco minutos. Reinício do processo exige nova conversa. Detalhes e payloads para integrar UI/MCP em [Integração da proposta local](docs/INTEGRACAO_PROPOSTA_LOCAL.md).
 
 ```powershell
 npm run typecheck

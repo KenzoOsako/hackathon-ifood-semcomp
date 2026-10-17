@@ -1,6 +1,6 @@
 # Frentes da Direção V2 (proposta)
 
-Substitui, se aceita (D-008), o mapa de "frentes candidatas". Detalhes: [plano V2](PLANO_V2_PAPEIS_E_CRONOGRAMA.md). Direção: [DIRECAO_V2_OCASIAO.md](DIRECAO_V2_OCASIAO.md).
+Substitui, se aceita (D-012), o mapa de "frentes candidatas". Detalhes: [plano V2](PLANO_V2_PAPEIS_E_CRONOGRAMA.md). Direção: [DIRECAO_V2_OCASIAO.md](DIRECAO_V2_OCASIAO.md).
 
 ## Mapa: pastas, dono e fronteiras
 

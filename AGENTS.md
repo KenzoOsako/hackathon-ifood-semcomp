@@ -8,7 +8,7 @@ Tema: **vendendo com agentes** (detalhado às 14:00 de 17/10/2026). Time de 4, 1
 3. Responda em português (Brasil), direto ao ponto.
 
 ## Papéis
-**Direção V2 (proposta, aguarda aceite do integrador; ver D-007 e D-008):** quatro funções.
+**Direção V2 (proposta, aguarda aceite do integrador; ver D-011 e D-012):** quatro funções.
 - **Felipe: Conversação e Voz** (`src/voice/`). Voz, interrupção, latência, falhas, sinais de pressa.
 - **Hyago: System Prompt e Fluxo de Agentes** (`src/agent/`, `src/prompts/`, `src/evals/`). Prompts, fluxos, extração de contexto, profundidade adaptativa (L0/L1/L2).
 - **Kenzo: Request e Dados** (`src/mcp/`, `src/reco/`, `src/domain/`, `src/data/`, `src/contracts/`). MCP real, OAuth, ranking, plano versionado, eventos. Integrador.

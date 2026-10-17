@@ -134,7 +134,7 @@ Um evento por fato, sem dados pessoais, com identificador anônimo de sessão.
 
 ## 9. Riscos e pontos abertos
 1. **Catálogo fora de restaurante [VERIFICAR]:** os mentores avisaram que algumas verticais são pequenas. Plano B: restaurante + mercado reais, shopping rotulado como simulado.
-2. **Mudança de escopo (decisões 1 e 19):** exige D-007 aprovado pelo Kenzo e registro na proposta.
+2. **Mudança de escopo (decisões 1 e 19):** exige D-011 aprovado pelo Kenzo e registro na proposta.
 3. **Escopo grande para ~17 horas.** Por isso P0 é só 2 verticais e a camada de dados é simples; painel e voz vêm depois.
 4. **Valor para o iFood é hipótese.** Não usar números inventados no pitch.
 5. **Conversa cansativa:** testar com pessoas reais; se o usuário disser que perguntamos demais, reduzir o teto.
@@ -151,6 +151,6 @@ Um evento por fato, sem dados pessoais, com identificador anônimo de sessão.
 | **11h–12h30** | Pitch final, evidências, submissão |
 
 ## 11. Perguntas para o time decidir agora
-1. **Aprovam D-007** (escopo multi-vertical e novo diferencial)? Dono da decisão: Kenzo.
+1. **Aprovam D-011** (escopo multi-vertical e novo diferencial)? Dono da decisão: Kenzo.
 2. O corte de 2 verticais no P0 está bom?
 3. Quem valida o resultado da sondagem e comunica o gate até **21h**? (Hyago, por padrão.)
