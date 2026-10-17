@@ -88,8 +88,14 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - **IDs de decisão:** as decisões da V2 foram renumeradas para **D-011 e D-012** (D-007 a D-010 são do Kenzo).
 - Nenhum card do Trello foi alterado; a poda é proposta.
 
+## Plano do agente (frente Hyago) — 17/10/2026, ~21h
+- `docs/BRIEFING_AGENTE.md`: arquitetura do agente na V2 (orquestrador guiado por código, saída estruturada, estado da sessão, funções de domínio, `/api/converse`, L0/L1/L2).
+- `docs/PLANO_AGENTE.md`: marcos M0–M4 alinhados aos gates G2–G5, divisão em dupla (Hyago + parceiro a definir), definição de pronto do core.
+- D-013 (proposta): LangChain.js isolado em `src/agent/llm/`, sem LangGraph. Nenhum código de runtime alterado; dependências ainda não instaladas.
+- Pendente: aceite de D-011/D-012/D-013, parceiro da dupla, provedor/chave de LLM; depende de K-1, K-3, K-5 (Kenzo) e M-1 (Malveste).
+
 ## UI: setup do design system — 17/10/2026
-- Branch `feat/malveste-ui-setup`: Tailwind v4, tokens em `globals.css`, componentes base em `src/ui/components`, lucide-react e motion instalados (D-013). Nenhuma tela mudou; `page.tsx` e rotas intactos.
+- Branch `feat/malveste-ui-setup`: Tailwind v4, tokens em `globals.css`, componentes base em `src/ui/components`, lucide-react e motion instalados (D-014). Nenhuma tela mudou; `page.tsx` e rotas intactos.
 - Validação: typecheck, lint, testes e build passaram; classes Tailwind e tokens confirmados no CSS servido pelo dev. Verificação visual em 375px e desktop fica para o PR da home, que tem tela nova.
 - Pendente: aviso ao integrador sobre `package.json`/lockfile; dark mode fora do escopo; próximo PR `feat/malveste-ui-home`.
 
@@ -102,3 +108,4 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Branch `feat/malveste-ui-agente` (empilhada sobre `feat/malveste-ui-home`). `/agente` é a tela do assistente: "Qual a sua vibe de hoje?", orbe com cinco estados (idle, listening, thinking, speaking, error) sempre com texto de status, conversa por texto contra `POST /api/chat` (cookie de sessão, sem `sessionId`), transcrição recolhível, erro com "Tentar de novo" e sugestões fixas de atalho.
 - Microfone desabilitado ("voz em breve"): o encaixe é `voiceState` e `onMicClick` em `AgentScreen`, para a frente de voz ligar. Ao receber `options` mostra só um aviso com botão desabilitado; a tela de opções é o próximo PR.
 - Validação: typecheck, lint, 49 testes e build passaram. Fluxo conferido em 375px via Chrome DevTools Protocol (bolinha → agente → sugestão → resposta do mock → transcrição): console limpo, sem rolagem horizontal. Falta teste com leitor de tela e verificação dos estados listening/speaking, que dependem da voz.
+
