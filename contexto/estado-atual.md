@@ -87,3 +87,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - **Bloqueios para a demo:** aprovação inalcançável (toda proposta nasce com taxas e total não confirmados) e UI sem botão de aprovação. Detalhes e backlog enxuto (34 → 22 tasks) em `docs/REVISAO_PR7_E_BACKLOG_V2.md`.
 - **IDs de decisão:** as decisões da V2 foram renumeradas para **D-011 e D-012** (D-007 a D-010 são do Kenzo).
 - Nenhum card do Trello foi alterado; a poda é proposta.
+
+## UI: setup do design system — 17/10/2026
+- Branch `feat/malveste-ui-setup`: Tailwind v4, tokens em `globals.css`, componentes base em `src/ui/components`, lucide-react e motion instalados (D-013). Nenhuma tela mudou; `page.tsx` e rotas intactos.
+- Validação: typecheck, lint, testes e build passaram; classes Tailwind e tokens confirmados no CSS servido pelo dev. Verificação visual em 375px e desktop fica para o PR da home, que tem tela nova.
+- Pendente: aviso ao integrador sobre `package.json`/lockfile; dark mode fora do escopo; próximo PR `feat/malveste-ui-home`.

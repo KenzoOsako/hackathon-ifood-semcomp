@@ -18,3 +18,8 @@ _(nenhum ainda)_
 - Sintoma: build rejeitou runtime=nodejs explícito nas rotas; smoke HTTP por 127.0.0.1 recebeu 403 enquanto localhost passava.
 - Causa: Cache Components usa runtime Node padrão e não aceita a configuração por segmento; Next normalizou req.url internamente para localhost.
 - Correção: remover runtime explícito conforme docs instaladas; comparar Origin com protocolo e Host validado recebido, ignorando X-Forwarded-Host do cliente. Testes cobrem alias legítimo e spoof de origem. Conferir endpoint servido além do teste de handler isolado.
+
+## E-004 — `next dev` reescreve o AGENTS.md (17/10/2026)
+- Sintoma: após rodar `npm run dev`, `git status` mostra AGENTS.md modificado com um bloco `nextjs-agent-rules`.
+- Causa: o Next 16 gera esse bloco sozinho no AGENTS.md ao subir o servidor de desenvolvimento.
+- Correção: não commitar a mudança (AGENTS.md é do integrador); desfazer com `git checkout AGENTS.md` antes de `git add`. Conferir `git status` depois de cada `npm run dev`.

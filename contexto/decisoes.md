@@ -58,3 +58,9 @@
 - **Funções:** Felipe = Conversação e Voz · Hyago = System Prompt e Fluxo de Agentes · Kenzo = Request e Dados · Malveste = Interface e Front-End.
 - **Lacunas redistribuídas:** pitch e Entregável 01 (Felipe), Entregável 02 (Hyago), Entregáveis 05 e 06 (Kenzo), Entregáveis 03 e 04 (Malveste), integração/QA/deploy (Kenzo, com testes de cada dono).
 - **Substitui, se aceita,** a distribuição de donos do plano anterior. Detalhes: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`.
+
+## D-013 — Stack de design da UI: Tailwind v4, shadcn/ui, lucide e Motion (17/10/2026)
+- **Contexto:** frente de interface (Malveste) precisa de visual consistente iFood sem escrever CSS à mão em cada tela; a página atual usa estilos inline.
+- **Decisão:** Tailwind CSS v4 (`@tailwindcss/postcss`, conforme docs do Next instaladas), componentes no estilo shadcn/ui copiados para `src/ui/components` (button, card, badge, alert, input; sem CLI nem pacote `radix-ui` completo, só `@radix-ui/react-slot`), `lucide-react` para ícones e `motion` para transições pontuais. Auxiliares: `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`.
+- **Tokens:** em `src/app/globals.css`. Só o tema claro é entregue e verificado; dark mode fica fora (decisão do dono da UI). O vermelho de marca `#EA1D2C` dá 4,46:1 com branco, abaixo do AA; texto sobre vermelho usa `--primary` `#D91A29` (5,08:1) e `--brand` fica para áreas grandes. Selo `simulated` obrigatório em dado não real.
+- **Consequência:** `package.json`, lockfile e `postcss.config.mjs` mudam; coordenar com o integrador para não haver edição concorrente do lockfile. Motion só entra em tela no PR do fluxo.

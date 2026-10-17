@@ -1,49 +1,90 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Tokens da UI. Só o tema claro é verificado; o escuro não é entregue (D-013).
+   Pares texto/fundo conferidos para contraste AA (>= 4,5:1). O #EA1D2C puro dá 4,46:1 com branco,
+   então texto sobre vermelho usa --primary (#D91A29, 5,08:1) e --brand fica para áreas grandes. */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #3f3e3e;
+  --card: #ffffff;
+  --card-foreground: #3f3e3e;
+  --muted: #f7f7f7;
+  --muted-foreground: #6b6b6b;
+  --border: #e6e6e6;
+  --input: #d4d4d4;
+  --ring: #d91a29;
+  --primary: #d91a29;
+  --primary-foreground: #ffffff;
+  --brand: #ea1d2c;
+  --secondary: #f2f2f2;
+  --secondary-foreground: #3f3e3e;
+  --accent: #fdecee;
+  --accent-foreground: #c21525;
+  --success: #e8f6ec;
+  --success-foreground: #1e6b35;
+  --warning: #fff4d6;
+  --warning-foreground: #8a4b00;
+  --destructive: #c21525;
+  --simulated: #fff4d6;
+  --simulated-foreground: #8a4b00;
+  --radius: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-simulated: var(--simulated);
+  --color-simulated-foreground: var(--simulated-foreground);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 8px);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Foco visível para navegação por teclado em qualquer controle. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
