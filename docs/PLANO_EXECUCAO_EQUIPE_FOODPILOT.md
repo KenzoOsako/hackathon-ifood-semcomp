@@ -1,4 +1,4 @@
-# FoodPilot — Plano de execução da equipe
+# Guide — Plano de execução da equipe
 
 > Plano operacional para **quatro desenvolvedores: Kenzo, Terossi, Malveste e Hyago**. Preparado em 17/10/2026, para entrega até **18/10/2026 às 12h30, America/Sao_Paulo (UTC−03:00)**. Destino sugerido: `docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md`.
 >
@@ -6,7 +6,7 @@
 
 ## 1. Objetivo, autoridade e ponto de partida
 
-Entregar um protótipo Next.js que transforme uma intenção de refeição em até três recomendações explicadas e uma proposta de carrinho revisável, usando contexto real autorizado do MCP iFood. A compra é finalizada no iFood. **Não existe compra automatizada no FoodPilot.**
+Entregar um protótipo Next.js que transforme uma intenção de refeição em até três recomendações explicadas e uma proposta de carrinho revisável, usando contexto real autorizado do MCP iFood. A compra é finalizada no iFood. **Não existe compra automatizada no Guide.**
 
 Fontes de trabalho, nesta ordem de finalidade:
 
@@ -64,7 +64,7 @@ Cada dono responde pelo código, testes proporcionais, documentação de uso e e
 8. Continuar a compra no iFood: transferência apenas quando suportada e validada; senão link confirmado; senão resumo copiável. Não inventar deep link ou alegar carrinho transferido ao apenas abrir o app.
 9. Demonstrar execução local testada e buscar deploy público validado, com contingência identificada. Falha de deploy deve constar como limitação, não como AC-14 aprovado.
 
-**Não realizar operação real antes do controle aplicável:** acesso protegido exige autorização de acesso; persistência exige base/consentimento pertinente; adição remota exige também aprovação específica da proposta. OAuth não autoriza automaticamente adicionar itens. Permissão de microfone não autoriza compra. Nenhum caminho FoodPilot deve submeter pedido, pagar ou finalizar compra, mesmo após aprovação do carrinho.
+**Não realizar operação real antes do controle aplicável:** acesso protegido exige autorização de acesso; persistência exige base/consentimento pertinente; adição remota exige também aprovação específica da proposta. OAuth não autoriza automaticamente adicionar itens. Permissão de microfone não autoriza compra. Nenhum caminho Guide deve submeter pedido, pagar ou finalizar compra, mesmo após aprovação do carrinho.
 
 ### 3.2 P1 — prioridade paralela de voz e ampliação
 
@@ -78,7 +78,7 @@ P1 não significa dispensável nem cancelado: voz e banco têm donos e trabalho 
 
 ### 3.3 P2 e fora do hackathon
 
-Tracking após checkout externo somente com operação e vínculo de pedido comprovados; múltiplos estabelecimentos apenas se autorizados e suportados, com custos claros; interrupção avançada de fala; experimentos prolongados. FoodPilot Market e integração nativa oficial são roadmap. Não prometer parceria, catálogo público anônimo ou capacidade transacional sem evidência.
+Tracking após checkout externo somente com operação e vínculo de pedido comprovados; múltiplos estabelecimentos apenas se autorizados e suportados, com custos claros; interrupção avançada de fala; experimentos prolongados. Guide Market e integração nativa oficial são roadmap. Não prometer parceria, catálogo público anônimo ou capacidade transacional sem evidência.
 
 ## 4. Ownership de arquivos e prevenção de conflitos
 
@@ -200,7 +200,7 @@ conversa → contexto autorizado → recomendações → proposta local vN
 - Composição desconhecida não é “segura para alérgicos”. Não recomendar como compatível nem substituir ingrediente por inferência; explicar incerteza e orientar confirmação com restaurante.
 - Histórico recente não prova “nunca pediu”; frequência não prova favorito declarado. Explicações devem usar o grau de evidência correto.
 - Nunca fixar `addr-1`. Zero endereços: pedir caminho suportado; um: informar o usado; vários: pedir confirmação; alteração/criação somente se suportada, autorizada e aprovada.
-- Proibir envio de pedido/pagamento pelo FoodPilot em todas as rotas, ferramentas expostas ao LLM e testes. Código legado de `submitOrder` não pode ficar alcançável no fluxo real.
+- Proibir envio de pedido/pagamento pelo Guide em todas as rotas, ferramentas expostas ao LLM e testes. Código legado de `submitOrder` não pode ficar alcançável no fluxo real.
 
 ## 6. Matriz de tarefas executáveis
 
@@ -306,7 +306,7 @@ Os IDs AC abaixo são os da proposta canônica. Evidência mínima por execuçã
 | AC-07 | Refinar restrição flexível | Terossi + Kenzo | Não relaxar automaticamente limite rígido/alergia |
 | AC-08 | Selecionar, editar e cancelar sem aprovar | Kenzo + Hyago | Contador/spy de mutações reais permanece zero |
 | AC-09 | Aprovação antiga, expirada, replay e mudança material | Kenzo | Bloqueio no servidor; nova revisão/consentimento; sem dupla escrita |
-| AC-10 | Continuidade externa | Hyago + Malveste | Caminho comprovado ou resumo manual; nenhuma finalização FoodPilot |
+| AC-10 | Continuidade externa | Hyago + Malveste | Caminho comprovado ou resumo manual; nenhuma finalização Guide |
 | AC-11 | Zero, um, vários e mudança de endereço | Hyago + Malveste | Sem endereço fixo ou seleção silenciosa ambígua |
 | AC-12 | Microfone negado, voz indisponível e falha de provedor | Terossi + Malveste | Texto e controle da proposta preservados; Chrome testado para Web Speech |
 | AC-13 | Memória habilitada: dois usuários, consentimento e CRUD | Hyago + Malveste | RLS impede acesso cruzado; excluir/desabilitar funciona; se não ativa, registrar pendência |
@@ -349,7 +349,7 @@ Os IDs AC abaixo são os da proposta canônica. Evidência mínima por execuçã
 
 ### 9.4 Testes com pessoas e definição de pronto
 
-Malveste conduz sessões curtas autorizadas, com cenário equivalente no FoodPilot e na navegação tradicional quando viável. Registrar tempo até decisão/proposta, interações, relevância percebida, satisfação, erros/ajuda e método. Separar latência do provedor da interação. Alternar ordem quando possível e registrar amostra pequena/limitações. Não efetuar compra para medir decisão, inventar participantes ou transformar dez observações MCP em dez testes de usuário.
+Malveste conduz sessões curtas autorizadas, com cenário equivalente no Guide e na navegação tradicional quando viável. Registrar tempo até decisão/proposta, interações, relevância percebida, satisfação, erros/ajuda e método. Separar latência do provedor da interação. Alternar ordem quando possível e registrar amostra pequena/limitações. Não efetuar compra para medir decisão, inventar participantes ou transformar dez observações MCP em dez testes de usuário.
 
 P0 só recebe “pronto” com fluxo textual íntegro, influência MCP real demonstrada, guardrails aprovados, continuidade honesta e evidências dos AC aplicáveis. Persistência e voz pendentes são declaradas separadamente. Falta de AC-03 significa **P0 real incompleto**, mesmo com demo mock convincente. Falta de AC-14 significa entrega pública pendente. Produto de hackathon não equivale a produção.
 
@@ -472,7 +472,7 @@ Fallback de compra é independente: transferência comprovada → link comprovad
 | Tempo | Conteúdo | Condução proposta |
 |---|---|---|
 | 0:00–0:40 | Problema: indecisão, fricção e contexto perdido | Kenzo |
-| 0:40–1:10 | FoodPilot, público amplo, gratuito e valor esperado | Kenzo; benefícios como hipótese |
+| 0:40–1:10 | Guide, público amplo, gratuito e valor esperado | Kenzo; benefícios como hipótese |
 | 1:10–3:10 | Demo: texto/voz, contexto real, até três opções, refinamento, proposta e confirmação | Malveste opera; Kenzo narra; Terossi/Hyago apoiam |
 | 3:10–3:50 | MCP e guardrails; compra final no iFood | Kenzo; Hyago disponível |
 | 3:50–4:30 | O que foi validado e limites reais; negócio | Kenzo, somente métricas coletadas |
@@ -506,7 +506,7 @@ Esta tabela é um índice operacional. A redação integral e os requisitos apro
 | D01 | Restaurantes/refeições; Market no roadmap | Kenzo / FP-18 |
 | D02 | Público amplo; persona não restringe acesso | Malveste / FP-20 |
 | D03 | Voz primária na visão; texto sempre; núcleo textual | Terossi / FP-10; Malveste FP-07 |
-| D04 | Proposta no FoodPilot, compra no iFood | Kenzo / FP-06; Hyago FP-11 |
+| D04 | Proposta no Guide, compra no iFood | Kenzo / FP-06; Hyago FP-11 |
 | D05 | Personalização autorizada, memória e feedback | Hyago / FP-04/12; Kenzo FP-05 |
 | D06 | Next.js; nativo futuro | Malveste / FP-07; Kenzo FP-17 |
 | D07 | Gratuito; benefício comercial hipotético | Kenzo / FP-18/24 |

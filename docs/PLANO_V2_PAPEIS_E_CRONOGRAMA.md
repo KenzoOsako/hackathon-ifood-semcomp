@@ -1,4 +1,4 @@
-# FoodPilot V2 — Plano de papéis, interfaces e cronograma
+# Guide V2 — Plano de papéis, interfaces e cronograma
 
 > **Proposta de reorganização** (17/10/2026, ~19h45) para análise do time. Complementa `docs/DIRECAO_V2_OCASIAO.md` e **substitui, se aceita, a distribuição de donos** do `docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md`. Não altera nada sem o aceite do Kenzo. Marcações: **[DECIDIR]** precisa de resposta do time; **[VERIFICAR]** depende do MCP real. Prazo: **domingo 12h30** (~17 horas).
 
@@ -8,7 +8,7 @@
 
 | Pessoa | Função | Em uma frase |
 |---|---|---|
-| **Felipe** | Conversação e Voz | Como o usuário **fala e ouve** o FoodPilot, com baixa latência e sem atrito |
+| **Felipe** | Conversação e Voz | Como o usuário **fala e ouve** o Guide, com baixa latência e sem atrito |
 | **Hyago** | System Prompt e Fluxo de Agentes | Como o agente **pensa**: prompts, fluxos, extração de contexto e profundidade adaptativa |
 | **Kenzo** | Request e Dados | Tudo que **entra e sai** (MCP, OAuth, dados, ranking, eventos) e as regras críticas |
 | **Malveste** | Interface e Front-End | Como o usuário **vê e controla** (plano, aprovação, estados, painel) |
@@ -49,7 +49,7 @@
 - **Requests ao iFood:** cliente MCP real, **OAuth + PKCE**, tokens por usuário, refresh sem corrida, erros por domínio, adaptador por vertical.
 - **Sondagem por vertical** (gate de escopo) e normalização dos dados do MCP.
 - **Ranking determinístico** por necessidade e vertical, filtros rígidos, totais, incerteza e `reasons[]`.
-- **Contratos compartilhados** (inclui Ocasião, Necessidade, Plano) e **proposta versionada** com aprovação que invalida por mudança material. **Nenhuma finalização de compra pelo FoodPilot.**
+- **Contratos compartilhados** (inclui Ocasião, Necessidade, Plano) e **proposta versionada** com aprovação que invalida por mudança material. **Nenhuma finalização de compra pelo Guide.**
 - **Dados e eventos:** armazenamento (Supabase com RLS se ficar pronto, senão local), **eventos de feedback**, consentimento, apagar dados, **agregados** que o painel lê.
 - **Continuidade no iFood:** deeplink validado ou resumo copiável.
 - **Segurança:** segredos, histórico de commits, callbacks por ambiente.
@@ -130,7 +130,7 @@ Felipe (voz) ──eventos de conversa──▶ Hyago (agente) ──funções d
 4. **Domínio** busca por vertical (restaurante, mercado, shopping se o gate permitir), filtra e ranqueia, devolve opções com motivos reais.
 5. **Agente** verbaliza o plano; **UI** mostra os 3 blocos.
 6. Usuário ajusta ("a pizza mais barata"); o domínio recalcula e a versão do plano muda.
-7. Usuário aprova o plano; backend revalida; **continuidade no iFood** (deeplink ou resumo). **Nenhum pedido é finalizado pelo FoodPilot.**
+7. Usuário aprova o plano; backend revalida; **continuidade no iFood** (deeplink ou resumo). **Nenhum pedido é finalizado pelo Guide.**
 8. **Eventos** são gravados (opções, reações, seleção, necessidades não atendidas, fricção).
 9. Caso rápido (L0): "pizza calabresa grande, pede logo" → proposta em um turno.
 
@@ -161,7 +161,7 @@ Cada entrega só conta com: tipos e testes passando (`typecheck`, `lint`, `test`
 |---|---|
 | D-1 | A ocasião vira ≥ 2 necessidades em verticais diferentes, com 3 opções e motivos reais cada |
 | D-2 | O usuário muda algo por voz, e o plano muda de versão e invalida a aprovação anterior |
-| D-3 | **Nenhum** pedido é submetido pelo FoodPilot; a continuidade é no iFood |
+| D-3 | **Nenhum** pedido é submetido pelo Guide; a continuidade é no iFood |
 | D-4 | Caso rápido (L0) chega à proposta em um turno; caso vago respeita o teto de 3 perguntas |
 | D-5 | Interrupção por voz e queda para texto funcionam |
 | D-6 | Eventos de feedback são gravados e o painel os mostra, rotulados |

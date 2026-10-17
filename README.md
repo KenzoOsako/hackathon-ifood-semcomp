@@ -1,4 +1,4 @@
-# FoodPilot — Hackathon iFood SEMCOMP 29
+# Guide — Hackathon iFood SEMCOMP 29
 
 Copiloto de compras por **voz** que resolve uma **ocasião**, e não só uma refeição. Exemplo: *"Hoje é aniversário de um amigo, vamos comer pizza em casa e ver um filme"* → pizza (restaurante), pipoca (mercado) e presente (shopping), cada um com até três opções e o motivo de cada escolha, em uma proposta única. A compra final ocorre no iFood.
 

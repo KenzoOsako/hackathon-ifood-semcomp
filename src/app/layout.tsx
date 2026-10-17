@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FoodPilot",
-  description: "Copiloto de voz para pedir no iFood",
+  title: "Guide",
+  description: "Guide: copiloto de voz que resolve ocasiões no iFood (refeição, mercado e presentes)",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

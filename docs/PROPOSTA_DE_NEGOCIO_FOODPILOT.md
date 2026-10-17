@@ -1,4 +1,4 @@
-# FoodPilot — Proposta de Negócio Final
+# Guide — Proposta de Negócio Final
 
 > **Documento canônico de produto e negócio para o Hackathon iFood × SEMCOMP 29.**
 > “Final” significa que a etapa de decisões de produto foi encerrada; não significa que a solução foi implementada, homologada ou validada comercialmente.
@@ -74,17 +74,17 @@ Nenhuma métrica de conversão, satisfação, latência, qualidade ou sucesso co
 
 ## 2. Sumário executivo
 
-**[DECISÃO APROVADA]** O FoodPilot é um copiloto de compras por conversação, com voz como interação primária e texto sempre disponível. Seu MVP ajuda consumidores do iFood a decidir o que comer, comparar até três recomendações iniciais contextualizadas e aprovar uma proposta de carrinho. A compra final acontece no iFood.
+**[DECISÃO APROVADA]** O Guide é um copiloto de compras por conversação, com voz como interação primária e texto sempre disponível. Seu MVP ajuda consumidores do iFood a decidir o que comer, comparar até três recomendações iniciais contextualizadas e aprovar uma proposta de carrinho. A compra final acontece no iFood.
 
 O produto se concentra em três problemas: indecisão diante das opções, fricção entre intenção e escolha e personalização insuficiente para o contexto do momento. A experiência transforma pedidos como “quero jantar algo diferente, rápido e dentro do meu orçamento” em opções explicadas, com refinamento e controle pelo consumidor.
 
 **[DECISÃO APROVADA]** O protótipo será um site Next.js. A integração real com o MCP do iFood é prioritária e precisa ser validada por operação. O uso de dados pessoais depende da autorização adequada; visitantes não recebem contexto privado da conta. Preferências e feedback podem enriquecer recomendações, mediante controles de memória e privacidade.
 
-**[HIPÓTESE]** Ao reduzir esforço de decisão e facilitar a descoberta relevante, o FoodPilot pode contribuir para conversão, retenção, satisfação e recompra na plataforma. A proposta prevê uso gratuito ao consumidor. Esses efeitos são hipóteses de valor, não resultados observados nem compromissos do iFood.
+**[HIPÓTESE]** Ao reduzir esforço de decisão e facilitar a descoberta relevante, o Guide pode contribuir para conversão, retenção, satisfação e recompra na plataforma. A proposta prevê uso gratuito ao consumidor. Esses efeitos são hipóteses de valor, não resultados observados nem compromissos do iFood.
 
 **[DECISÃO APROVADA]** O sucesso mínimo no hackathon é **uma jornada demonstrável por voz OU texto**, com autorização, contexto MCP real, recomendação e proposta de carrinho. Voz permanece a direção principal do produto, mas a demonstração pode usar texto se isso preservar uma jornada íntegra e verificável. A existência de carrinho real transferível ou acompanhamento posterior depende de capacidades comprovadas do MCP.
 
-**[FUTURO/ROADMAP]** Uma integração nativa no aplicativo oficial iFood e a expansão FoodPilot Market são possibilidades futuras. Não representam parceria, aprovação ou compromisso de implementação.
+**[FUTURO/ROADMAP]** Uma integração nativa no aplicativo oficial iFood e a expansão Guide Market são possibilidades futuras. Não representam parceria, aprovação ou compromisso de implementação.
 
 ## 3. Contexto do hackathon e oportunidade
 
@@ -150,13 +150,13 @@ O diferencial pretendido é a continuidade entre intenção, contexto autorizado
 
 O MVP atende restaurantes e refeições. Pode recomendar pratos ou estabelecimentos conforme a intenção: uma pessoa que pede “uma pizza para dividir” precisa de uma proposta de refeição; quem pede “um restaurante japonês perto daqui” pode começar por estabelecimentos. A resposta deve manter coerência entre itens, disponibilidade, endereço e estabelecimento.
 
-O FoodPilot recomenda e prepara a proposta de carrinho; checkout e conclusão da compra ocorrem no iFood. Proposta local, carrinho remoto e pedido confirmado são estados diferentes e precisam de rótulos diferentes.
+O Guide recomenda e prepara a proposta de carrinho; checkout e conclusão da compra ocorrem no iFood. Proposta local, carrinho remoto e pedido confirmado são estados diferentes e precisam de rótulos diferentes.
 
 Login é opcional para iniciar a experiência. Visitantes podem usar voz e texto com dados efêmeros de sessão. A consulta a catálogo público depende de acesso permitido; a existência de modo visitante não prova disponibilidade de catálogo sem autorização. Sem fonte permitida, explicar a limitação e oferecer orientação ou demonstração mock sinalizada, sem apresentar dados inventados como reais.
 
 ### 6.2 Fora do núcleo inicial
 
-**[FUTURO/ROADMAP]** FoodPilot Market inclui comparar mercados, interpretar lista de compras e montar cesta. Supermercado não integra o MVP de refeições. Integração nativa no app, notificações externas, automação mais ampla e interrupção avançada de fala podem ser avaliadas posteriormente.
+**[FUTURO/ROADMAP]** Guide Market inclui comparar mercados, interpretar lista de compras e montar cesta. Supermercado não integra o MVP de refeições. Integração nativa no app, notificações externas, automação mais ampla e interrupção avançada de fala podem ser avaliadas posteriormente.
 
 **[A VALIDAR]** Tracking de pedidos, transferência de carrinho, múltiplos estabelecimentos, criação/alteração de endereços e qualquer mutação remota dependem de suporte real e autorização. A decisão de desejá-los não cria a capacidade no MCP.
 
@@ -181,27 +181,27 @@ Login é opcional para iniciar a experiência. Visitantes podem usar voz e texto
 
 > **Pessoa:** Quero jantar algo diferente, mas sem gastar muito.
 >
-> **FoodPilot:** Você tem um teto total que não posso ultrapassar ou um valor que gostaria de buscar?
+> **Guide:** Você tem um teto total que não posso ultrapassar ou um valor que gostaria de buscar?
 >
 > **Pessoa:** No máximo R$ 45, incluindo entrega e taxas. Não posso comer amendoim.
 >
-> **FoodPilot:** Vou tratar R$ 45 como teto e amendoim como restrição rígida. Se eu não conseguir confirmar composição e risco de contaminação cruzada, vou sinalizar a incerteza. Quer manter essa restrição apenas nesta sessão?
+> **Guide:** Vou tratar R$ 45 como teto e amendoim como restrição rígida. Se eu não conseguir confirmar composição e risco de contaminação cruzada, vou sinalizar a incerteza. Quer manter essa restrição apenas nesta sessão?
 >
 > **Pessoa:** Sim. Pode usar meu endereço cadastrado.
 >
-> **FoodPilot:** Para consultar seus endereços, preciso da autorização correspondente. Depois de autorizado, confirmarei o endereço usado.
+> **Guide:** Para consultar seus endereços, preciso da autorização correspondente. Depois de autorizado, confirmarei o endereço usado.
 >
 > **[A pessoa conclui a autorização; o sistema informa o único endereço retornado ou pede escolha entre vários.]**
 >
-> **FoodPilot:** Encontrei opções, mas algumas não têm informação suficiente sobre amendoim. Vou separar o que precisa de confirmação com o restaurante. Também não apresentarei um total como dentro do teto se faltarem taxas.
+> **Guide:** Encontrei opções, mas algumas não têm informação suficiente sobre amendoim. Vou separar o que precisa de confirmação com o restaurante. Também não apresentarei um total como dentro do teto se faltarem taxas.
 >
 > **Pessoa:** Compare as duas opções elegíveis e priorize a mais rápida.
 >
-> **FoodPilot:** Vou comparar ETA informado, custo conhecido e adequação às suas condições. O prazo é estimado. Veja os dados e as pendências em cada opção.
+> **Guide:** Vou comparar ETA informado, custo conhecido e adequação às suas condições. O prazo é estimado. Veja os dados e as pendências em cada opção.
 >
 > **Pessoa:** Quero a segunda.
 >
-> **FoodPilot:** Esta é a proposta com os itens e custos disponíveis. A composição ainda precisa ser confirmada com o restaurante. Se essa condição não estiver resolvida, não vou tratar a opção como segura. Após a revisão, você poderá aprovar a ação de carrinho que estiver disponível.
+> **Guide:** Esta é a proposta com os itens e custos disponíveis. A composição ainda precisa ser confirmada com o restaurante. Se essa condição não estiver resolvida, não vou tratar a opção como segura. Após a revisão, você poderá aprovar a ação de carrinho que estiver disponível.
 
 No cenário sem alergia ou com os esclarecimentos necessários resolvidos, a pessoa revisa e aprova o carrinho. Se não houver transferência comprovada, o sistema informa “vou abrir o link confirmado” ou “aqui está o resumo para montar no iFood”, conforme o fallback disponível. O texto nunca diz “pedido realizado” sem confirmação real de pedido.
 
@@ -416,7 +416,7 @@ O inventário deve classificar cada operação como: documentada; descoberta no 
 2. **Link ou redirecionamento confirmado**, se a transferência não existir ou não funcionar. Verificar destino e explicar se o carrinho não acompanha a navegação.
 3. **Resumo manual**, se nenhuma continuidade automática estiver comprovada. Exibir estabelecimento, itens, quantidades e custos conhecidos para a pessoa concluir no iFood.
 
-Links não podem ser construídos por suposição sobre rotas ou deep links. Falha no handoff não autoriza fingir pedido ou carrinho concluído. Checkout externo não garante que o FoodPilot receba confirmação de compra ou acesso ao pedido; qualquer tracking permanece condicionado.
+Links não podem ser construídos por suposição sobre rotas ou deep links. Falha no handoff não autoriza fingir pedido ou carrinho concluído. Checkout externo não garante que o Guide receba confirmação de compra ou acesso ao pedido; qualquer tracking permanece condicionado.
 
 ### 13.5 Indisponibilidade, preço e múltiplos estabelecimentos
 
@@ -496,7 +496,7 @@ Não registrar tokens OAuth, chaves de API ou segredos em logs, mensagens, exemp
 
 **[DECISÃO APROVADA]** Detectar alergias e restrições declaradas, tratá-las como filtros rígidos e pedir consentimento apropriado para persistir. Falta de menção a ingrediente não prova ausência. Composição incompleta e risco de contaminação cruzada desconhecido devem ser explicitados, com orientação para confirmar com o restaurante.
 
-Não classificar como seguro um prato cuja compatibilidade não pode ser verificada. Se não houver opções com informação suficiente, declarar a limitação; não reduzir o filtro para produzir uma recomendação. O FoodPilot não oferece diagnóstico, aconselhamento clínico ou garantia alimentar. Uma opção “vegetariana”, por exemplo, não prova compatibilidade com toda alergia.
+Não classificar como seguro um prato cuja compatibilidade não pode ser verificada. Se não houver opções com informação suficiente, declarar a limitação; não reduzir o filtro para produzir uma recomendação. O Guide não oferece diagnóstico, aconselhamento clínico ou garantia alimentar. Uma opção “vegetariana”, por exemplo, não prova compatibilidade com toda alergia.
 
 ### 16.3 Ética de recomendação
 
@@ -508,7 +508,7 @@ Histórico e comportamento autorizado não devem gerar inferências desnecessár
 
 ### 17.1 Modelo proposto
 
-**[DECISÃO APROVADA]** O FoodPilot é gratuito ao consumidor. O valor econômico esperado é indireto para o iFood, potencialmente em conversão, retenção, satisfação e recompra. Não foi aprovada cobrança por assinatura, comissão própria ou venda de dados pessoais.
+**[DECISÃO APROVADA]** O Guide é gratuito ao consumidor. O valor econômico esperado é indireto para o iFood, potencialmente em conversão, retenção, satisfação e recompra. Não foi aprovada cobrança por assinatura, comissão própria ou venda de dados pessoais.
 
 **[HIPÓTESE]** Uma experiência com menos indecisão e recomendações mais relevantes pode gerar mais sessões bem-sucedidas e recorrência. Não há neste documento estimativa comprovada de receita, ganho percentual, tamanho de mercado ou retorno financeiro.
 
@@ -535,7 +535,7 @@ Medir custo variável por sessão concluída e por tentativa, incluindo sessões
 
 Esta é uma comparação conceitual de caminhos disponíveis ao consumidor, não um levantamento atualizado de funcionalidades de concorrentes.
 
-| Alternativa | O que pode atender | Hipótese de espaço para o FoodPilot |
+| Alternativa | O que pode atender | Hipótese de espaço para o Guide |
 |---|---|---|
 | Navegação tradicional no iFood | Busca, exploração e conclusão da compra no ambiente conhecido | Reduzir esforço de formular filtros e comparar opções por conversa |
 | Escolher um favorito conhecido | Rapidez e previsibilidade | Apoiar variação contextual quando a pessoa deseja mudar |
@@ -543,7 +543,7 @@ Esta é uma comparação conceitual de caminhos disponíveis ao consumidor, não
 | Assistente conversacional genérico | Ideias e esclarecimento em linguagem natural | Conectar recomendações a contexto autorizado e contratos reais |
 | Filtros ou listas mantidos manualmente | Controle e critérios explícitos | Reduzir reconstrução de preferências com memória consentida |
 
-**[HIPÓTESE]** A combinação proposta pode ser útil; sua superioridade deve ser testada. Não afirmar que concorrentes não possuem voz, personalização, carrinho ou recursos específicos sem pesquisa contemporânea. O FoodPilot é uma proposta de assistência ao ecossistema iFood, não substituto declarado de sua operação de pagamento e entrega.
+**[HIPÓTESE]** A combinação proposta pode ser útil; sua superioridade deve ser testada. Não afirmar que concorrentes não possuem voz, personalização, carrinho ou recursos específicos sem pesquisa contemporânea. O Guide é uma proposta de assistência ao ecossistema iFood, não substituto declarado de sua operação de pagamento e entrega.
 
 ## 19. Prioridades P0, P1 e P2
 
@@ -561,7 +561,7 @@ Voz prioritária, cinco modos completos, refinamento mais rico, feedback híbrid
 
 ### 19.3 P2 e roadmap
 
-Tracking condicionado ao MCP, múltiplos estabelecimentos autorizados e suportados, interrupção avançada de voz, expansão de contextos e experimentos prolongados. FoodPilot Market e integração nativa oficial permanecem roadmap sujeito a validação própria.
+Tracking condicionado ao MCP, múltiplos estabelecimentos autorizados e suportados, interrupção avançada de voz, expansão de contextos e experimentos prolongados. Guide Market e integração nativa oficial permanecem roadmap sujeito a validação própria.
 
 Prioridades não são atribuições pessoais. Após auditoria, o recorte pode ser ajustado à disponibilidade real sem apagar requisitos aprovados do documento.
 
@@ -595,7 +595,7 @@ Definição de pronto do P0: critérios aplicáveis ao recorte aprovados com evi
 
 1. **Técnica:** contratos, autorização, ranking, orçamento, alergias, estados, RLS quando aplicável, falhas de provedores e execução local/pública.
 2. **Usabilidade:** observar pessoas realizando uma tarefa, sem ensinar cada clique; registrar entendimento, dificuldades e pontos de confiança ou desconforto.
-3. **Comparação:** realizar tarefa equivalente no FoodPilot e na navegação tradicional, com condições comparáveis e ordem alternada quando possível.
+3. **Comparação:** realizar tarefa equivalente no Guide e na navegação tradicional, com condições comparáveis e ordem alternada quando possível.
 
 ### 21.2 Plano experimental proposto
 
@@ -812,10 +812,10 @@ Se a voz estiver pronta, usá-la sem comprometer o tempo; manter texto como alte
 
 | Nº | Requisito aprovado | Referência e implicação |
 |---|---|---|
-| **1** | MVP de restaurantes/refeições. Supermercado e FoodPilot Market ficam no roadmap, com comparação de mercados, lista e cesta. | §§6, 19, 23; RF-01. Não ampliar o MVP implicitamente. |
+| **1** | MVP de restaurantes/refeições. Supermercado e Guide Market ficam no roadmap, com comparação de mercados, lista e cesta. | §§6, 19, 23; RF-01. Não ampliar o MVP implicitamente. |
 | **2** | Público-alvo consumidor iFood amplo. | §4. Personas são recortes hipotéticos, não restrições de público. |
 | **3** | Voz primária e texto disponível. | §§7, 9, 14; RF-02/03. P0 pode usar um canal conforme D37. |
-| **4** | Recomendar e preparar carrinho no FoodPilot; compra final no iFood. | §§6, 7, 13; RF-11. Separar proposta, carrinho remoto e pedido. |
+| **4** | Recomendar e preparar carrinho no Guide; compra final no iFood. | §§6, 7, 13; RF-11. Separar proposta, carrinho remoto e pedido. |
 | **5** | Personalizar com dados autorizados via MCP, memória consentida, feedback e aprendizado de preferências; treinamento de modelo não é obrigatório. | §§8, 13, 15; RF-05/16/17. |
 | **6** | Site protótipo Next.js; integração nativa iFood como visão futura. | §§2, 12, 23. Não alegar parceria ou aprovação. |
 | **7** | Gratuito ao usuário; benefícios indiretos à plataforma como hipóteses. | §17. Não afirmar receita ou impacto comprovado. |

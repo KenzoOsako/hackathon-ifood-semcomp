@@ -2,7 +2,7 @@
 
 **Dono:** Malveste. **Status:** não implementado (a página atual é do esqueleto, em `src/app/page.tsx`).
 
-**Responsabilidade:** como o usuário vê e controla o FoodPilot.
+**Responsabilidade:** como o usuário vê e controla o Guide.
 
 ## Componentes previstos
 - **Conversa** com legendas da voz e botão de microfone (estados: ouvindo, pensando, falando, erro).

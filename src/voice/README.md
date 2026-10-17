@@ -2,7 +2,7 @@
 
 **Dono:** Felipe. **Status:** não implementado (o esqueleto só tem texto).
 
-**Responsabilidade:** o usuário fala e ouve o FoodPilot, com baixa latência e sem atrito.
+**Responsabilidade:** o usuário fala e ouve o Guide, com baixa latência e sem atrito.
 
 ## Entra
 - Resposta do agente (texto em fluxo) e estados da conversa.

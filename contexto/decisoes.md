@@ -17,7 +17,7 @@
 - **Decisão (proposta):** URL `https://consumer-mcp.ifood.com.br/marketplace`; redirect `http://localhost:8765/callback` igual para os 4 (localhost é local a cada máquina). Confirmar quando o agente for aprovado.
 
 ## D-005 — Direção do produto (PROPOSTA, 17/10/2026, aguardando aprovação do grupo)
-- **Proposta:** copiloto de voz com personalização e recomendação explicada (nome provisório FoodPilot). Núcleo = voz, intenção, recomendação explicada, memória e contexto, ação segura via MCP, interface multimodal. Mercado e extras só se sobrar tempo.
+- **Proposta:** copiloto de voz com personalização e recomendação explicada (nome provisório Guide). Núcleo = voz, intenção, recomendação explicada, memória e contexto, ação segura via MCP, interface multimodal. Mercado e extras só se sobrar tempo.
 - **Regra de proveniência proposta:** todo motivo falado pelo agente vem de um campo real do MCP.
 - **Detalhes e cruzamento com o MCP:** `docs/produto-v1.md`.
 
@@ -33,7 +33,7 @@
 
 ## D-008 — Separar carrinho proposto, operação remota e compra (17/10/2026)
 - Compra final no iFood; aprovação explícita antes de adicionar remotamente, vinculada à versão e invalidada por mudança material.
-- Fallback: transferência validada, link confirmado ou resumo manual. submitOrder documentado no guia não é requisito para o FoodPilot.
+- Fallback: transferência validada, link confirmado ou resumo manual. submitOrder documentado no guia não é requisito para o Guide.
 - Fluxo atual de createCart/submitOrder é simulado e divergente. Não promovê-lo a integração real sem corrigir guardrails e contratos.
 
 ## D-009 — Reconciliação documental e segurança do template (17/10/2026)
@@ -48,7 +48,7 @@
 - Publicação exige resolver limite de visitantes anônimos, armazenamento entre instâncias e autorização real. Interface de Malveste só recebeu a correção pontual autorizada do efeito de rolagem. Integração descrita em docs/INTEGRACAO_PROPOSTA_LOCAL.md.
 
 ## D-011 — Direção V2: ocasião, contexto por voz e dados para o iFood (PROPOSTA, 17/10/2026 ~19h30, aguardando aceite do Kenzo)
-- **Proposta:** manter o FoodPilot, mas passar de "escolher uma refeição" para "resolver uma ocasião" em várias verticais (restaurante e mercado no P0; shopping se o catálogo sustentar). Novo diferencial: (1) personalização por contexto rico gerado pela fala; (2) feedback estruturado e agregado útil ao iFood. Conversa com profundidade adaptativa (L0/L1/L2, no máximo 3 perguntas).
+- **Proposta:** manter o Guide, mas passar de "escolher uma refeição" para "resolver uma ocasião" em várias verticais (restaurante e mercado no P0; shopping se o catálogo sustentar). Novo diferencial: (1) personalização por contexto rico gerado pela fala; (2) feedback estruturado e agregado útil ao iFood. Conversa com profundidade adaptativa (L0/L1/L2, no máximo 3 perguntas).
 - **Substitui parcialmente:** decisões 1 e 19 da proposta canônica (restaurante apenas; supermercado fora do MVP) e o diferencial anterior (acessibilidade e facilidade).
 - **Mantém:** não finalizar pedido, aprovação da versão da proposta, filtros rígidos, proveniência dos motivos, ownership de pastas.
 - **Gate:** só entram as verticais que o MCP real sustentar no endereço da demo.
@@ -58,3 +58,8 @@
 - **Funções:** Felipe = Conversação e Voz · Hyago = System Prompt e Fluxo de Agentes · Kenzo = Request e Dados · Malveste = Interface e Front-End.
 - **Lacunas redistribuídas:** pitch e Entregável 01 (Felipe), Entregável 02 (Hyago), Entregáveis 05 e 06 (Kenzo), Entregáveis 03 e 04 (Malveste), integração/QA/deploy (Kenzo, com testes de cada dono).
 - **Substitui, se aceita,** a distribuição de donos do plano anterior. Detalhes: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`.
+
+## D-013 — Nome do produto: Guide (17/10/2026, escolhido pelo time)
+- **Contexto:** "FoodPilot" prendia o produto a comida; a V2 resolve ocasiões em várias verticais (refeição, mercado, presentes).
+- **Decisão:** o produto se chama **Guide**. Nomes de arquivos existentes (`*_FOODPILOT.md`) foram mantidos para não quebrar links; só o texto foi trocado. Identificadores internos de código em minúsculas (`foodpilot...`) não mudam.
+- **Pendências:** verificar marca (INPI) e domínio; testar a pronúncia na voz sintética (pode precisar de grafia fonética no texto falado).

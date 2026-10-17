@@ -1,9 +1,9 @@
-# FoodPilot — Direção V2: ocasião, contexto por voz e dados para o iFood
+# Guide — Direção V2: ocasião, contexto por voz e dados para o iFood
 
 > **Adendo** à proposta canônica (`docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md`) e ao plano (`docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md`). Redigido em 17/10/2026, ~19h30. **Não reescreve os documentos do Kenzo**: ele decide o que incorporar. Marcações: **[DECISÃO PROPOSTA]** aguarda aceite do time; **[HIPÓTESE]** não comprovada; **[VERIFICAR]** depende do MCP real.
 
 ## 1. A mudança em uma frase
-Mantemos o FoodPilot (copiloto de voz, personalizado, com recomendação explicada e aprovação humana), mas **saímos de "escolher uma refeição" para "resolver uma ocasião"**, entre várias verticais, e o **diferencial passa a ser o contexto rico que a fala gera e o dado estruturado que isso devolve ao iFood**.
+Mantemos o Guide (copiloto de voz, personalizado, com recomendação explicada e aprovação humana), mas **saímos de "escolher uma refeição" para "resolver uma ocasião"**, entre várias verticais, e o **diferencial passa a ser o contexto rico que a fala gera e o dado estruturado que isso devolve ao iFood**.
 
 Exemplo-guia (a demo): *"Hoje é aniversário de um amigo. Vamos comer pizza em casa e ver um filme."* → o agente sugere **a pizza** (restaurante), **a pipoca** (mercado) e **o presente** (shopping), explica cada escolha e monta uma proposta única.
 
@@ -15,8 +15,8 @@ Exemplo-guia (a demo): *"Hoje é aniversário de um amigo. Vamos comer pizza em 
 | **Verticais** | Só restaurante; supermercado no roadmap (RF-01, decisões 1 e 19) | Restaurante + mercado + shopping (as que o catálogo sustentar) | **Muda o escopo aprovado**: exige D-007 |
 | **Diferencial** | Voz como acessibilidade e facilidade | (1) Personalização por **contexto rico** vindo da fala; (2) **feedback estruturado** que o iFood pode usar | Nova camada de dados e painel |
 | **Conversa** | Interpretar pedido + refinamento | **Profundidade adaptativa**: rápido quando o usuário tem pressa, guiado quando a ocasião é vaga; nunca cansativo | Nova política de diálogo |
-| **Múltiplos estabelecimentos** | P2, só se suportado | **P0 como proposta local** (sem criar carrinhos remotos) | Compatível com "FoodPilot não finaliza compra" |
-| **Compra** | Continua no iFood; FoodPilot não submete | **Igual** | Sem mudança, e evita falha parcial entre lojas |
+| **Múltiplos estabelecimentos** | P2, só se suportado | **P0 como proposta local** (sem criar carrinhos remotos) | Compatível com "Guide não finaliza compra" |
+| **Compra** | Continua no iFood; Guide não submete | **Igual** | Sem mudança, e evita falha parcial entre lojas |
 | **Voz** | P1 em paralelo ao P0 textual | **Igual**, texto sempre funcional | Sem mudança |
 | **Guardrails** (aprovação, restrições, proveniência) | Regra de negócio | **Igual** | Valem para cada necessidade |
 

@@ -15,7 +15,7 @@ Substitui, se aceita (D-012), o mapa de "frentes candidatas". Detalhes: [plano V
 1. **Voz → Agente:** `POST /api/converse` (resposta em fluxo). Entrada `{sessionId, texto, origem, sinais}`; saída `resposta_parcial`, `evento_de_tela`, `resposta_final`.
 2. **Agente → Domínio (funções do Kenzo):** `obterContexto`, `buscarNecessidade`, `rankear`, `montarPlano`, `ajustarPlano`, `aprovarPlano(versão)`, `registrarEvento`. **Sem acesso transacional.**
 3. **Domínio → UI:** snapshot do plano versionado (`planoId`, `versão`, necessidades, opções, motivos, totais conhecidos ou ausentes, pendências, origem real ou simulada).
-4. **Aprovação:** UI ou voz envia `planoId` e `versão`; o **backend revalida**. **O FoodPilot não finaliza pedido.**
+4. **Aprovação:** UI ou voz envia `planoId` e `versão`; o **backend revalida**. **O Guide não finaliza pedido.**
 
 ## Regras comuns
 - **Motivo só com dado real** (`reasons` do ranking); o modelo verbaliza, não inventa.

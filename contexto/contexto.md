@@ -1,10 +1,10 @@
-# Contexto atual — FoodPilot / iFood SEMCOMP 29
+# Contexto atual — Guide / iFood SEMCOMP 29
 
 Atualização: 17/10/2026. Base auditada: main 0867abc; PR #4 introduziu o esqueleto em 6c1b414.
 Fonte de produto: [proposta final](../docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md), fornecida pelo usuário com decisões 1–39 aprovadas. Estado técnico separado em [auditoria](../docs/AUDITORIA-ALINHAMENTO-2026-10-17.md).
 
 ## Direção V2 (proposta, aguarda aceite do integrador)
-Atualização 17/10/2026, ~20h. O FoodPilot passa de "escolher uma refeição" para **resolver uma ocasião** em várias verticais (restaurante e mercado no P0; shopping se o catálogo sustentar), por voz, com **conversa adaptativa** (rápida quando há pressa, guiada quando a ocasião é vaga, máximo de 3 perguntas). O diferencial passa a ser (1) personalização por **contexto rico gerado pela fala** e (2) **feedback estruturado e agregado** útil ao iFood (hipótese, sem números inventados). Mantêm-se: sem finalizar pedido no FoodPilot, aprovação humana por versão, filtros rígidos e proveniência dos motivos. Adega e farmácia ficam fora por ora.
+Atualização 17/10/2026, ~20h. O Guide passa de "escolher uma refeição" para **resolver uma ocasião** em várias verticais (restaurante e mercado no P0; shopping se o catálogo sustentar), por voz, com **conversa adaptativa** (rápida quando há pressa, guiada quando a ocasião é vaga, máximo de 3 perguntas). O diferencial passa a ser (1) personalização por **contexto rico gerado pela fala** e (2) **feedback estruturado e agregado** útil ao iFood (hipótese, sem números inventados). Mantêm-se: sem finalizar pedido no Guide, aprovação humana por versão, filtros rígidos e proveniência dos motivos. Adega e farmácia ficam fora por ora.
 Funções: Felipe (Conversação e Voz), Hyago (System Prompt e Fluxo de Agentes), Kenzo (Request e Dados, integrador), Malveste (Interface e Front-End). Gate de escopo: só entram as verticais que o MCP real sustentar no endereço da demo.
 Detalhes: [direção V2](../docs/DIRECAO_V2_OCASIAO.md), [plano V2](../docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md), [índice](../docs/INDEX.md). Decisões em `decisoes.md` (D-011 e D-012). **Onde conflitar com as seções abaixo, a V2 só vale depois do aceite.**
 

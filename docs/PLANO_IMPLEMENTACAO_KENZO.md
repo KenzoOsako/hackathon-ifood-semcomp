@@ -1,4 +1,4 @@
-# Plano de implementação — Kenzo / FoodPilot
+# Plano de implementação — Kenzo / Guide
 
 Data: 17/10/2026. Responsável: Kenzo, com este chat como executor e supervisor.
 Fonte de escopo: [plano da equipe](PLANO_EXECUCAO_EQUIPE_FOODPILOT.md). Requisitos: [proposta aprovada](PROPOSTA_DE_NEGOCIO_FOODPILOT.md). Este documento organiza a execução das 12 tarefas de Kenzo; não redistribui tarefas nem substitui as fontes.

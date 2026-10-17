@@ -54,7 +54,7 @@ export default function Home() {
 
   return (
     <main style={{ maxWidth: 760, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
-      <h1 style={{ marginBottom: 4 }}>FoodPilot</h1>
+      <h1 style={{ marginBottom: 4 }}>Guide</h1>
       <p style={{ marginTop: 0, color: "#666" }}>Esqueleto da demo (dados simulados). Tente: “estou com fome”, “pizza até 45”.</p>
 
       <section aria-live="polite" style={{ display: "grid", gap: 8, marginBottom: 16 }}>
