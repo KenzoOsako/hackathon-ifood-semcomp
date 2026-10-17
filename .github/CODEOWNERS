@@ -1,0 +1,11 @@
+# Integrador/reviewer: Kenzo. Ele revisa tudo; as linhas abaixo deixam explícito o que é sensível.
+*                                   @KenzoOsako
+
+# Regras de negócio são imutáveis para agentes: só humanos, e com aprovação do integrador.
+/contexto/regras-de-negocio.md      @KenzoOsako
+
+# Harness: mudar as regras do jogo exige o integrador.
+/AGENTS.md                          @KenzoOsako
+/CLAUDE.md                          @KenzoOsako
+/contexto/README.md                 @KenzoOsako
+/.github/                           @KenzoOsako
