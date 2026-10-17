@@ -4,13 +4,20 @@ Tema: **vendendo com agentes** (detalhado às 14:00 de 17/10/2026). Time de 4, 1
 
 ## Antes de qualquer coisa
 1. Leia `contexto/contexto.md` (visão completa do evento e do time) e depois o restante de `contexto/`, nesta ordem: `regras-de-negocio.md`, `decisoes.md`, `erros-aprendidos.md`, `estado-atual.md`.
-2. Leia também docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md e docs/AUDITORIA-ALINHAMENTO-2026-10-17.md. A proposta final supera o rascunho produto-v1; requisitos aprovados não são funcionalidades implementadas. Não invente requisito. Se faltar informação, pergunte à pessoa antes de codar.
+2. Leia `docs/INDEX.md` (mapa dos documentos e o que vale em caso de conflito), `docs/DIRECAO_V2_OCASIAO.md` e `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md` (direção V2, em aprovação). Leia também docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md e docs/AUDITORIA-ALINHAMENTO-2026-10-17.md. A proposta final supera o rascunho produto-v1; requisitos aprovados não são funcionalidades implementadas. Não invente requisito. Se faltar informação, pergunte à pessoa antes de codar.
 3. Responda em português (Brasil), direto ao ponto.
 
 ## Papéis
-As frentes novas só serão atribuídas após a auditoria e alinhamento da equipe (decisão 39). Os papéis abaixo descrevem o fluxo de integração vigente, não uma nova distribuição de implementação.
-- **3 construtores:** cada um trabalha numa fatia pequena e mensurável, em branch própria (`feat/<nome>-<assunto>`).
-- **1 integrador:** único que faz merge na `main`. Se o PR quebra o projeto ou foge das regras, devolve com comentário objetivo e o autor corrige.
+**Direção V2 (proposta, aguarda aceite do integrador; ver D-011 e D-012):** quatro funções.
+- **Felipe: Conversação e Voz** (`src/voice/`). Voz, interrupção, latência, falhas, sinais de pressa.
+- **Hyago: System Prompt e Fluxo de Agentes** (`src/agent/`, `src/prompts/`, `src/evals/`). Prompts, fluxos, extração de contexto, profundidade adaptativa (L0/L1/L2).
+- **Kenzo: Request e Dados** (`src/mcp/`, `src/reco/`, `src/domain/`, `src/data/`, `src/contracts/`). MCP real, OAuth, ranking, plano versionado, eventos. Integrador.
+- **Malveste: Interface e Front-End** (`src/app/` sem `api/`, `src/ui/`). Plano de ocasião, aprovação, estados, privacidade, painel.
+Detalhes e interfaces: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md` e `docs/frentes.md`. Até o aceite, a distribuição do `docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md` continua valendo.
+
+**Fluxo de integração vigente:**
+- Cada pessoa trabalha numa fatia pequena e mensurável, em branch própria (`feat/<nome>-<assunto>`).
+- **Integrador:** único que faz merge na `main`. Se o PR quebra o projeto ou foge das regras, devolve com comentário objetivo e o autor corrige.
 
 ## Fluxo de PR
 - PR pequeno (idealmente < 300 linhas), uma coisa só, descrição com: o que muda, como testar, o que não foi feito.
@@ -22,6 +29,10 @@ As frentes novas só serão atribuídas após a auditoria e alinhamento da equip
 - **Stack:** Next.js 16 + TypeScript (demo em Chrome desktop). Este Next tem mudanças em relação ao que a IA conhece: consulte `node_modules/next/dist/docs/` antes de usar uma API.
 - **Frentes e pastas:** veja `docs/frentes.md`. Mexa só na pasta da sua frente; `src/contracts/` só o integrador.
 - **Motivos de recomendação** só vêm de campos reais (`reasons`); o modelo não inventa motivo.
+- **Conversa adaptativa (V2):** L0 rápido (0 perguntas), L1 (1), L2 guiado (até 3, uma por vez, com "pode escolher por mim"); teto de 3 perguntas por sessão; só pergunta se a resposta muda o ranking; sinais de pressa rebaixam o nível.
+- **Eventos de feedback (V2):** sem dados pessoais, ID anônimo, consentimento separado para uso agregado, painel só com agregados e dados de demonstração rotulados como simulados.
+- **Rotular sempre** o que é real, simulado, planejado ou bloqueado.
+- **Agente/LLM nunca tem ferramenta transacional.** Só chama funções de domínio; aprovação e escrita são código do dono de `src/domain/`.
 - **Compra final no iFood.** Separar proposta local, carrinho remoto e pedido. Exigir aprovação explícita vinculada à versão antes de adicionar remotamente; alterações materiais invalidam aprovação. Não conectar o submitOrder do esqueleto a operações reais. Transferência/link só se suportados e validados; senão resumo manual.
 - Antes do PR: `npm run typecheck && npm run lint && npm test && npm run build`.
 - Código simples antes de elegante: é hackathon, mas a `main` sempre roda.

@@ -46,3 +46,15 @@
 - Implementação local: cookie opaco HttpOnly/SameSite Strict por 30 minutos absolutos, 1000 sessões máximas no processo; proposta de chat válida por cinco minutos. Mudanças são limitadas à demo mock; login/OAuth e escrita real continuam bloqueados.
 - São parâmetros técnicos provisórios revisáveis, não nova regra humana de negócio. Alternativa de confiar em sessionId/explicit do body foi rejeitada por não vincular aprovação ao servidor. Sem custo completo, não aprovar; resumo local explicita pendências.
 - Publicação exige resolver limite de visitantes anônimos, armazenamento entre instâncias e autorização real. Interface de Malveste só recebeu a correção pontual autorizada do efeito de rolagem. Integração descrita em docs/INTEGRACAO_PROPOSTA_LOCAL.md.
+
+## D-011 — Direção V2: ocasião, contexto por voz e dados para o iFood (PROPOSTA, 17/10/2026 ~19h30, aguardando aceite do Kenzo)
+- **Proposta:** manter o FoodPilot, mas passar de "escolher uma refeição" para "resolver uma ocasião" em várias verticais (restaurante e mercado no P0; shopping se o catálogo sustentar). Novo diferencial: (1) personalização por contexto rico gerado pela fala; (2) feedback estruturado e agregado útil ao iFood. Conversa com profundidade adaptativa (L0/L1/L2, no máximo 3 perguntas).
+- **Substitui parcialmente:** decisões 1 e 19 da proposta canônica (restaurante apenas; supermercado fora do MVP) e o diferencial anterior (acessibilidade e facilidade).
+- **Mantém:** não finalizar pedido, aprovação da versão da proposta, filtros rígidos, proveniência dos motivos, ownership de pastas.
+- **Gate:** só entram as verticais que o MCP real sustentar no endereço da demo.
+- **Detalhes:** `docs/DIRECAO_V2_OCASIAO.md`.
+
+## D-012 — Papéis da V2 (PROPOSTA, 17/10/2026 ~19h45, aguardando aceite do time)
+- **Funções:** Felipe = Conversação e Voz · Hyago = System Prompt e Fluxo de Agentes · Kenzo = Request e Dados · Malveste = Interface e Front-End.
+- **Lacunas redistribuídas:** pitch e Entregável 01 (Felipe), Entregável 02 (Hyago), Entregáveis 05 e 06 (Kenzo), Entregáveis 03 e 04 (Malveste), integração/QA/deploy (Kenzo, com testes de cada dono).
+- **Substitui, se aceita,** a distribuição de donos do plano anterior. Detalhes: `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`.

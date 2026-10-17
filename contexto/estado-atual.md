@@ -34,6 +34,14 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - O plano define 24 tarefas: Kenzo integração/contratos/guardrails/ranking/revisão e merge; Terossi voz/LLM; Malveste UI/UX; Hyago MCP/OAuth/dados. Supera o status histórico de atribuições pendentes; tarefas não estão executadas por sua publicação.
 - Esta atualização somente publica o Markdown e seu link de entrada. Não altera Trello, runtime ou regras humanas; não executa as tarefas do plano.
 
+## Direção V2 e reorganização do repositório — 17/10/2026, ~20h
+- **Proposta, aguardando aceite do integrador:** `docs/DIRECAO_V2_OCASIAO.md` (D-011) e `docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md` (D-012). Índice dos documentos em `docs/INDEX.md`.
+- **Funções propostas:** Felipe (Conversação e Voz), Hyago (System Prompt e Fluxo de Agentes), Kenzo (Request e Dados), Malveste (Interface e Front-End).
+- **Trello:** 8 cards novos (OCS-01 a 04, INS-01/02, UX-01, DEMO-01) e comentários em 5 cards antigos. Donos nos títulos ainda seguem o plano anterior; renomear só após o aceite.
+- **Repositório:** README, AGENTS.md, `docs/frentes.md`, contexto e pastas novas com README (`src/voice`, `src/prompts`, `src/evals`, `src/domain`, `src/data`, `src/ui`) e esqueletos dos entregáveis 02 a 06. **Nenhum código de runtime foi alterado.**
+- **Pendente:** gate das verticais (21h), contratos de Ocasião, Necessidade e Plano (21h30), provedor de LLM e dono da chave, endereço da demo, regra de revisão de PR (CODEOWNERS), medidor de consumo (ainda na branch `feat/esqueleto-andante`).
+- **Segurança:** valores com formato de credencial permanecem no histórico Git; revogar/rotacionar antes de tornar o repositório público.
+
 ## Plano de implementação de Kenzo — 17/10/2026
 - Base remota consultada: origin/main e85cd2b, merge do PR #6. Plano local em docs/PLANO_IMPLEMENTACAO_KENZO.md organiza as 12 tarefas de Kenzo, com contratos e guardrails antes da integração real.
 - FP-01 segue parcial: base e código conferidos; fila de PRs/cards, coordenação com colegas e baseline ainda pendentes. Nenhuma FP de implementação concluída nesta documentação.
@@ -73,3 +81,9 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - PR #7: https://github.com/KenzoOsako/hackathon-ifood-semcomp/pull/7, branch feat/kenzo-contratos-minimos → main e85cd2b. Aberto para revisão/merge do usuário, sem conflitos na consulta; nenhum merge executado por este chat.
 - Revisão independente de e85cd2b..0a2e1f38205450860ddba4fea34befc2132ec99e não encontrou regressão acionável adicional; revisão por leitura, distinta do aceite humano. Typecheck/lint/49 testes/build passaram no código publicado. Commit posterior acrescenta apenas este registro documental.
 - Card KEN-01 vinculado ao PR; revisão dos consumidores e limites pré-deploy permanecem pendentes. Nenhum check de CI foi retornado pelo GitHub; resultados acima são locais, não CI aprovado.
+
+## Revisão do PR #7 e poda do backlog — 17/10/2026, ~20h40
+- PR #7 (contratos mínimos, proposta local, compra interna eliminada) está na `main`; `typecheck`, `lint`, 49 testes e `build` passam.
+- **Bloqueios para a demo:** aprovação inalcançável (toda proposta nasce com taxas e total não confirmados) e UI sem botão de aprovação. Detalhes e backlog enxuto (34 → 22 tasks) em `docs/REVISAO_PR7_E_BACKLOG_V2.md`.
+- **IDs de decisão:** as decisões da V2 foram renumeradas para **D-011 e D-012** (D-007 a D-010 são do Kenzo).
+- Nenhum card do Trello foi alterado; a poda é proposta.
