@@ -7,3 +7,11 @@
 
 ## D-002 — Stack
 - _Em aberto. Definir após o tema (14:00) e registrar aqui._
+
+## D-003 — Trello: um card por PR (17/10/2026)
+- **Contexto:** 4 pessoas em paralelo, integrador único.
+- **Decisão:** listas A Desenvolver → Desenvolvendo → Em Revisão → Pronto; checklist por card; 1 card em andamento por pessoa; integrador move para Pronto.
+- **Consequência:** padrão completo no `AGENTS.md`.
+
+## D-004 — Conexão ao MCP do iFood (17/10/2026)
+- **Decisão (proposta):** URL `https://consumer-mcp.ifood.com.br/marketplace`; redirect `http://localhost:8765/callback` igual para os 4 (localhost é local a cada máquina). Confirmar quando o agente for aprovado.

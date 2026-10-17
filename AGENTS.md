@@ -3,7 +3,7 @@
 Tema: **vendendo com agentes** (detalhado às 14:00 de 17/10/2026). Time de 4, 18h de desenvolvimento.
 
 ## Antes de qualquer coisa
-1. Leia a pasta `contexto/` inteira, nesta ordem: `regras-de-negocio.md`, `decisoes.md`, `erros-aprendidos.md`, `estado-atual.md`.
+1. Leia `contexto/contexto.md` (visão completa do evento e do time) e depois o restante de `contexto/`, nesta ordem: `regras-de-negocio.md`, `decisoes.md`, `erros-aprendidos.md`, `estado-atual.md`.
 2. Não invente requisito. Se faltar informação, pergunte à pessoa antes de codar.
 3. Responda em português (Brasil), direto ao ponto.
 
@@ -32,7 +32,27 @@ Regras de edição completas em `contexto/README.md`. Resumo:
 ## Aprendeu algo ou errou?
 Registre em `contexto/erros-aprendidos.md` (sintoma, causa, correção) para ninguém repetir.
 
-## Backlog (Trello)
-- As tarefas vivem no Trello (MCP configurado pelo Arthur). Antes de começar, pegue/peça um card; cite o card no PR.
-- Agentes podem criar cards de backlog e mover o próprio card (Fazendo → Revisão). Quem move para "Feito" é o integrador, após o merge.
-- Credenciais do Trello só em `.env` (ver `.env.example`), nunca no repo.
+## Backlog (Trello) — um card por PR
+Quadro: **HACKATHON IFOOD** (https://trello.com/b/ZcLDfKqU/hackathon-ifood). Listas, da esquerda para a direita:
+`A Desenvolver` → `Desenvolvendo` → `Em Revisão` → `Pronto`.
+
+**Fluxo de um card**
+1. Pegue um card em `A Desenvolver`, atribua a si e mova para `Desenvolvendo`. Máximo **1 card em Desenvolvendo por pessoa**.
+2. Crie a branch `feat/<nome>-<assunto>` e trabalhe os itens do checklist.
+3. Abra o PR citando o card (link) e cole o link do PR na descrição do card. Mova para `Em Revisão`.
+4. O integrador (Kenzo) revisa. Se pedir ajustes, o card volta para `Desenvolvendo`. Após o merge, ele move para `Pronto`.
+
+**Padrão do card**
+- Título: `[fatia] verbo + resultado` (fatias: infra, agente, dados, ui, entregável, pitch).
+- Descrição: `Objetivo` · `Pronto quando` (critério verificável) · `Regras` (RN-xxx) · `Branch` · `PR`.
+- Checklist do Trello com 3 a 6 itens; o último é sempre "Atualizar contexto/estado-atual.md".
+- Card maior que ~2h: quebre em dois cards e dois PRs.
+- Etiquetas (cores, sem nome no Trello): azul = entregável · verde = agente · amarelo = integração MCP · laranja = UI · roxo = infra · vermelho = bloqueado.
+
+**Agentes** podem ler cards, criar cards de backlog, comentar e mover o card em que estão trabalhando até `Em Revisão`. Quem move para `Pronto` é o integrador. Credenciais do Trello e do iFood só em `.env`, nunca no repo, no card ou no chat do grupo.
+
+## Regras do evento (fonte: organização iFood × SEMCOMP)
+- Desenvolvimento até **domingo 12h30**; pitches dom 13h–16h (5 min + 3 de perguntas); resultado dom 17h.
+- Avaliação: visão e originalidade · arquitetura e engenharia (uso correto do MCP) · design e experiência · impacto · comunicação e pitch.
+- Entregáveis obrigatórios: 01 proposta de negócio · 02 desenho de solução · 03 racional da experiência · 04 interface visual · 05 documento técnico resumido · 06 feedback sobre os MCPs (`contexto/feedback-mcp.md`, anotar na hora).
+- Chaves do MCP são pessoais do time e serão revogadas na segunda-feira. Não vazar.
