@@ -18,6 +18,11 @@ Tema: **vendendo com agentes** (detalhado às 14:00 de 17/10/2026). Time de 4, 1
 - Commits curtos, em português.
 
 ## Regras de código
+- **Stack:** Next.js 16 + TypeScript (demo em Chrome desktop). Este Next tem mudanças em relação ao que a IA conhece: consulte `node_modules/next/dist/docs/` antes de usar uma API.
+- **Frentes e pastas:** veja `docs/frentes.md`. Mexa só na pasta da sua frente; `src/contracts/` só o integrador.
+- **Motivos de recomendação** só vêm de campos reais (`reasons`); o modelo não inventa motivo.
+- **Checkout** só com confirmação explícita da pessoa (`explicit: true`); nunca preencher `userConsent` por conta própria.
+- Antes do PR: `npm run typecheck && npm run lint && npm test && npm run build`.
 - Código simples antes de elegante: é hackathon, mas a `main` sempre roda.
 - Sem segredos no repo. Usar `.env` (ignorado) e manter `.env.example` atualizado.
 - Não adicionar dependência grande sem registrar em `contexto/decisoes.md`.
