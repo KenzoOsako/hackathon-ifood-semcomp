@@ -9,6 +9,8 @@ Copiloto conversacional para escolher refeições, comparar até três opções 
 4. [Guia técnico MCP](docs/mcp-ifood-referencia.md) e [frentes candidatas](docs/frentes.md).
 5. [Resumo de negócio — entregável 01](docs/entregaveis/01-proposta-de-negocio.md).
 
+Plano operacional e tarefas por responsável: [Plano de execução da equipe](docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md).
+
 ## Execução local
 Requer Node.js e npm compatíveis com o lockfile. No PowerShell:
 ```powershell
