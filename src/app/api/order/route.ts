@@ -1,11 +1,5 @@
-import { orderStatus } from "@/agent/agent";
+import { jsonResponse } from "@/agent/http";
 
-export async function GET(req: Request) {
-  const orderId = new URL(req.url).searchParams.get("orderId");
-  if (!orderId) return Response.json({ error: "orderId obrigatório" }, { status: 400 });
-  try {
-    return Response.json(await orderStatus(orderId));
-  } catch (e) {
-    return Response.json({ error: (e as Error).message }, { status: 404 });
-  }
+export async function GET() {
+  return jsonResponse({ code: "NOT_SUPPORTED", reply: "FoodPilot não envia pedidos. Compra e acompanhamento final ocorrem no iFood; tracking externo não foi validado." }, 410);
 }

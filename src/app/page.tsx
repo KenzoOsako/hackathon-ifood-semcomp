@@ -22,7 +22,9 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
 
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [msgs, turn, status]);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, turn, status]);
 
   // Acompanhamento do pedido: respeita pollingStop.
   useEffect(() => {
