@@ -1,4 +1,5 @@
-import Image from "next/image";
+import { CatalogImage } from "@/ui/components/catalog-image";
+import { catalogImage, type CatalogMedia } from "@/ui/lib/catalog-media";
 import { BadgeCheck, Clock, Heart, History, MapPin, Sparkles, Star, Tag, Wallet, Zap, type LucideIcon } from "lucide-react";
 import type { Option, OptionLabel, Reason } from "@/contracts";
 import { Button } from "@/ui/components/button";
@@ -30,6 +31,7 @@ const CHIP_DEFAULT = "bg-[var(--cat-5-bg)] text-[color:var(--cat-5-fg)]";
 
 type Props = {
   option: Option;
+  media?: CatalogMedia;
   tag?: string; // rótulo vindo do servidor (plano do Guide); sem ele, o do `label`
   first: boolean;
   expanded: boolean;
@@ -42,14 +44,18 @@ type Props = {
 // Linha no formato da busca do iFood: tag acima do nome, logo quadrado, nome, "★ nota • tempo • frete", o
 // produto recomendado com o preço e chips. Só a linha tocada expande; selecionar e aprovar são eventos
 // diferentes (aprovar só existe na revisão da proposta).
-export function ResultCard({ option, tag, expanded, disabled, onToggle, onSelect, onAdjust }: Readonly<Props>) {
+export function ResultCard({ option, tag, media: suppliedMedia, expanded, disabled, onToggle, onSelect, onAdjust }: Readonly<Props>) {
   const title = tag ?? LABELS[option.label].title;
   const c = option.candidate;
   const price = c.promotionalPrice ?? c.price;
   const panelId = `acoes-${c.itemId}`;
   const free = c.deliveryFee === 0;
   const rating = c.rating?.toFixed(1).replace(".", ",");
-  const media = mockMediaFor(c.merchantId);
+  const mock = mockMediaFor(c.merchantId);
+  const media = suppliedMedia ? {
+    photo: catalogImage(suppliedMedia.photo) ?? (suppliedMedia.photo === mock?.photo ? mock?.photo : undefined),
+    logo: catalogImage(suppliedMedia.logo) ?? (suppliedMedia.logo === mock?.logo ? mock?.logo : undefined),
+  } : mock;
 
   return (
     <div className={cn("min-w-0 rounded-2xl transition-colors", expanded && "bg-accent/40")}>
@@ -61,7 +67,7 @@ export function ResultCard({ option, tag, expanded, disabled, onToggle, onSelect
         onClick={onToggle}
         className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left"
       >
-        {/* Sem logos reais na demo: ícone neutro com cor estável por loja (o contrato ainda não traz a categoria). */}
+        {/* Mídia validada do plano; ausência usa o ícone neutro da loja. */}
         <StoreLogo seed={c.merchantId} shape="square" imageSrc={media?.logo} className="size-[72px]" />
         <span className="min-w-0 flex-1">
           {/* A tag vem do rótulo da opção (como "Mais Pedido" no iFood). */}
@@ -96,11 +102,10 @@ export function ResultCard({ option, tag, expanded, disabled, onToggle, onSelect
             })}
           </span>
         </span>
-        {/* Com foto do produto (mock), ela ocupa o lugar do coração; sem foto, o favorito é só cenário
-            (como no iFood): não é focável e não faz nada. */}
-        {media ? (
+        {/* A foto pertence à opção exibida. Sem mídia, o ícone é decorativo. */}
+        {media?.photo ? (
           <span aria-hidden="true" className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border">
-            <Image src={media.photo} alt="" fill sizes="64px" className="object-cover" />
+            <CatalogImage key={media.photo} src={media.photo} alt="" />
           </span>
         ) : (
           <Heart className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />

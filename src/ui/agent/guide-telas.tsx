@@ -7,6 +7,9 @@ import { CircleCheck, Info, ShoppingBag } from "lucide-react";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
+import { CatalogImage } from "@/ui/components/catalog-image";
+import { catalogImage } from "@/ui/lib/catalog-media";
+import { chaveLoja } from "@/agent/sacola";
 import { StoreLogo } from "@/ui/components/store-logo";
 import { fromCents } from "./format";
 import { paraOption, porLoja, type PlanoTela } from "./plano-tela";
@@ -45,7 +48,7 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
         </div>
         <ul className="mt-2 flex flex-col gap-3">
           {plano.blocos.map((b, i) => {
-            const { option, tag } = paraOption(b.principal);
+            const { option, tag, media } = paraOption(b.principal);
             return (
               <motion.li key={b.necessidadeId} className="min-w-0"
                 initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.06 }}>
@@ -55,7 +58,7 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
                   <span className="ml-auto"><Origem origem={b.principal.origem} /></span>
                 </div>
                 {/* Sem "Selecionar": trocar de alternativa tocando fica para depois; ajustar é falar ou digitar. */}
-                <ResultCard option={option} tag={tag} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
+                <ResultCard option={option} tag={tag} media={media} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
                   onToggle={() => setAberto(aberto === b.necessidadeId ? null : b.necessidadeId)} onAdjust={onAdjust} />
               </motion.li>
             );
@@ -81,13 +84,13 @@ export function RevisaoView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
         {porLoja(plano).map((l) => (
           <section key={l.lojaId} className="mt-3 rounded-2xl border border-border bg-card">
             <header className="flex items-center gap-2 border-b border-border p-3">
-              <StoreLogo seed={l.lojaId} shape="square" className="size-8" />
+              <StoreLogo seed={l.lojaId} shape="square" imageSrc={plano.blocos.filter(b => chaveLoja(b.principal) === l.lojaId).map(b => paraOption(b.principal).media.logo).find(Boolean)} className="size-8" />
               <span className="font-display font-semibold">{l.loja}</span>
             </header>
             <ul className="divide-y divide-border">
               {l.itens.map(({ bloco: b }) => (
                 <li key={b.necessidadeId} className="flex justify-between gap-3 p-3 text-sm">
-                  <span>{b.quantidade}× {b.principal.item}{b.sugestao && <Badge className="ml-2">Sugestão</Badge>}</span>
+                  <span className="flex items-center gap-2"><ItemPhoto src={paraOption(b.principal).media.photo} />{b.quantidade}× {b.principal.item}{b.sugestao && <Badge className="ml-2">Sugestão</Badge>}</span>
                   <span className="font-semibold">{fromCents(b.principal.precoCents)}{b.quantidade > 1 && <span className="font-normal text-muted-foreground"> cada</span>}</span>
                 </li>
               ))}
@@ -110,6 +113,8 @@ export function RevisaoView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
 export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
   const [finalizou, setFinalizou] = useState(false);
   const sacola = plano.sacola;
+  const mesmaVersao = sacola?.planoId === plano.planoId && sacola?.versao === plano.versao;
+  const opcao = (lojaId: string, ref?: string) => mesmaVersao ? plano.blocos.find(b => chaveLoja(b.principal) === lojaId && (ref === undefined || b.principal.ref === ref))?.principal : undefined;
   if (!sacola) return null;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -123,14 +128,14 @@ export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
         {sacola.lojas.map((l) => (
           <section key={l.lojaId} className="mt-3 rounded-2xl border border-border bg-card">
             <header className="flex items-center gap-2 border-b border-border p-3">
-              <StoreLogo seed={l.lojaId} shape="square" className="size-8" />
+              <StoreLogo seed={l.lojaId} shape="square" imageSrc={mesmaVersao ? plano.blocos.filter(b => chaveLoja(b.principal) === l.lojaId).map(b => paraOption(b.principal).media.logo).find(Boolean) : undefined} className="size-8" />
               <span className="font-display font-semibold">{l.loja}</span>
               <span className="ml-auto"><Origem origem={l.origem} /></span>
             </header>
             <ul className="divide-y divide-border">
               {l.itens.map((it, i) => (
                 <li key={`${it.ref}-${i}`} className="flex justify-between gap-3 p-3 text-sm">
-                  <span>{it.quantidade}× {it.item}</span>
+                  <span className="flex items-center gap-2"><ItemPhoto src={opcao(l.lojaId, it.ref) ? paraOption(opcao(l.lojaId, it.ref)!).media.photo : undefined} />{it.quantidade}× {it.item}</span>
                   <span className="font-semibold">{fromCents(it.subtotalCents)}</span>
                 </li>
               ))}
@@ -161,4 +166,9 @@ export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
       </div>
     </div>
   );
+}
+
+function ItemPhoto({ src }: Readonly<{ src?: string }>) {
+ const safe = src?.startsWith("/exemplos/") ? src : catalogImage(src);
+ return safe ? <span aria-hidden="true" className="relative size-10 shrink-0 overflow-hidden rounded-lg"><CatalogImage key={safe} src={safe} alt="" sizes="40px" /></span> : null;
 }

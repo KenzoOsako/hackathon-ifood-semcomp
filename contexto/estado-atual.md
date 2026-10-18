@@ -1,3 +1,17 @@
+## Imagens reais — validação autenticada em 18/10/2026
+
+- Kenzo: MCP real + Gemini local, fotos/logos oficiais carregados no plano/revisão/sacola; texto e fala “Prefiro a opção mais rápida” verificados. Sacola é simulação e nenhuma compra ocorreu.
+- 556 testes aprovados/10 ignorados, typecheck/lint/build; lint com avisos preexistentes. Revisão independente concluída. Evidências e limites em docs/IMAGENS_REAIS_IFOOD.md.
+- Refinamento por critério manteve opção atual; troca de categoria não interpretada pelo agente (fora da feature). Associação de mídia em trocas/versionamento coberta automaticamente.
+- .env preservado e ignorado. MCP_MODE=real apenas no processo. PR da feature será preparado para merge humano; produção exige configuração/redirect e validação no destino.
+
+## Imagens do catálogo — 18/10/2026 (Kenzo)
+
+- Transferência explícita: responsabilidades de Hyago passam a Kenzo; autoria histórica preservada.
+- Branch feat/kenzo-imagens-reais-ifood, base 7918d15. Implementação de mídia em resultados/revisão/sacola; detalhes e auditoria em docs/IMAGENS_REAIS_IFOOD.md.
+- Typecheck/lint/build aprovados; 555 testes passaram, 10 ignorados; lint tem 10 avisos preexistentes.
+- Teste real bloqueado: OAuth local não configurado (login HTTP 503). Voz/mídia real e CDN ainda sem comprovação. Sem PR até cumprir os gates do plano; nenhuma escrita remota ou compra.
+
 # Estado atual — 17/10/2026
 
 ## K-3 — contrato e domínio local do plano composto
