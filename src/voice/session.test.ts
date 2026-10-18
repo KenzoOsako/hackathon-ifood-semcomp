@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FRASES } from "@/agent/frases";
 import type { LatencySummary } from "./latency";
-import { NEUTRAL_FILLER } from "./phrases";
 import { BargeInDetector, EndpointDetector, NoiseFloor } from "./endpoint";
 import { LIMIARES_CONFIANCA } from "@/agent/frases";
 import { LOW_CONFIDENCE, UNCLEAR_PHRASE, VoiceSession, type PlayerLike, type RecorderLike, type SessionDeps, type SessionEvents, type Utterance, type VoiceApi, type VoiceErrorCode } from "./session";
@@ -528,7 +527,7 @@ describe("medida de latência com a frase de espera", () => {
     s.beginTurn();
     s.mark("mic_stop"); // t = 0
     clock.t = 500; s.mark("stt_done"); s.mark("request_sent");
-    clock.t = 600; s.ttsResponded(NEUTRAL_FILLER); s.speakingStarted(NEUTRAL_FILLER); // frase de espera toca antes de o agente responder
+    clock.t = 600; s.ttsResponded(FRASES.espera); s.speakingStarted(FRASES.espera); // frase de espera toca antes de o agente responder
     expect(got).toHaveLength(0); // ainda não é a resposta útil
     clock.t = 1500; s.mark("first_chunk"); // o agente responde
     clock.t = 1550; s.ttsResponded(FRASES.espera); s.speakingStarted(FRASES.espera); // o ack do agente (também em cache) é espera

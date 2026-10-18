@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConverseEvent } from "./converse-events";
-import { NEUTRAL_FILLER } from "./phrases";
-import { ACK_GRACE_MS, FILLER_AFTER_MS, runTurn, type TurnCtl, type TurnHandlers } from "./turn";
+import { ACK_GRACE_MS, runTurn, type TurnCtl, type TurnHandlers } from "./turn";
 
 // Relógio e agente falsos: o agente "demora" `delay` ms (no relógio falso) antes de devolver os eventos.
 function setup(events: ConverseEvent[], delay = 0, origem: "voz" | "texto" = "voz", gapAfterAck = 0) {
@@ -26,18 +25,18 @@ function setup(events: ConverseEvent[], delay = 0, origem: "voz" | "texto" = "vo
 }
 
 describe("runTurn", () => {
-  it("agente rápido (dentro de 100 ms): fala só a resposta, sem frase de espera", async () => {
-    const t = setup([{ type: "speech", seq: 0, text: "Achei duas opções.", final: true }, { type: "done", turnId: "1" }], FILLER_AFTER_MS - 50);
+  it("agente rápido: fala só a resposta", async () => {
+    const t = setup([{ type: "speech", seq: 0, text: "Achei duas opções.", final: true }, { type: "done", turnId: "1" }], 50);
     await t.run();
     expect(t.said).toEqual(["Achei duas opções."]);
     expect(t.seen.text).toBe("Achei duas opções.");
     expect(t.log).toEqual(["begin", "mark:request_sent", "mark:first_chunk", "end"]);
   });
 
-  it("agente lento com JSON único (ack e resposta juntos): frase neutra e resposta; o ack seria só atraso e é descartado", async () => {
-    const t = setup([{ type: "ack", text: "Deixa eu ver as opções." }, { type: "speech", seq: 0, text: "Montei assim.", final: true }, { type: "done", turnId: "1" }], FILLER_AFTER_MS + 500);
+  it("agente lento com JSON único (ack e resposta juntos): fala só a resposta; o ack seria só atraso e é descartado", async () => {
+    const t = setup([{ type: "ack", text: "Deixa eu ver as opções." }, { type: "speech", seq: 0, text: "Montei assim.", final: true }, { type: "done", turnId: "1" }], 1500);
     await t.run();
-    expect(t.said).toEqual([NEUTRAL_FILLER, "Montei assim."]);
+    expect(t.said).toEqual(["Montei assim."]);
     expect(t.seen.text).toBe("Montei assim."); // a espera da voz não aparece como fala do agente
   });
 
@@ -88,10 +87,10 @@ describe("runTurn", () => {
     expect(falou.log).not.toContain("done");
   });
 
-  it("só a frase neutra falada, sem resposta depois, ainda libera o microfone", async () => {
-    const t = setup([{ type: "done", turnId: "1" }], FILLER_AFTER_MS + 100);
+  it("agente lento sem fala nenhuma: não inventa frase de espera e libera o microfone", async () => {
+    const t = setup([{ type: "done", turnId: "1" }], 1100);
     await t.run();
-    expect(t.said).toEqual([NEUTRAL_FILLER]);
+    expect(t.said).toEqual([]);
     expect(t.log).toContain("done");
   });
 

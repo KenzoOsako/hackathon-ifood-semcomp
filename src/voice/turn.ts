@@ -6,13 +6,9 @@ import type { AgentMeta } from "./conversation-export";
 import type { ConverseEvent } from "./converse-events";
 import type { Mark } from "./latency";
 import { LOGIN_PATH } from "./auth-status";
-import { NEUTRAL_FILLER } from "./phrases";
 
-// Duas camadas de espera (docs/PLANO_INTEGRACAO_VOZ_AGENTE.md):
-//  1) esta, da voz: frase neutra em cache, ~1 s depois do reconhecimento (só se a resposta demora; a 0,1 s tocava em toda fala), só quando a fala veio por VOZ;
-//  2) a do agente (`fraseEspera` → evento `ack`), só quando ele decide buscar. As duas podem tocar, uma depois da outra.
-// Se o agente responder dentro desse 1 s (modo por regras), a espera nem toca.
-export const FILLER_AFTER_MS = 1000;
+// Sem frase de espera da voz ("Hum, um instante" saiu: a latência é atacada na origem, não mascarada).
+// Só resta o `ack` do agente (`fraseEspera`), e só quando ele decide buscar.
 // O `ack` do agente só vale se a resposta ainda demora. Se ela vem logo atrás (hoje, JSON único), a espera já acabou e
 // falar "Deixa eu ver as opções." só atrasaria a resposta útil em ~1,6 s.
 export const ACK_GRACE_MS = 50;
@@ -50,9 +46,6 @@ export async function runTurn(input: TurnInput, ctl: TurnCtl, handlers: TurnHand
 
   ctl.begin?.();
   ctl.mark("request_sent");
-  const cancelFiller = input.origem === "voz"
-    ? deps.after(() => { if (!firstSeen && !aborted()) ctl.enqueue(NEUTRAL_FILLER); }, FILLER_AFTER_MS)
-    : () => undefined;
 
   try {
     for await (const ev of converse(input, { signal: deps.signal, onMeta: (m) => { if (!aborted()) handlers.onMeta?.(m); } })) {
@@ -60,7 +53,6 @@ export async function runTurn(input: TurnInput, ctl: TurnCtl, handlers: TurnHand
       handle(ev);
     }
   } finally {
-    cancelFiller();
     cancelAck();
     // Um turno interrompido não fala, não mostra e, principalmente, não libera o microfone do turno NOVO.
     if (!aborted()) {
@@ -72,8 +64,7 @@ export async function runTurn(input: TurnInput, ctl: TurnCtl, handlers: TurnHand
 
   function handle(ev: ConverseEvent) {
     if (!firstSeen && (ev.type === "ack" || ev.type === "speech" || ev.type === "error")) {
-      firstSeen = true; // o agente já respondeu alguma coisa: a espera da voz não precisa mais tocar
-      cancelFiller();
+      firstSeen = true;
     }
     // "Primeiro pedaço" do backend = a resposta de verdade; o ack é espera e não entra nessa medida.
     if (ev.type === "speech" || ev.type === "error") ctl.mark("first_chunk");

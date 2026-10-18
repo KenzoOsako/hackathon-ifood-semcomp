@@ -358,6 +358,9 @@ async function ajustar(s: AgentSession, input: ConverseInput, deps: Deps, turno:
 async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }, tempos: AgentReply["tempos"], s: AgentSession): Promise<string> {
   const now = deps.now ?? (() => performance.now());
   const tr = now();
+  // Plano simples (até 2 itens pedidos, sem sugestão, aproximação, falta ou suposição): a frase do template já é curta,
+  // natural e verdadeira, e dispensa uma ida ao modelo (0,7 s a 3 s por turno). RESPONDER_LLM=1 força o modelo.
+  if (planoSimples(input) && process.env.RESPONDER_LLM !== "1") { tempos.responderMs = 0; return seguraOuTemplate(input, s); }
   try {
     const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder(input, signal));
     // A fala do LLM só vale vinculada aos fatos do plano (guardas-fala.ts); senão, o template.
@@ -370,6 +373,12 @@ async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; 
   } finally {
     tempos.responderMs = Math.round(now() - tr);
   }
+}
+
+function planoSimples(input: { plano: PlanoSnapshot; assumido: string[] }): boolean {
+  const { plano } = input;
+  return plano.blocos.length > 0 && plano.blocos.length <= 2 && input.assumido.length === 0 && plano.naoAtendidas.length === 0 && plano.pendencias.length === 0
+    && plano.blocos.every((b) => !b.sugestao && b.cobertura !== "proxima");
 }
 
 // O template também passa pela guarda: se nem ele serve (plano estranho), a fala é a mais simples e verdadeira possível.

@@ -21,7 +21,7 @@ export async function criarModelo(provedor: Provedor, modelo: string): Promise<B
 }
 
 const MAX_SAIDA = 600;
-const ATRASO_RESERVA_MS = 1500;
+const ATRASO_RESERVA_MS = 900;
 
 // Resposta crua do modelo (tool call ou texto JSON), para aproveitar o que veio quando a validação estrita falha.
 function bruto(msg: BaseMessage): unknown {
