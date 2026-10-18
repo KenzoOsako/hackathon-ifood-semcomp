@@ -39,7 +39,18 @@ export function palavrasDoPedido(n: Pick<Necessidade, "categoria" | "consultas">
 
 // Veredito só pelo texto. "serve" = todas as palavras do pedido aparecem no item; "proximo" = parte delas (mesmo tipo de
 // coisa, outra variação); "nao_serve" = nenhuma. Pedido com consultas alternativas basta casar com UMA consulta inteira.
+// Combo/kit: um item que reúne vários produtos ("Pizza A + Pizza B + Refri") não é o produto pedido sozinho, e o preço
+// é de todos eles. Só serve a quem pediu combo ou kit.
+const COMBO = /\s\+\s|\b(combo|kit|promocao)\b/;
+export const ehCombo = (item: string) => COMBO.test(norm(item));
+
 export function vereditoLexico(n: Pick<Necessidade, "categoria" | "consultas">, item: string): Veredito {
+  const pediuCombo = [n.categoria, ...(n.consultas ?? [])].some((t) => ehCombo(t) || /combo|kit/.test(norm(t)));
+  if (ehCombo(item) && !pediuCombo) return vereditoLexicoSimples(n, item) === "nao_serve" ? "nao_serve" : "proximo";
+  return vereditoLexicoSimples(n, item);
+}
+
+function vereditoLexicoSimples(n: Pick<Necessidade, "categoria" | "consultas">, item: string): Veredito {
   const doItem = palavras(item);
   const casa = (pedido: string[]) => pedido.filter((p) => doItem.some((i) => bate(p, i))).length;
   const alternativas = [n.categoria, ...(n.consultas ?? [])].map(palavras).filter((p) => p.length > 0);

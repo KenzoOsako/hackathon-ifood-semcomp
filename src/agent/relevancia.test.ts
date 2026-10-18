@@ -158,3 +158,15 @@ describe("atalho do texto e timer do juiz", () => {
     } finally { vi.useRealTimers(); }
   });
 });
+
+describe("combos não valem como o produto pedido sozinho", () => {
+  const n = { id: "n", vertical: "RESTAURANT" as const, categoria: "pizza calabresa", restricoes: [], consultas: ["pizza calabresa"] };
+  it("'1 Pizza Marguerita + 1 Pizza Calabresa + Guaraná' é no máximo proximo", () => {
+    expect(vereditoLexico(n, "1 Pizza Marguerita + 1 Pizza Calabresa + Guaraná")).toBe("proximo");
+    expect(vereditoLexico(n, "Pizza Calabresa grande")).toBe("serve");
+    expect(vereditoLexico(n, "Combo Calabresa e refri")).toBe("proximo");
+  });
+  it("quem pediu combo aceita combo", () => {
+    expect(vereditoLexico({ ...n, categoria: "combo pizza calabresa", consultas: ["combo pizza calabresa"] }, "Combo pizza calabresa + refri")).toBe("serve");
+  });
+});

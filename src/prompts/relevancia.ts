@@ -4,7 +4,7 @@ import { z } from "zod";
 import { MAX_CANDIDATOS_JUIZ } from "@/agent/limites";
 import type { CandidatoJulgado, Necessidade } from "@/agent/types";
 
-export const PROMPT_RELEVANCIA_VERSAO = "relevancia-v2";
+export const PROMPT_RELEVANCIA_VERSAO = "relevancia-v3";
 
 export const SYSTEM_RELEVANCIA = `Você confere se itens de um catálogo de entrega (iFood: restaurantes, mercado e presentes) atendem ao que o usuário pediu. Devolva SOMENTE o JSON pedido.
 
@@ -17,6 +17,7 @@ export const SYSTEM_RELEVANCIA = `Você confere se itens de um catálogo de entr
 - Julgue pelo NOME do item e pelo que o pedido significa para quem compra, não por palavras soltas em comum.
 - O pedido pode ser genérico, regional ou o nome de uma ocasião: reconheça os produtos e pratos que fazem parte dele.
 - Tipos diferentes não se substituem: sobremesa não substitui refeição; ingrediente não substitui prato pronto, nem o contrário; presente de uma categoria não substitui outra.
+- Combo, kit ou item que reúne vários produtos ("A + B + bebida") NÃO é o produto pedido sozinho: no máximo proximo, a menos que a pessoa tenha pedido combo ou kit. Prefira sempre o item individual.
 - Em dúvida entre proximo e nao_serve, escolha nao_serve. Dizer "não achei" é melhor do que oferecer o item errado.
 - O mesmo item em lojas diferentes recebe o mesmo veredito.
 - Ilustração (outro assunto): pedido "camiseta"; "Camiseta básica algodão" serve; "Regata" proximo; "Caneca" nao_serve.`;

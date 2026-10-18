@@ -82,7 +82,9 @@ export function nomesForaDoPlano(fala: string, plano: PlanoSnapshot, permitidos:
   const doPlano = textoDoPlano(plano);
   const extras = new Set(permitidos.map(norm));
   const fora: string[] = [];
-  for (const m of fala.matchAll(/(?<![.!?:]\s)(?<!^)\b([A-ZÀ-Ý][\p{L}]{2,})\b/gu)) {
+  for (const m of fala.matchAll(/\b([A-ZÀ-Ý][\p{L}]{2,})\b/gu)) {
+    // Começo de frase não é nome: início do texto, depois de pontuação final ou de quebra de linha.
+    if (/(^|[.!?:;"“(–—]|\n)\s*$/.test(fala.slice(0, m.index))) continue;
     const w = norm(m[1]);
     if (!doPlano.includes(w) && !PERMITIDOS.has(w) && !extras.has(w)) fora.push(m[1]);
   }

@@ -221,6 +221,9 @@ export class McpDomain implements DomainPort {
       else if (proximo.length > 0 && n.fonte !== "inferido") { todos = proximo; cobertura = "proxima"; }
       else todos = [];
       todos = todos.slice(0, MAX_CANDIDATOS);
+      console.info(`[busca] ${n.vertical} "${n.categoria}" consultas=${consultas.length} respostas=${respostas.length} itens=${unicos.size} elegiveis=${pool.length} serve=${serve.length} proximo=${proximo.length} fonte=${n.fonte ?? "dito"}`);
+    } else {
+      console.info(`[busca] ${n.vertical} "${n.categoria}" consultas=${consultas.length} respostas=${respostas.length} itens=${unicos.size} elegiveis=${pool.length} (sem juiz)`);
     }
     // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
     const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
