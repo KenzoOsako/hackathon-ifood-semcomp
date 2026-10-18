@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BargeInDetector, EndpointDetector } from "./endpoint";
+import { BargeInDetector, EndpointDetector, NoiseFloor } from "./endpoint";
 import { VoiceSession, type PlayerLike, type RecorderLike, type SessionDeps, type SessionEvents, type Utterance, type VoiceErrorCode } from "./session";
 
 // ---------- doubles ----------
@@ -109,6 +109,23 @@ describe("fim de fala", () => {
   });
 });
 
+describe("ruído de fundo", () => {
+  it("estima o fundo pelo percentil baixo e ignora os picos da fala", () => {
+    const n = new NoiseFloor();
+    for (let i = 0; i < 40; i++) n.push(0.004);
+    for (let i = 0; i < 10; i++) n.push(0.2); // fala
+    expect(n.floor).toBeCloseTo(0.004);
+    expect(n.speechThreshold()).toBeCloseTo(0.012);
+  });
+  it("o limite respeita um mínimo e um máximo", () => {
+    const silencioso = new NoiseFloor(); silencioso.push(0);
+    expect(silencioso.speechThreshold()).toBe(0.006);
+    const barulhento = new NoiseFloor(); for (let i = 0; i < 20; i++) barulhento.push(0.5);
+    expect(barulhento.speechThreshold()).toBe(0.04);
+    expect(barulhento.bargeInThreshold()).toBe(0.12);
+  });
+});
+
 describe("interrupção por voz", () => {
   it("exige voz sustentada e forte; ruído fraco ou estalo não dispara", () => {
     const b = new BargeInDetector();
@@ -148,12 +165,33 @@ describe("modo manual (Falar / Parar)", () => {
     expect(s.state).toBe("listening");
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("áudio sem fala vira erro claro, sem chamar o reconhecimento", async () => {
+  it("no manual o áudio SEMPRE vai ao reconhecimento; sem fala, ele responde vazio e a tela avisa", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(new Response("{}", { status: 422 })));
     const s = makeSession();
     await s.start(); await clock.advance(1000); s.stop(); await clock.advance(200);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1); // quem decide se há fala é o reconhecimento, não o medidor local
     expect(errors.at(-1)).toBe("no_speech");
     expect(s.state).toBe("error");
+  });
+  it("microfone FRACO (abaixo do antigo limite fixo de 0,02) ainda é reconhecido no manual", async () => {
+    const s = makeSession();
+    await s.start();
+    level = 0.012; await clock.advance(1500); level = 0;
+    s.stop(); await clock.advance(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(utterances).toHaveLength(1);
+  });
+  it("o diagnóstico informa nível, ruído de fundo, limite, tamanho do áudio e a resposta do reconhecimento", async () => {
+    const diags: Array<Record<string, unknown>> = [];
+    const s = makeSession();
+    (s as unknown as { ev: SessionEvents }).ev.onDiag = (d) => diags.push({ ...d });
+    await s.start();
+    level = 0.012; await clock.advance(1500); level = 0; s.stop(); await clock.advance(200);
+    const last = diags.at(-1)!;
+    expect(last).toMatchObject({ sttStatus: 200, mime: "audio/webm" });
+    expect(last.blobBytes).toBeGreaterThan(800);
+    expect(typeof last.floor).toBe("number");
+    expect(typeof last.threshold).toBe("number");
   });
   it("permissão negada e navegador sem suporte são tratados sem quebrar", async () => {
     openFails = true;
@@ -184,6 +222,22 @@ describe("modo sem as mãos", () => {
     await clock.advance(400);
     expect(s.state).toBe("listening"); // reabriu sozinho
     expect(recorders).toHaveLength(2);
+  });
+  it("limite adaptativo: microfone fraco (voz a 0,012) ainda é ouvido no modo sem as mãos", async () => {
+    const s = makeSession();
+    await s.setHandsFree(true);
+    level = 0.002; await clock.advance(1000); // ruído de fundo baixo: o limite desce
+    level = 0.012; await clock.advance(1500); level = 0.002; await clock.advance(1300);
+    expect(utterances).toHaveLength(1);
+  });
+  it("limite adaptativo: sala barulhenta (fundo a 0,015) não conta como fala, a voz forte conta", async () => {
+    const s = makeSession();
+    await s.setHandsFree(true);
+    level = 0.015; await clock.advance(4000); // só barulho de fundo
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(s.state).toBe("listening");
+    level = 0.08; await clock.advance(1500); level = 0.015; await clock.advance(1300); // voz bem acima do fundo
+    expect(utterances).toHaveLength(1);
   });
   it("depois de entregar a fala, NÃO reabre o microfone enquanto o agente ainda está pensando", async () => {
     const s = makeSession();

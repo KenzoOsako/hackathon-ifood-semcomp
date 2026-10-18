@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserDeps } from "./browser-deps";
 import type { LatencySummary, Mark } from "./latency";
 import { SpeechPlayer } from "./player";
-import { VoiceSession, type Utterance, type VoiceApi, type VoiceErrorCode, type VoiceState } from "./session";
+import { VoiceSession, type Utterance, type VoiceApi, type VoiceDiag, type VoiceErrorCode, type VoiceState } from "./session";
 
 export type { Utterance, VoiceApi, VoiceErrorCode, VoiceState };
 
@@ -30,6 +30,7 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const [level, setLevel] = useState(0);
   const [handsFree, setHandsFreeState] = useState(false);
   const [latency, setLatency] = useState<LatencySummary | null>(null);
+  const [diag, setDiag] = useState<VoiceDiag>({});
   const session = useRef<VoiceSession | null>(null);
   const player = useRef<SpeechPlayer | null>(null);
   const onUtt = useRef(onUtterance);
@@ -49,6 +50,7 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
       onHandsFree: setHandsFreeState,
       onUtterance: (u, api) => onUtt.current(u, api),
       onLatency: setLatency,
+      onDiag: setDiag,
     });
     session.current = s;
     return () => { s.destroy(); session.current = null; };
@@ -64,5 +66,5 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const turnDone = useCallback(() => session.current?.turnDone(), []);
   const stopSpeaking = useCallback(() => session.current?.stopSpeaking(), []);
 
-  return { state, error, errorMessage: error ? MESSAGES[error] : null, level, handsFree, latency, start, stop, setHandsFree, speak, enqueue, mark, beginTurn, turnDone, stopSpeaking };
+  return { state, error, errorMessage: error ? MESSAGES[error] : null, level, handsFree, latency, diag, start, stop, setHandsFree, speak, enqueue, mark, beginTurn, turnDone, stopSpeaking };
 }

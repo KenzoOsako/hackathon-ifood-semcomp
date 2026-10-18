@@ -84,6 +84,21 @@ export default function VozLab() {
         <button disabled={busy} style={{ padding: "0 18px", borderRadius: 10, border: 0, background: "#222", color: "#fff" }}>Enviar</button>
       </form>
 
+      <details open style={{ marginTop: 12, color: "#444" }}>
+        <summary>Diagnóstico do microfone</summary>
+        <pre style={{ background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto", fontSize: 13 }}>{JSON.stringify({
+          nivel_agora: voice.diag.level?.toFixed(4),
+          ruido_de_fundo: voice.diag.floor?.toFixed(4),
+          limite_de_voz: voice.diag.threshold?.toFixed(4),
+          ultimo_audio_bytes: voice.diag.blobBytes,
+          formato: voice.diag.mime,
+          medidor_local_ouviu_fala: voice.diag.heardSpeech,
+          reconhecimento_http: voice.diag.sttStatus,
+          reconhecimento_ms: voice.diag.sttMs,
+        }, null, 2)}</pre>
+        <small>Fale e veja o <strong>nivel_agora</strong> subir. Se ele ficar em 0, o navegador não está entregando som ao medidor (microfone errado ou contexto de áudio suspenso).</small>
+      </details>
+
       {voice.latency && (
         <details open style={{ marginTop: 16, color: "#444" }}>
           <summary>Latência do último turno (ms)</summary>

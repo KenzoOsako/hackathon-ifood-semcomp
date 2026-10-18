@@ -34,9 +34,10 @@ export class EndpointDetector {
     return this.speechStart !== undefined;
   }
 
-  feed(level: number, t: number): EndDecision {
+  // `threshold` opcional: o limite adaptativo (ruído de fundo) vence o fixo.
+  feed(level: number, t: number, threshold: number = this.o.threshold): EndDecision {
     if (t - this.startAt >= this.o.maxMs) return "max";
-    if (level >= this.o.threshold) {
+    if (level >= threshold) {
       this.runStart ??= t;
       if (t - this.runStart >= this.o.minSpeechMs) {
         this.speechStart ??= this.runStart;
@@ -68,12 +69,41 @@ export class BargeInDetector {
     this.runStart = undefined;
   }
 
-  feed(level: number, t: number): boolean {
-    if (level < this.o.threshold) {
+  feed(level: number, t: number, threshold: number = this.o.threshold): boolean {
+    if (level < threshold) {
       this.runStart = undefined;
       return false;
     }
     this.runStart ??= t;
     return t - this.runStart >= this.o.minMs;
+  }
+}
+
+// Estima o ruído de fundo (nível baixo recente) e devolve limites RELATIVOS a ele. Microfones de notebook entregam
+// níveis muito diferentes; um número fixo falha em uns e dispara em outros. Medido na prática: ajustar no teste humano.
+export class NoiseFloor {
+  private recent: number[] = [];
+  constructor(private windowSize = 60) {} // ~3 s a 20 amostras/s
+
+  push(level: number): void {
+    this.recent.push(level);
+    if (this.recent.length > this.windowSize) this.recent.shift();
+  }
+
+  // Percentil 20 dos últimos níveis: ignora os picos da própria fala.
+  get floor(): number {
+    if (this.recent.length === 0) return 0;
+    const sorted = [...this.recent].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length * 0.2)];
+  }
+
+  // Voz = bem acima do ruído de fundo, mas nunca acima de `max` (microfone fraco) nem abaixo de `min`.
+  speechThreshold(min = 0.006, max = 0.04, factor = 3): number {
+    return Math.min(max, Math.max(min, this.floor * factor));
+  }
+
+  // Interromper o Guide pede voz mais forte (o alto-falante vaza no microfone).
+  bargeInThreshold(min = 0.03, max = 0.12, factor = 6): number {
+    return Math.min(max, Math.max(min, this.floor * factor));
   }
 }

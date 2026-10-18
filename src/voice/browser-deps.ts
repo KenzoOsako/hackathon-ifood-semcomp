@@ -19,6 +19,8 @@ export function createBrowserDeps(player: PlayerLike, getTerms?: () => string[],
       // Ganho automático DESLIGADO: ele amplifica o ruído nas pausas e atrapalha o detector de fim de fala.
       const media = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
       const ctx = new AudioContext();
+      // O Chrome pode criar o contexto SUSPENSO; suspenso, o medidor devolve zero para sempre.
+      if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 1024;
       ctx.createMediaStreamSource(media).connect(analyser);
@@ -32,6 +34,7 @@ export function createBrowserDeps(player: PlayerLike, getTerms?: () => string[],
             return rms(buf);
           },
           close: () => void ctx.close(),
+          state: () => ctx.state,
         },
       };
     },

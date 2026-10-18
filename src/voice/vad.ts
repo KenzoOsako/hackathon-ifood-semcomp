@@ -24,8 +24,8 @@ export class VoiceActivityTracker {
   constructor(private opts: VadOptions = DEFAULT_VAD) {}
 
   // `t` em ms (performance.now). Chamar a cada amostra de nível, em ordem crescente de tempo.
-  push(level: number, t: number): void {
-    const voiced = level >= this.opts.threshold;
+  push(level: number, t: number, threshold: number = this.opts.threshold): void {
+    const voiced = level >= threshold;
     if (voiced) {
       this.runStart ??= t;
       const confirmed = t - this.runStart >= this.opts.minVoiceMs;

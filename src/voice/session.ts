@@ -6,7 +6,7 @@
 //  - Manual: Falar / Parar (a pessoa decide quando termina).
 //  - Sem as mãos: o Guide abre o microfone, PARA sozinho depois de um silêncio, reconhece, responde falando e
 //    abre de novo. Falar por cima do Guide (voz sustentada) interrompe a fala.
-import { BargeInDetector, EndpointDetector, DEFAULT_ENDPOINT, type EndpointOptions } from "./endpoint";
+import { BargeInDetector, EndpointDetector, NoiseFloor, DEFAULT_ENDPOINT, type EndpointOptions } from "./endpoint";
 import { LatencyTrace, type LatencySummary, type Mark } from "./latency";
 import { computeSignals, type VoiceSignals } from "./signals";
 import { VoiceActivityTracker } from "./vad";
@@ -30,7 +30,7 @@ export interface VoiceApi {
   turnDone: () => void;
 }
 
-export interface MeterLike { read(): number; close(): void }
+export interface MeterLike { read(): number; close(): void; state?(): string }
 export interface StreamLike { stop(): void }
 export interface RecorderLike {
   mimeType: string;
@@ -60,7 +60,20 @@ export interface SessionDeps {
   endpoint?: EndpointOptions;
 }
 
+// Diagnóstico para a tela: o que o microfone está entregando de verdade.
+export interface VoiceDiag {
+  level?: number; // nível atual (RMS)
+  floor?: number; // ruído de fundo estimado
+  threshold?: number; // limite de voz em uso
+  blobBytes?: number; // tamanho do último áudio enviado
+  mime?: string;
+  sttStatus?: number | "rede";
+  sttMs?: number;
+  heardSpeech?: boolean; // o medidor local achou que houve fala
+}
+
 export interface SessionEvents {
+  onDiag?(d: VoiceDiag): void;
   onState(s: VoiceState): void;
   onError(code: VoiceErrorCode | null): void;
   onLevel(level: number): void;
@@ -87,6 +100,8 @@ export class VoiceSession {
   private tracker?: VoiceActivityTracker;
   private endpoint?: EndpointDetector;
   private barge = new BargeInDetector();
+  private noise = new NoiseFloor();
+  private diag: VoiceDiag = {};
   private micOpenedAt = 0;
   private interrupted = false;
   private cooldownUntil = 0;
@@ -247,6 +262,12 @@ export class VoiceSession {
     const t = this.d.now();
     const level = this.mic.meter.read();
     this.ev.onLevel(level);
+    // Ruído de fundo: só aprende quando ninguém está falando (nem o usuário, nem o Guide).
+    const speakingNow = this.d.player.speaking;
+    if (!speakingNow) this.noise.push(level);
+    const thr = this.noise.speechThreshold();
+    this.diag = { ...this.diag, level, floor: this.noise.floor, threshold: thr };
+    this.ev.onDiag?.(this.diag);
 
     const speaking = this.d.player.speaking;
     if (speaking !== this.wasSpeaking) {
@@ -258,8 +279,8 @@ export class VoiceSession {
     }
 
     if (this.state === "listening") {
-      this.tracker?.push(level, t);
-      const decision = this.endpoint!.feed(level, t);
+      this.tracker?.push(level, t, thr);
+      const decision = this.endpoint!.feed(level, t, thr);
       if (decision === "max") this.finalize();
       // Fim de fala por silêncio e desistência por falta de fala só valem no modo sem as mãos;
       // no manual, quem decide é a pessoa.
@@ -273,7 +294,7 @@ export class VoiceSession {
 
     if (!this.handsFree) return;
     if (this.state === "speaking") {
-      if (this.barge.feed(level, t)) void this.beginListening(true);
+      if (this.barge.feed(level, t, this.noise.bargeInThreshold())) void this.beginListening(true);
     } else if (this.state === "idle" && t >= this.cooldownUntil && !speaking && !this.awaitingReply) {
       void this.beginListening(false);
     }
@@ -301,14 +322,21 @@ export class VoiceSession {
     const mime = (mimeType || "audio/webm").split(";")[0];
     const blob = new Blob(this.chunks, { type: mime });
     if (!this.handsFree) this.releaseMic();
+    this.diag = { ...this.diag, blobBytes: blob.size, mime, heardSpeech: !!this.tracker?.heardSpeech };
+    this.ev.onDiag?.(this.diag);
     if (blob.size < 800) return this.afterEmpty("too_short");
-    if (!this.tracker?.heardSpeech) return this.afterEmpty("no_speech");
+    // No modo sem as mãos o medidor local decide se vale gravar; no MANUAL o áudio SEMPRE vai ao reconhecimento
+    // (microfones fracos ficam abaixo do limite local mesmo com a pessoa falando alto).
+    if (this.handsFree && !this.tracker?.heardSpeech) return this.afterEmpty("no_speech");
     this.silentRounds = 0;
     this.setState("transcribing");
     try {
       const terms = this.d.getTerms?.() ?? [];
       const query = terms.length ? `?terms=${encodeURIComponent(JSON.stringify(terms.slice(0, 40)))}` : "";
+      const sttStart = this.d.now();
       const res = await this.d.fetchImpl(`/api/voice/stt${query}`, { method: "POST", headers: { "Content-Type": mime }, body: blob });
+      this.diag = { ...this.diag, sttStatus: res.status, sttMs: Math.round(this.d.now() - sttStart) };
+      this.ev.onDiag?.(this.diag);
       if (res.status === 429) return this.afterFailure("rate_limited");
       if (res.status === 503) return this.afterFailure("stt_unavailable");
       if (res.status === 422) return this.afterEmpty("no_speech");
@@ -324,6 +352,8 @@ export class VoiceSession {
         { speak: (t) => player.speak(t), enqueue: (c, n) => player.enqueue(c, { nextText: n }), mark: (m) => this.mark(m), turnDone: () => this.turnDone() },
       );
     } catch {
+      this.diag = { ...this.diag, sttStatus: "rede" };
+      this.ev.onDiag?.(this.diag);
       this.afterFailure("stt_failed");
     }
   }
