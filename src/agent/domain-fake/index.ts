@@ -2,6 +2,7 @@
 // (src/voice/agent-prompt.md) e são sempre rotulados "simulado". Substituído pelas
 // funções reais do Kenzo (K-3/K-5) sem mudar o orquestrador.
 import { randomUUID } from "node:crypto";
+import { soOsEspecificos } from "../especificidade";
 import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
 
 interface Oferta {
@@ -21,6 +22,15 @@ const OFERTAS: Oferta[] = [
   { ref: "central-copos", vertical: "GROCERIES", loja: "Mercado Central", item: "50 copos descartáveis", termos: ["copo", "copos", "descartavel"], precoCents: 700, freteCents: 600, prazoMin: 35, prazo: "35 minutos", pedidoMinimoCents: 3000 },
   { ref: "bairro-pipoca", vertical: "GROCERIES", loja: "Mercado do Bairro", item: "pipoca de micro-ondas, pacote com 3", termos: ["pipoca", "filme", "petisco"], precoCents: 990, freteCents: 450, prazoMin: 25, prazo: "25 minutos", pedidoMinimoCents: 2500, porcoes: 3 },
   { ref: "bairro-refri", vertical: "GROCERIES", loja: "Mercado do Bairro", item: "refrigerante de 2 litros", termos: ["refrigerante", "bebida"], precoCents: 890, freteCents: 450, prazoMin: 25, prazo: "25 minutos", pedidoMinimoCents: 2500, porcoes: 4 },
+  // Churrasco e comida leve: para os cenários de situações variadas (dados simulados).
+  { ref: "acougue-picanha", vertical: "GROCERIES", loja: "Açougue Boi Bom", item: "picanha, 1 kg", termos: ["carne", "picanha", "churrasco", "fraldinha"], precoCents: 7990, freteCents: 700, prazoMin: 40, prazo: "40 minutos", nota: 4.7, porcoes: 4 },
+  { ref: "acougue-linguica", vertical: "GROCERIES", loja: "Açougue Boi Bom", item: "linguiça toscana, 1 kg", termos: ["carne", "linguica", "churrasco"], precoCents: 2990, freteCents: 700, prazoMin: 40, prazo: "40 minutos", nota: 4.5, porcoes: 5 },
+  { ref: "central-carvao", vertical: "GROCERIES", loja: "Mercado Central", item: "carvão, saco de 5 kg", termos: ["carvao", "churrasco"], precoCents: 2490, freteCents: 600, prazoMin: 35, prazo: "35 minutos", pedidoMinimoCents: 3000 },
+  { ref: "central-espetinho-veg", vertical: "GROCERIES", loja: "Mercado Central", item: "espetinho de legumes, 6 unidades", termos: ["vegetariano", "legume", "vegetal", "espetinho"], precoCents: 2190, freteCents: 600, prazoMin: 35, prazo: "35 minutos", porcoes: 2 },
+  { ref: "verde-burger-veg", vertical: "RESTAURANT", loja: "Verde Lanches", item: "hambúrguer vegetariano de grão-de-bico", termos: ["hamburguer", "vegetariano", "vegetal"], precoCents: 2890, freteCents: 500, prazoMin: 30, prazo: "30 minutos", nota: 4.6 },
+  { ref: "vovo-canja", vertical: "RESTAURANT", loja: "Cozinha da Vovó", item: "canja de galinha", termos: ["sopa", "canja", "caldo", "leve"], precoCents: 2290, freteCents: 490, prazoMin: 30, prazo: "30 minutos", nota: 4.8 },
+  { ref: "vovo-sopa-legumes", vertical: "RESTAURANT", loja: "Cozinha da Vovó", item: "sopa de legumes", termos: ["sopa", "caldo", "legume", "leve", "vegetariano"], precoCents: 1990, freteCents: 490, prazoMin: 30, prazo: "30 minutos", nota: 4.6 },
+  { ref: "bairro-suco", vertical: "GROCERIES", loja: "Mercado do Bairro", item: "suco natural de laranja, 1 litro", termos: ["suco", "laranja", "bebida"], precoCents: 1290, freteCents: 450, prazoMin: 25, prazo: "25 minutos", porcoes: 4 },
   { ref: "casa-panelas", vertical: "SHOPPING", loja: "Casa e Sabor", item: "kit de panelas antiaderentes", termos: ["presente", "panela", "cozinha"], precoCents: 8990, prazoMin: 1440, prazo: "amanhã", nota: 4.5 },
   { ref: "gamer-fone", vertical: "SHOPPING", loja: "Gamer Center", item: "fone de ouvido bluetooth", termos: ["presente", "fone", "eletronico"], precoCents: 9900, prazoMin: 1440, prazo: "amanhã", nota: 4.6 },
   { ref: "livraria-livro", vertical: "SHOPPING", loja: "Livraria Central", item: "livro de culinária ilustrado", termos: ["presente", "livro", "cozinha"], precoCents: 5990, prazoMin: 2880, prazo: "em dois dias", nota: 4.8 },
@@ -67,8 +77,9 @@ export class FakeDomain implements DomainPort {
     const cat = norm(n.categoria);
     const restricoes = n.restricoes.map(norm);
     const qtd = quantidade(n, ocasiao);
-    return OFERTAS.filter((o) => o.vertical === n.vertical)
-      .filter((o) => o.termos.some((t) => cat.includes(t) || t.includes(cat)) || norm(o.item).includes(cat))
+    const daCategoria = OFERTAS.filter((o) => o.vertical === n.vertical)
+      .filter((o) => o.termos.some((t) => cat.includes(t) || t.includes(cat)) || norm(o.item).includes(cat));
+    return soOsEspecificos(daCategoria, n.categoria, (o) => `${o.item} ${o.termos.join(" ")}`)
       // Filtro rígido: restrição declarada exclui a oferta; nunca é relaxado aqui.
       .filter((o) => !restricoes.some((r) => (o.contem ?? []).some((c) => r.includes(c) || c.includes(r))))
       .filter((o) => n.orcamento?.tipo !== "teto" || o.precoCents * qtd <= Math.round(n.orcamento.max * 100));

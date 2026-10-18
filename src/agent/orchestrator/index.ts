@@ -1,6 +1,7 @@
 // Orquestrador do Guide: um turno = interpretar (LLM) → regras em código → domínio → resposta.
 // Estados S0–S7 conforme docs/AGENTE_CONVERSA_E_FLUXO.md §3. O prompt orienta; este arquivo garante
 // teto de perguntas, nível que só rebaixa, encaminhamento único e que aprovação nunca é executada aqui.
+import { ZodError } from "zod";
 import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
 import { FRASES, LIMIARES_CONFIANCA } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
@@ -75,6 +76,13 @@ function resumoParaConfirmar(s: AgentSession, turno: TurnoInterpretado, texto: s
   return undefined;
 }
 
+// Só o tipo da falha e os campos inválidos, nunca o texto: a mensagem do provedor pode trazer a fala do usuário.
+function motivoFalha(error: unknown): string {
+  if (error instanceof ZodError) return `formato (${error.issues.map((i) => `${i.path.join(".")}:${i.code}`).join(", ")})`;
+  if (error instanceof Error) return error.name === "AbortError" ? "tempo esgotado" : `${error.name}${/\b(429|quota)\b/i.test(error.message) ? " (cota)" : ""}`;
+  return "desconhecida";
+}
+
 // Interromper o Guide é sinal de pressa, exceto quando ele acabou de perguntar (S2): aí a pessoa só está
 // respondendo, e um "sim" curto não é pressa. Fala curta sozinha não conta: é ambígua demais sem calibração.
 function pressaPelaVoz(s: AgentSession, input: ConverseInput): boolean {
@@ -112,9 +120,10 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
       texto: input.texto, hipoteses: input.hipoteses, pressaDetectada: pressa,
       session: { estado: s.estado, nivel: s.nivel, perguntasFeitas: s.perguntasFeitas, ocasiao: s.ocasiao, necessidades: s.necessidades, history: s.history, opcoesFaladas: opcoesFaladas(s.plano) },
     }, signal));
-  } catch {
+  } catch (error) {
     // Saída inválida ou falha do provedor: frase curta, nada inventado, nível intacto.
     tempos.interpretarMs = Math.round(now() - t0);
+    console.warn(`[agente] interpretar falhou em ${tempos.interpretarMs}ms: ${motivoFalha(error)}`);
     return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
   }
   tempos.interpretarMs = Math.round(now() - t0);
@@ -196,10 +205,17 @@ function processarPedidoOuResposta(s: AgentSession, input: ConverseInput, deps: 
   return montar(s, input, deps, turno, tempos, t0);
 }
 
+// Sugestão não gasta pergunta (decisão do Hyago): pergunta que cita só item sugerido é descartada e o Guide assume.
+function perguntaSobreSugestao(s: AgentSession, pergunta: string): boolean {
+  const p = norm(pergunta);
+  const cita = (n: Necessidade) => p.includes(chave(n));
+  return s.necessidades.some((n) => n.fonte === "inferido" && cita(n)) && !s.necessidades.some((n) => n.fonte !== "inferido" && cita(n));
+}
+
 function devePerguntar(s: AgentSession, turno: TurnoInterpretado, pressa: boolean): boolean {
   const limite = s.nivel === "L1" ? MAX_PERGUNTAS_L1 : MAX_PERGUNTAS;
   // Pergunta com conteúdo proibido é descartada: segue para o plano em vez de falar algo indevido.
-  return Boolean(turno.pergunta && !PROIBIDO.test(turno.pergunta) && !temDadoPessoal(turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
+  return Boolean(turno.pergunta && !PROIBIDO.test(turno.pergunta) && !temDadoPessoal(turno.pergunta) && !perguntaSobreSugestao(s, turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
 }
 
 async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> {

@@ -24,6 +24,9 @@ function checarPlanoEFala(r: AgentReply, e: Esperado, falhas: string[]) {
   if (e.minBlocos !== undefined && (r.tela?.plano.blocos.length ?? 0) < e.minBlocos) {
     falhas.push(`blocos < ${e.minBlocos}`);
   }
+  const blocos = r.tela?.plano.blocos.map((b) => `${b.categoria} ${b.principal.item}`) ?? [];
+  for (const re of e.blocosIncluem ?? []) if (!blocos.some((b) => re.test(b))) falhas.push(`plano sem ${re}`);
+  if (e.blocosExcluem && blocos.some((b) => e.blocosExcluem!.test(b))) falhas.push(`plano com ${e.blocosExcluem}`);
   if (e.temSugestao !== undefined && Boolean(r.tela?.plano.blocos.some((b) => b.sugestao)) !== e.temSugestao) {
     falhas.push(e.temSugestao ? "sem sugestão no plano" : "sugestão inesperada");
   }

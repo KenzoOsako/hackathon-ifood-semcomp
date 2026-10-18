@@ -7,18 +7,19 @@ import { VoiceSignalsSchema } from "@/voice/signals";
 export const VerticalSchema = z.enum(["RESTAURANT", "GROCERIES", "SHOPPING"]);
 export type Vertical = z.infer<typeof VerticalSchema>;
 
+// As descrições vão para o modelo junto com o schema: campos curtos são poucas palavras, não frases.
 export const OcasiaoSchema = z.object({
-  tipo: z.string().max(60).optional(),
+  tipo: z.string().max(60).describe("Uma a três palavras. Ex.: aniversário, churrasco, jantar, doença").optional(),
   pessoas: z.number().int().min(1).max(50).optional(),
-  quando: z.string().max(60).optional(),
-  local: z.string().max(60).optional(),
+  quando: z.string().max(60).describe("Uma ou duas palavras. Ex.: hoje, sábado, agora").optional(),
+  local: z.string().max(60).describe("Uma ou duas palavras. Ex.: casa, trabalho").optional(),
 });
 export type Ocasiao = z.infer<typeof OcasiaoSchema>;
 
 export const NecessidadeSchema = z.object({
   id: z.string().min(1).max(40),
   vertical: VerticalSchema,
-  categoria: z.string().min(1).max(60),
+  categoria: z.string().min(1).max(60).describe("Uma a três palavras concretas, buscáveis no iFood. Ex.: pizza calabresa, canja, carvão"),
   restricoes: z.array(z.string().max(60)).max(10).default([]),
   // min(1) e não positive(): o Gemini rejeita exclusiveMinimum no response_schema.
   orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),

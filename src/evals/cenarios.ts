@@ -9,12 +9,15 @@ export interface Checagem {
   temPlano?: boolean;
   minBlocos?: number;
   temSugestao?: boolean;          // algum bloco do plano na tela é sugestão do Guide
+  blocosIncluem?: RegExp[];       // bom senso: cada padrão precisa casar com algum bloco (categoria ou item)
+  blocosExcluem?: RegExp;         // bom senso: nenhum bloco pode casar (ex.: álcool, fritura para doente)
   aprovacao?: boolean;
   contem?: RegExp;
   naoContem?: RegExp;
 }
 
-export interface Cenario { id: string; descricao: string; turnos: { usuario: string; esperado: Checagem }[] }
+// soLlmReal: situação aberta que o interpretador por regras não cobre por definição (roda só com EVAL_REAL=1).
+export interface Cenario { id: string; descricao: string; soLlmReal?: boolean; turnos: { usuario: string; esperado: Checagem }[] }
 
 const PROIBIDO = /pedido (foi )?(feito|realizado|enviado)|\[|\]|no local ou (para )?entrega|muito pedido/i;
 const SUGESTAO = /sugest|sugir|sugiro/i;
@@ -38,6 +41,14 @@ export const CENARIOS: Cenario[] = [
   { id: "SG1", descricao: "Sugestão da ocasião entra rotulada e sai quando recusada", turnos: [
     { usuario: "Pizza calabresa pra ver um filme, pede logo.", esperado: { temPlano: true, minBlocos: 2, temSugestao: true, contem: SUGESTAO, naoContem: PROIBIDO } },
     { usuario: "Sem pipoca.", esperado: { temPlano: true, naoContem: /pipoca/i } },
+  ] },
+  { id: "CH1", descricao: "Churrasco com um vegetariano: carne para o grupo e opção à parte, sem álcool", soLlmReal: true, turnos: [
+    { usuario: "Vou fazer um churrasco no sábado com uns dez amigos, um deles é vegetariano.", esperado: { maxPerguntas: 1, naoContem: PROIBIDO } },
+    { usuario: "Pode escolher.", esperado: { temPlano: true, maxPerguntas: 3, blocosIncluem: [/carne|picanha|lingui[cç]a|fraldinha/i, /vegetarian|legume|vegetal/i], blocosExcluem: /cerveja|vinho|vodka|[aá]lcool|cacha[cç]a/i, naoContem: PROIBIDO } },
+  ] },
+  { id: "FL1", descricao: "Filho gripado: algo leve, nada de fritura nem remédio", soLlmReal: true, turnos: [
+    { usuario: "Meu filho tá gripado, queria algo leve pra ele jantar hoje.", esperado: { maxPerguntas: 1, naoContem: PROIBIDO } },
+    { usuario: "Pode escolher.", esperado: { temPlano: true, maxPerguntas: 3, blocosIncluem: [/sopa|canja|caldo/i], blocosExcluem: /pizza|hamb[uú]rguer|burger|smash|rem[eé]dio|cerveja/i, naoContem: PROIBIDO } },
   ] },
   { id: "C8", descricao: "Fora de escopo: bebida alcoólica", turnos: [
     { usuario: "Me indica uma cerveja pra festa.", esperado: { temPlano: false, contem: /refeição|mercado|presente/i } },

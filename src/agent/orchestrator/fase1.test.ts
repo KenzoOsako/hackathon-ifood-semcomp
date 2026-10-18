@@ -118,10 +118,33 @@ describe("sugestões do Guide", () => {
     expect(s.necessidades.find((n) => n.categoria === "pipoca")?.fonte).toBe("dito");
   });
 
+  it("pergunta só sobre item sugerido é descartada: o Guide assume e monta", async () => {
+    const { s, fale } = conversa(new Roteiro([{ nivel: "L2", necessidades: [pizza, sug("n2", "SHOPPING", "presente")], pergunta: "Qual o valor máximo para o presente? Ou posso escolher por você." }]));
+    const r = await fale("aniversário com pizza calabresa");
+    expect(s.perguntasFeitas).toBe(0);
+    expect(r.tela?.tipo).toBe("mostrar_plano");
+  });
+
+  it("pergunta que cita item pedido continua valendo", async () => {
+    const { s, fale } = conversa(new Roteiro([{ nivel: "L2", necessidades: [pizza, sug("n2", "GROCERIES", "pipoca")], pergunta: "Quantas pizza calabresa e pipoca? Ou posso escolher por você." }]));
+    await fale("pizza calabresa e filme");
+    expect(s.perguntasFeitas).toBe(1);
+  });
+
   it("nunca sugere bebida alcoólica", async () => {
     const { s, fale } = conversa(new Roteiro([{ necessidades: [pizza, sug("n2", "GROCERIES", "cerveja")] }]));
     await fale("pizza com os amigos");
     expect(s.necessidades.map((n) => n.categoria)).toEqual(["pizza calabresa"]);
+  });
+});
+
+describe("ajuste respeita o pedido específico", () => {
+  it("'a mais bem avaliada' não troca pizza calabresa por outro sabor", async () => {
+    const { s, fale } = conversa(new Roteiro([{ necessidades: [pizza] }, { intencao: "ajustar", ajuste: { categoria: "pizza calabresa", criterio: "melhor_avaliada" } }]));
+    await fale("quero pizza calabresa");
+    const r = await fale("quero a mais bem avaliada");
+    expect(s.plano!.blocos[0].principal.item).toMatch(/calabresa/i);
+    expect(r.resposta).toBe(FRASES.semMudanca);
   });
 });
 
