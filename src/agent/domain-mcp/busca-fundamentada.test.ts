@@ -109,3 +109,19 @@ describe("relevância na busca (mecanismo geral)", () => {
     expect(sem.map((o) => o.item)).not.toContain("Leite integral 1L"); // antes: só os 10 mais baratos entravam
   });
 });
+
+describe("cartão de sugestão: campos do estabelecimento, só do que o MCP devolveu", () => {
+  it("opção real traz descrição de uma linha e os campos estruturados", async () => {
+    const [o] = await new McpDomain(new Catalogo({ leite: [item("1", "Leite integral 1L", 600, "Mercado")] }), local).buscarNecessidade(nec("leite"), {});
+    expect(o.descricao).toBe("nota 4,5 (100 avaliações) · a 1 km · entrega até 30 minutos · frete R$ 5,00");
+    expect(o).toMatchObject({ distanciaKm: 1, avaliacoes: 100 });
+  });
+  it("promoção real aparece como preço original; sem promoção, o campo não existe", async () => {
+    // O MCP devolve preço em REAIS (5,00); o domínio converte para centavos.
+    const promo = { ...item("2", "Leite promo", 5, "Mercado"), promotionalUnitPrice: 4 };
+    const [o] = await new McpDomain(new Catalogo({ leite: [promo] }), local).buscarNecessidade(nec("leite"), {});
+    expect(o.precoOriginalCents).toBe(500);
+    const [p] = await new McpDomain(new Catalogo({ leite: [item("3", "Leite normal", 5, "Mercado")] }), local).buscarNecessidade(nec("leite"), {});
+    expect(p.precoOriginalCents).toBeUndefined();
+  });
+});

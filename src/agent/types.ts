@@ -76,6 +76,12 @@ export interface OpcaoPlano {
   motivo: string;   // idem
   origem: Origem;
   cobertura?: Cobertura;
+  // Cartão de sugestão da interface: só campos reais (nada escrito pelo modelo). Ausente = o dado não veio.
+  descricao?: string;          // uma linha: nota, distância, prazo, frete, pedido mínimo, promoção
+  distanciaKm?: number;
+  avaliacoes?: number;         // quantidade de avaliações por trás da nota
+  pedidoMinimoCents?: number;
+  precoOriginalCents?: number; // preço antes da promoção (quando há)
 }
 
 export interface BlocoPlano {

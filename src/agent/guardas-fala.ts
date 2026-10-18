@@ -38,6 +38,11 @@ function sanearOpcao(o: OpcaoPlano): OpcaoPlano {
   if (o.freteCents !== undefined) { if (Number.isFinite(o.freteCents) && o.freteCents >= 0) out.freteCents = Math.round(o.freteCents); else delete out.freteCents; }
   if (o.nota !== undefined && !(Number.isFinite(o.nota) && o.nota >= 0 && o.nota <= 5)) delete out.nota;
   if (o.prazo !== undefined) { const p = limparNome(o.prazo, 40); if (p) out.prazo = p; else delete out.prazo; }
+  if (o.descricao !== undefined) { const d = limparNome(o.descricao, 200); if (d) out.descricao = d; else delete out.descricao; }
+  for (const k of ["distanciaKm", "avaliacoes", "pedidoMinimoCents", "precoOriginalCents"] as const) {
+    const v = o[k];
+    if (v !== undefined && !(Number.isFinite(v) && v >= 0)) delete out[k];
+  }
   return out;
 }
 

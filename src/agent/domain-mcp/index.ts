@@ -8,6 +8,7 @@ import { normalizeCandidate, type NormalizedCandidate } from "@/mcp/normalize-ca
 import { compareEligibleCandidates } from "@/reco/rank-eligible";
 import { filterEligibleCandidates, type CandidateEligibilityResult } from "@/reco/eligibility";
 import { soOsEspecificos } from "../especificidade";
+import { descricaoDe } from "../descricao";
 import { MAX_CONSULTAS } from "../limites";
 import { vereditoLexico } from "../relevancia";
 import type { BlocoPlano, ContextoBusca, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
@@ -44,6 +45,28 @@ export function consultasDe(n: Pick<Necessidade, "categoria" | "consultas">): st
   const lista = [...(n.consultas ?? []), n.categoria].map((q) => q.trim().replace(/\s+/g, " ")).filter((q) => q.length > 0);
   const vistos = new Set<string>();
   return lista.filter((q) => { const k = norm(q); if (vistos.has(k)) return false; vistos.add(k); return true; }).slice(0, MAX_CONSULTAS);
+}
+
+// Campos do cartão de sugestão, só do que o MCP devolveu (nenhum texto do modelo).
+function extrasDoCartao(item: ItemBusca, precoCents: number, minimoCents?: number): Partial<OpcaoPlano> {
+  const m = item.merchant;
+  const entrega = m.deliveryMethod ?? undefined;
+  const frete = entrega?.promotionalFee ?? entrega?.fee;
+  const prazoMax = entrega?.estimatedMinutes?.max;
+  const promo = typeof item.promotionalUnitPrice === "number" && item.promotionalUnitPrice < item.unitPrice;
+  const extras: Partial<OpcaoPlano> = {
+    ...(typeof m.straightLineDistanceKm === "number" && m.straightLineDistanceKm >= 0 ? { distanciaKm: Math.round(m.straightLineDistanceKm * 10) / 10 } : {}),
+    ...(typeof m.ratingCount === "number" && m.ratingCount > 0 ? { avaliacoes: Math.round(m.ratingCount) } : {}),
+    ...(minimoCents ? { pedidoMinimoCents: minimoCents } : {}),
+    ...(promo ? { precoOriginalCents: brlToMoney(item.unitPrice).cents } : {}),
+  };
+  const descricao = descricaoDe({
+    nota: nota1(m.reviewRating), avaliacoes: extras.avaliacoes, distanciaKm: extras.distanciaKm,
+    prazo: typeof prazoMax === "number" && prazoMax > 0 ? `até ${Math.round(prazoMax)} minutos` : undefined,
+    freteCents: typeof frete === "number" ? brlToMoney(frete).cents : undefined,
+    pedidoMinimoCents: extras.pedidoMinimoCents, precoCents, precoOriginalCents: extras.precoOriginalCents,
+  });
+  return { ...extras, ...(descricao ? { descricao } : {}) };
 }
 
 export function quantidadePara(n: Necessidade, ocasiao: Ocasiao): number {
@@ -174,6 +197,7 @@ export class McpDomain implements DomainPort {
           precoCents: c.base.precoCents, ...(e.candidate.deliveryFee !== undefined ? { freteCents: brlToMoney(e.candidate.deliveryFee).cents } : {}),
           ...(prazo ? { prazo: `até ${prazo} minutos` } : {}), ...(c.base.nota !== undefined ? { nota: c.base.nota } : {}),
           rotulo: "", motivo: "", origem: "real",
+          ...extrasDoCartao(c.base.item, c.base.precoCents, c.base.minimoCents),
         },
       };
     });
