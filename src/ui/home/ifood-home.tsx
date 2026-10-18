@@ -122,7 +122,7 @@ export function IfoodHome() {
         aria-label="Abrir assistente FoodPilot"
         className="absolute bottom-20 right-4 flex size-16 items-center justify-center rounded-full shadow-lg"
       >
-        <Orb pulse className="size-16" />
+        <Orb size="fab" />
       </Link>
     </div>
   );

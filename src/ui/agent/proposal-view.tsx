@@ -5,9 +5,10 @@ import type { Option, PublicProposal } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
+import { useFocusOnMount } from "@/ui/lib/use-focus-on-mount";
 import { useNow } from "@/ui/lib/use-now";
 import { DATA_ORIGIN } from "./agent-context";
-import { fromCents } from "./format";
+import { fromCents, itemLabel } from "./format";
 
 const STATE_LABEL: Record<PublicProposal["state"], string> = {
   draft: "Rascunho",
@@ -21,18 +22,22 @@ const STATE_LABEL: Record<PublicProposal["state"], string> = {
 type Props = {
   proposal: PublicProposal;
   option: Option | null;
+  itemNames?: Record<string, string>;
   busy: boolean;
   error: string | null;
+  embedded?: boolean;
   approvedReply?: string;
   onApprove: () => void;
   onCancel: () => void;
+  onEditOrder: () => void;
   onRetry: () => void;
 };
 
 // Mostra o snapshot da proposta como veio do servidor. Aprovar, editar e cancelar são ações separadas
 // e a UI nunca soma custos: ausência de frete/taxas aparece como pendência, não como zero.
-export function ProposalView({ proposal, option, busy, error, approvedReply, onApprove, onCancel, onRetry }: Readonly<Props>) {
+export function ProposalView({ proposal, option, itemNames, busy, error, embedded = false, approvedReply, onApprove, onCancel, onEditOrder, onRetry }: Readonly<Props>) {
   const now = useNow(15_000);
+  const headingRef = useFocusOnMount<HTMLHeadingElement>();
 
   const expiresAt = Date.parse(proposal.expiresAt);
   const expired = proposal.state === "expired" || (now !== null && now > expiresAt);
@@ -44,11 +49,13 @@ export function ProposalView({ proposal, option, busy, error, approvedReply, onA
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Button asChild variant="ghost" size="icon" aria-label="Voltar para as opções">
-          <Link href="/agente/opcoes"><ArrowLeft /></Link>
-        </Button>
-        <h1 className="font-display text-lg font-bold">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
-        {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
+        {!embedded && (
+          <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início">
+            <Link href="/"><ArrowLeft /></Link>
+          </Button>
+        )}
+        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-medium outline-none">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
+        {DATA_ORIGIN === "mock" && !embedded && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -62,16 +69,15 @@ export function ProposalView({ proposal, option, busy, error, approvedReply, onA
           )}
         </div>
 
-        {option && <p className="mt-3 font-display text-2xl font-bold leading-tight">{option.candidate.merchantName}</p>}
+        {option && <p className="mt-3 font-display text-2xl font-medium leading-tight">{option.candidate.merchantName}</p>}
 
         <ul className="mt-3 divide-y divide-border rounded-2xl border border-border">
           {proposal.items.map((item) => {
-            // O nome vem da opção escolhida; a proposta pública só carrega a referência do item.
-            const name = option?.candidate.itemId === item.ref ? option.candidate.itemName : `Item ${item.ref}`;
+            const name = itemLabel(item.ref, option, itemNames);
             return (
               <li key={item.ref} className="flex justify-between gap-3 p-3 text-sm">
                 <span>{item.quantity}× {name}</span>
-                <span className="font-semibold">{fromCents(item.unitPrice.cents)}</span>
+                <span className="font-semibold">{fromCents(item.unitPrice.cents)}{item.quantity > 1 && <span className="font-normal text-muted-foreground"> cada</span>}</span>
               </li>
             );
           })}
@@ -85,7 +91,7 @@ export function ProposalView({ proposal, option, busy, error, approvedReply, onA
           <dt className="text-muted-foreground">Taxas</dt>
           <dd>{cost.fees ? fromCents(cost.fees.cents) : <span className="text-warning-foreground">Não informadas</span>}</dd>
           <dt className="border-t border-border pt-2 font-semibold">Total</dt>
-          <dd className="border-t border-border pt-2 font-display text-xl font-bold">
+          <dd className="border-t border-border pt-2 font-display text-xl font-medium">
             {cost.total ? fromCents(cost.total.cents) : <span className="text-base text-warning-foreground">Pendente</span>}
           </dd>
         </dl>
@@ -137,7 +143,7 @@ export function ProposalView({ proposal, option, busy, error, approvedReply, onA
         <footer className="grid gap-2 border-t border-border bg-background px-4 pb-4 pt-3">
           <Button disabled={!open || blockers || busy} onClick={onApprove}>Aprovar proposta</Button>
           <div className="grid grid-cols-2 gap-2">
-            <Button asChild variant="outline"><Link href="/agente">Mudar o pedido</Link></Button>
+            <Button variant="outline" disabled={busy} onClick={onEditOrder}>Mudar o pedido</Button>
             <Button variant="ghost" disabled={busy || proposal.state === "cancelled"} onClick={onCancel}>Cancelar proposta</Button>
           </div>
         </footer>
