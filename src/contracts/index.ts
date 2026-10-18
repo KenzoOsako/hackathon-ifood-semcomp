@@ -5,6 +5,7 @@ import { PublicProposalSchema } from "./recommendation";
 export * from "./proposal";
 export * from "./recommendation";
 export * from "./proposal-state";
+export * from "./occasion-plan";
 
 // Regra de proveniência: todo motivo falado pelo agente nasce de um campo real.
 // `text` é gerado por código a partir de `value`; o modelo só verbaliza.
