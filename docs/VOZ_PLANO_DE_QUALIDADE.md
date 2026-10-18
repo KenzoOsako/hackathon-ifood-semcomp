@@ -43,8 +43,9 @@ Marcar só depois de conferir na tela.
 - [x] **Idioma**: Português (Brasil).
 - [x] **Reconhecimento (ASR)** (20 palavras-chave cadastradas; o limite é 20 caracteres por palavra): conferir provedor e se há **palavras-chave**; cadastrar lojas e itens.
 - [x] **Retenção de dados** (7 dias, áudio não armazenado, Zero Retention desligado de propósito para poder depurar): o mínimo possível; **não guardar áudio** se a opção existir (LGPD).
+- [x] **Overrides (aba Segurança)**: todos desligados, inclusive *Text only* (17/10, conferido na tela e publicado). Ninguém que conecta troca prompt, LLM, voz, tools ou base de conhecimento.
 - [ ] **Guardrails**: ligar o que houver (injeção de prompt, conteúdo) e anotar o que cada opção faz.
-- [ ] **Análise / webhooks / integrações**: desligados.
+- [~] **Análise / webhooks / integrações**: no workspace não há webhook, secret nem conexão de autenticação cadastrados (conferido em 17/10); falta conferir as abas Analysis e Tools do agente.
 - [ ] **Chave de API**: permissões mínimas, limite de créditos, validade curta; **rotacionar** ao fim do evento.
 
 ## 5. Roteiro de teste humano (Chrome, microfone real)
