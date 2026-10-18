@@ -334,3 +334,6 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Justificativa contextual descarta afirmações de preço, frete, avaliação, disponibilidade e composição; fatos comerciais permanecem nos campos de catálogo.
 - Composição das fixtures novas de bolo/leite/manteiga/farinha/ovos/açúcar declarada para o filtro simulado; não representa certificação de produtos reais.
 - Regressões reproduzidas na revisão agora passam; teste parametrizado cobre frete grátis, avaliação/composição no porquê e restrições lactose/glúten/ovo no mock.
+
+## Entregáveis: seção 03 (Malveste) — 18/10/2026
+- 03 (Racional da Experiência) adicionado: seções 3.1 a 3.5 (conversa, escolha, controle e confiança, identidade visual, falhas/privacidade/acessibilidade). PDF com 6 páginas.
