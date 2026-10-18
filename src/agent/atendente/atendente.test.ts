@@ -67,6 +67,28 @@ describe("atendente", () => {
     expect((await fale("quero pizza")).tela?.tipo).toBe("mostrar_plano");
   });
 
+  it("ocasião com várias vertentes: bolo (restaurante) e flores (shopping) no mesmo plano, com título e porquê filtrados", async () => {
+    const bolo = { categoria: "bolo", vertical: "RESTAURANT" };
+    const flores = { categoria: "flores", vertical: "SHOPPING" };
+    const { fale } = conversa([
+      [{ name: "buscar_no_ifood", args: bolo }, { name: "buscar_no_ifood", args: flores }],
+      "Pensei em bolo e flores. Qual bolo prefere?",
+      [{ name: "mostrar_plano", args: { ocasiao: "Surpresa de aniversário", itens: [
+        { ...bolo, ref: "bolos-chocolate", porque: "o bolo para cantar parabéns com ela" },
+        { ...flores, ref: "presentes-rosas", porque: "rosas por apenas 119 reais" }, // número: não vai para a tela
+      ] } }],
+      "Montei bolo e flores. É isso?",
+    ]);
+    const opcoes = await fale("hoje é aniversário da minha namorada, queria fazer uma surpresa");
+    expect(opcoes.tela?.plano.opcoes?.map((g) => g.vertical)).toEqual(["RESTAURANT", "SHOPPING"]);
+    const r = await fale("o de chocolate e as rosas");
+    const p = r.tela!.plano;
+    expect(p.titulo).toBe("Surpresa de aniversário");
+    expect(p.blocos.map((b) => [b.vertical, b.principal.ref])).toEqual([["RESTAURANT", "bolos-chocolate"], ["SHOPPING", "presentes-rosas"]]);
+    expect(p.blocos[0].porque).toBe("o bolo para cantar parabéns com ela");
+    expect(p.blocos[1].porque).toBeUndefined();
+  });
+
   it("'fechou' com plano leva à revisão sem chamar o modelo", async () => {
     const { estado, fale } = conversa([[{ name: "mostrar_plano", args: { itens: [pizza] } }], "Montei. É isso?"]);
     await fale("quero pizza");

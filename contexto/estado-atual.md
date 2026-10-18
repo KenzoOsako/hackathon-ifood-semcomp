@@ -309,3 +309,10 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Removido orçamento dos schemas das ferramentas e sua propagação; domínio real/mock não exclui opções por teto legado. Mantidos preços/fretes e ordenação.
 - Busca posterior no mesmo turno preserva tela de plano/revisão já montada. Com restrição alimentar, memória não reintroduz opções excluídas na busca atual.
 - Cobertura nova: preço sem bloqueio no domínio real e no atendente; precedência da tela de plano; restrição alimentar após busca anterior.
+
+## Várias vertentes num pedido (surpresa de aniversário) — 18/10/2026, ~06h (Hyago)
+- Branch feat/hyago-ocasiao-vertentes. O atendente planeja ocasiões: propõe de uma vez um roteiro de 2–3 itens de verticais diferentes (ex.: bolo + flores), pergunta UMA vez o caminho que muda tudo ("pronto ou fazer?") antes de buscar; "fazer" vira a lista completa de ingredientes do mercado (mostrar_plano direto, sem buscar item por item).
+- Tela: título da ocasião no plano (`PlanoSnapshot.titulo`), selo da vertical (Restaurante/Mercado/Shopping) em cada item e em cada grupo de opções, e uma linha de "por que" por item (`BlocoPlano.porque`, escrita pelo atendente e filtrada: sem números, dado pessoal ou marcação).
+- Mock: bolos (Bolos & Cia, Doce Encanto), flores (Casa dos Presentes, Floricultura Jardim) e ingredientes de bolo (Mercado do Bairro), rotulados como simulados, com as fotos de exemplo do Malveste.
+- Provas: 430 testes (novo: bolo + flores no mesmo plano, título e porquê filtrados, vertical nos grupos); vídeo em mock com Gemini: pergunta pronto/fazer → opções lado a lado (Restaurante + Shopping) → plano "Surpresa de aniversário" → troca para ingredientes (7 itens do Mercado + rosas) → revisão → sacola.
+- Não verificado: catálogo real de bolos e flores perto do endereço da demo (iFood real precisa do login).

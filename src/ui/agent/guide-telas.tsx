@@ -3,7 +3,7 @@
 // Os botões não têm rota própria: mandam ao agente a mesma frase que a pessoa diria. Nenhum valor é somado aqui.
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ChevronDown, ChevronUp, CircleCheck, Info, ShoppingBag } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, Gift, Info, ShoppingBag, ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
@@ -12,7 +12,7 @@ import { catalogImage } from "@/ui/lib/catalog-media";
 import { chaveLoja } from "@/agent/sacola";
 import { StoreLogo } from "@/ui/components/store-logo";
 import { fromCents } from "./format";
-import type { OpcaoPlano } from "@/agent/types";
+import type { OpcaoPlano, Vertical } from "@/agent/types";
 import { paraOption, porLoja, type PlanoTela } from "./plano-tela";
 import { ResultCard } from "./result-card";
 import type { ConfiguracaoItem } from "@/agent/types";
@@ -42,6 +42,18 @@ function Avisos({ plano }: Readonly<{ plano: PlanoTela }>) {
   );
 }
 
+// Um pedido pode juntar mundos diferentes do iFood (restaurante, mercado, shopping): o selo deixa isso visível.
+const VERTICAL: Record<Vertical, { nome: string; Icone: typeof Gift }> = {
+  RESTAURANT: { nome: "Restaurante", Icone: UtensilsCrossed },
+  GROCERIES: { nome: "Mercado", Icone: ShoppingCart },
+  SHOPPING: { nome: "Shopping", Icone: Gift },
+};
+function SeloVertical({ vertical }: Readonly<{ vertical?: Vertical }>) {
+  const v = vertical ? VERTICAL[vertical] : undefined;
+  if (!v) return null;
+  return <Badge variant="neutral"><v.Icone className="size-3" aria-hidden="true" />{v.nome}</Badge>;
+}
+
 const Origem = ({ origem }: Readonly<{ origem: string }>) =>
   origem === "real" ? <Badge variant="success">iFood real</Badge> : <Badge variant="simulated">Simulado</Badge>;
 
@@ -61,6 +73,7 @@ export function OpcoesView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
           <section key={`${g.categoria}-${gi}`} className="mt-3" aria-label={`Opções de ${g.categoria}`}>
             <div className="flex items-center gap-2 px-2">
               <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">{g.categoria}</h3>
+              <SeloVertical vertical={g.vertical} />
               {g.criterio && CRITERIO[g.criterio] && <span className="text-xs text-muted-foreground">· {CRITERIO[g.criterio]}</span>}
               {g.itens[0] && <span className="ml-auto"><Origem origem={g.itens[0].origem} /></span>}
             </div>
@@ -93,7 +106,7 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mt-1 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-4 pt-4">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="font-display text-2xl font-semibold">Seu plano</h2>
+          <h2 className="font-display text-2xl font-semibold">{plano.titulo ?? "Seu plano"}</h2>
           <span className="shrink-0 text-xs text-muted-foreground">versão {plano.versao}{atualizado && " · atualizado"}</span>
         </div>
         <ul className="mt-2 flex flex-col gap-3">
@@ -104,9 +117,11 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
                 initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.06 }}>
                 <div className="flex items-center gap-2 px-2">
                   <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">{b.categoria} · {b.quantidade} {b.quantidade > 1 ? "unidades" : "unidade"}</h3>
+                  <SeloVertical vertical={b.vertical} />
                   {b.sugestao && <Badge>Sugestão</Badge>}
                   <span className="ml-auto"><Origem origem={b.principal.origem} /></span>
                 </div>
+                {b.porque && <p className="px-2 pt-0.5 text-sm italic text-muted-foreground">{b.porque}</p>}
                 {/* A escolhida não tem "Selecionar"; as alternativas sim: tocar troca o item no plano (pelo atendente). */}
                 <ResultCard option={option} tag={tag} media={media} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
                   onToggle={() => setAberto(aberto === b.necessidadeId ? null : b.necessidadeId)} onAdjust={onAdjust} />

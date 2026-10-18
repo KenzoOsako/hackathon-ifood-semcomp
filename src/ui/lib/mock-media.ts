@@ -6,6 +6,9 @@ export type MockMedia = { logo: string; photo: string };
 const MEDIA: Record<string, MockMedia> = {
   "m-8": { logo: "/exemplos/logo-bolos-e-cia.png", photo: "/exemplos/bolo-chocolate.webp" },
   "m-9": { logo: "/exemplos/logo-casa-dos-presentes.png", photo: "/exemplos/rosa-vermelha.webp" },
+  // Surpresa de aniversário no agente (domínio simulado: id da loja = "fake:<nome>").
+  "fake:Bolos & Cia": { logo: "/exemplos/logo-bolos-e-cia.png", photo: "/exemplos/bolo-chocolate.webp" },
+  "fake:Casa dos Presentes": { logo: "/exemplos/logo-casa-dos-presentes.png", photo: "/exemplos/rosa-vermelha.webp" },
 };
 
 export function mockMediaFor(merchantId: string): MockMedia | undefined {

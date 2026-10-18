@@ -119,10 +119,12 @@ export interface BlocoPlano {
   principal: OpcaoPlano;
   alternativas: OpcaoPlano[];
   sugestao?: boolean; // necessidade inferida pelo Guide, não pedida pelo usuário
+  porque?: string;    // uma linha do atendente sobre por que o item serve à ocasião (sem números; filtrada pelo código)
   cobertura?: Cobertura;
 }
 
 export interface PlanoSnapshot {
+  titulo?: string; // nome da ocasião dado pelo atendente (ex.: "Surpresa de aniversário")
   planoId: string;
   versao: number;
   blocos: BlocoPlano[];
@@ -196,7 +198,7 @@ export interface Sacola {
 export type TipoTela = "mostrar_opcoes" | "mostrar_plano" | "plano_atualizado" | "aguardando_aprovacao" | "sacola";
 
 // Opções que o atendente acabou de pesquisar no iFood, para a pessoa ver e escolher tocando (tela "mostrar_opcoes").
-export interface GrupoOpcoes { categoria: string; criterio?: string; itens: OpcaoPlano[] }
+export interface GrupoOpcoes { categoria: string; vertical?: Vertical; criterio?: string; itens: OpcaoPlano[] }
 
 export interface AgentReply {
   estado: Estado;
