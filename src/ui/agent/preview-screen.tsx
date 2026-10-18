@@ -38,12 +38,13 @@ export function PreviewScreen() {
   if (now === null) return null;
   const soon = new Date(now + 5 * 60_000).toISOString();
 
-  const proposal: PublicProposal =
-    scenario === "pendente"
-      ? { ...BASE, expiresAt: soon, cost: { items: BASE.cost.items, status: "unknown" }, unresolved: ["Taxas e total não confirmados", "Frete desconhecido"] }
-      : scenario === "expirada" ? { ...BASE, expiresAt: "2000-01-01T00:00:00.000Z" }
-      : scenario === "aprovada" ? { ...BASE, state: "approved", expiresAt: soon }
-      : { ...BASE, expiresAt: soon };
+  const PROPOSALS: Record<Scenario, PublicProposal> = {
+    aprovavel: { ...BASE, expiresAt: soon },
+    pendente: { ...BASE, expiresAt: soon, cost: { items: BASE.cost.items, status: "unknown" }, unresolved: ["Taxas e total não confirmados", "Frete desconhecido"] },
+    expirada: { ...BASE, expiresAt: "2000-01-01T00:00:00.000Z" },
+    aprovada: { ...BASE, state: "approved", expiresAt: soon },
+  };
+  const proposal = PROPOSALS[scenario];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

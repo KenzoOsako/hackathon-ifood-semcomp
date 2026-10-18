@@ -30,7 +30,9 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
   const [input, setInput] = useState("");
   const [showLog, setShowLog] = useState(false);
 
-  const orbState: OrbState = busy ? "thinking" : error ? "error" : voiceState && voiceState !== "idle" ? voiceState : "idle";
+  let orbState: OrbState = voiceState ?? "idle";
+  if (error) orbState = "error";
+  if (busy) orbState = "thinking";
   const lastReply = [...msgs].reverse().find((m) => m.from === "agente")?.text;
 
   return (
@@ -94,9 +96,9 @@ export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
             </Button>
             {showLog && (
               <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-36 gap-2 overflow-y-auto">
-                {msgs.map((m, i) => (
+                {msgs.map((m) => (
                   <li
-                    key={i}
+                    key={m.id}
                     className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${m.from === "voce" ? "justify-self-end bg-accent text-accent-foreground" : "justify-self-start bg-secondary text-secondary-foreground"}`}
                   >
                     <span className="sr-only">{m.from === "voce" ? "Você: " : "FoodPilot: "}</span>

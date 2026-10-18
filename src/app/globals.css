@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Tokens da UI. Só o tema claro é verificado; o escuro não é entregue (D-013).
+/* Tokens da UI. Só o tema claro é verificado; o escuro não é entregue (D-014).
    Pares texto/fundo conferidos para contraste AA (>= 4,5:1). O #EA1D2C puro dá 4,46:1 com branco,
    então texto sobre vermelho usa --primary (#D91A29, 5,08:1) e --brand fica para áreas grandes. */
 :root {

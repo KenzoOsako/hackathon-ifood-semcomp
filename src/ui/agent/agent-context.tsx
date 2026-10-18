@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { usePathname, useRouter } from "next/navigation";
 import type { AgentTurn, Option } from "@/contracts";
 
-export type Msg = { from: "voce" | "agente"; text: string };
+export type Msg = { id: number; from: "voce" | "agente"; text: string };
 
 // O servidor ainda só devolve dados do mock. Quando o contrato informar a origem de cada
 // dado, este valor passa a vir dele; até lá, todo dado exibido é rotulado como simulado.
@@ -42,19 +42,23 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const lastAction = useRef<() => Promise<void>>(async () => {});
 
+  const nextId = useRef(0);
+  const addMsg = useCallback((from: Msg["from"], text: string) => {
+    setMsgs((m) => [...m, { id: nextId.current++, from, text }]);
+  }, []);
+
   // Quem decide a tela é o estado devolvido pelo servidor, nunca a UI.
   const goTo = useCallback((t: AgentTurn) => {
-    const target =
-      t.state === "ESCOLHENDO_OPCAO" ? "/agente/opcoes"
-      : t.state === "AGUARDANDO_CONFIRMACAO" || t.state === "PROPOSTA_APROVADA" ? "/agente/proposta"
-      : "/agente";
+    let target = "/agente";
+    if (t.state === "ESCOLHENDO_OPCAO") target = "/agente/opcoes";
+    else if (t.state === "AGUARDANDO_CONFIRMACAO" || t.state === "PROPOSTA_APROVADA") target = "/agente/proposta";
     if (target !== pathname) router.push(target);
   }, [pathname, router]);
 
   const call = useCallback(async (url: string, body: object, shown?: string) => {
     setBusy(true);
     setError(null);
-    if (shown) setMsgs((m) => [...m, { from: "voce", text: shown }]);
+    if (shown) addMsg("voce", shown);
     try {
       // O visitante é identificado pelo cookie de sessão; não enviamos sessionId.
       const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -64,14 +68,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         return;
       }
       setTurn(t);
-      setMsgs((m) => [...m, { from: "agente", text: t.reply }]);
+      addMsg("agente", t.reply);
       goTo(t);
     } catch {
       setError("Sem conexão com o servidor. Confira sua internet e tente de novo.");
     } finally {
       setBusy(false);
     }
-  }, [goTo]);
+  }, [goTo, addMsg]);
 
   const send = useCallback(async (text: string) => {
     const message = text.trim();
