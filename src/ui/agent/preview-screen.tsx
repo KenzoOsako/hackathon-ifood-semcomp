@@ -112,7 +112,7 @@ export function PreviewScreen() {
         selected={STORE}
         itemNames={ITEM_NAMES}
         msgs={msgs}
-        query={scenario === "inicio" ? "" : "Pizza até R$ 45"}
+        query={scenario === "inicio" ? "" : "Pizza até R$ 60"}
         busy={scenario === "carregando"}
         error={scenario === "erro" ? "Sem conexão com o servidor. Confira sua internet e tente de novo." : null}
         onSend={() => setScenario("opcoes")}
