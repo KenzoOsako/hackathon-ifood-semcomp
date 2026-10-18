@@ -39,3 +39,8 @@ _(nenhum ainda)_
 - Sintoma: no cenário do filho gripado, o 2º turno ("Pode escolher.") respondia "Não consegui entender" em ~2,7 s ou estourava o timeout de 8 s, nas 2 rodadas.
 - Causa: o `gemini-3.5-flash-lite` escreveu uma frase sem espaços de ~250 letras em `ocasiao.tipo` (campo de enfeite, máx. 60). A validação estrita recusava a resposta inteira; quando o modelo seguia escrevendo, o turno estourava o tempo.
 - Correção: `.describe()` nos campos curtos (vai ao modelo junto com o schema), teto de saída de 600 tokens e `includeRaw` com saneamento (`src/agent/llm/sanear.ts`) que descarta só campos opcionais fora do formato; necessidades e restrições seguem validadas à risca. O orquestrador passa a registrar o tipo da falha (sem conteúdo). Resultado: o cenário passou nas 2 rodadas seguintes. Uma falha intermitente no churrasco não se repetiu em 3 tentativas e ficou sem causa conhecida.
+
+## E-008 — Voz do Guide troca no meio da frase (18/10/2026)
+- Sintoma: no teste falado da /agente, parte da resposta saía na voz do ElevenLabs e parte na voz do navegador.
+- Causa: o player pede os pedaços da fala ao `/api/voice/tts` ao mesmo tempo; a conta do ElevenLabs aceita poucas sínteses simultâneas e as excedentes voltam como erro (rota responde 503), caindo na voz do navegador. Prova: 4 pedidos em paralelo → 1 ok e 3 com 503; os mesmos 4 em sequência → 4 ok.
+- Correção (pendente, frente do Felipe): pedir os pedaços em fila (1 ou 2 por vez) ou repetir o pedido que falhou antes de cair na voz do navegador. Relacionado: a frase "Hum, um instante." toca em todo turno porque o Gemini leva 1,3–3,3 s e ela dispara 0,1 s após o reconhecimento; o Hyago pediu para tirá-la.

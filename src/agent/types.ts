@@ -67,6 +67,9 @@ export type Cobertura = "exata" | "proxima";
 export interface OpcaoPlano {
   ref: string;
   loja: string;
+  // Identificador estável do estabelecimento (merchantId no MCP). Duas lojas com o mesmo nome são lojas diferentes;
+  // sacola e revisão agrupam por ele. Ausente: agrupa pelo nome.
+  lojaId?: string;
   item: string;
   precoCents: number;
   freteCents?: number;
@@ -176,12 +179,34 @@ export interface LlmPort {
   julgar?(input: { necessidade: Necessidade; candidatos: CandidatoJulgado[] }, signal?: AbortSignal): Promise<Record<string, Veredito>>;
 }
 
+// Sacola simulada do plano aprovado: valores calculados no servidor; nunca é um carrinho remoto nem um pedido.
+export interface SacolaLoja {
+  lojaId: string;
+  loja: string;
+  itens: { ref: string; item: string; categoria: string; quantidade: number; precoCents: number; subtotalCents: number }[];
+  subtotalCents: number;
+  freteCents?: number;
+  totalCents: number; // subtotal + frete conhecido
+  origem: Origem;
+}
+export interface Sacola {
+  planoId: string;
+  versao: number;
+  lojas: SacolaLoja[];
+  totalCents: number;
+  freteDesconhecido: boolean; // alguma loja sem frete informado: o total é parcial
+  simulacao: true;
+}
+
+export type TipoTela = "mostrar_plano" | "plano_atualizado" | "aguardando_aprovacao" | "sacola";
+
 export interface AgentReply {
   estado: Estado;
   nivel: Nivel;
   resposta: string;
   fraseEspera?: string;
-  tela?: { tipo: "mostrar_plano" | "plano_atualizado" | "aguardando_aprovacao"; plano: PlanoSnapshot };
+  // A sacola viaja dentro do payload do plano para chegar à tela pelo mesmo evento `screen` da voz.
+  tela?: { tipo: TipoTela; plano: PlanoSnapshot & { sacola?: Sacola } };
   aprovacao?: { planoId: string; versao: number };
   origem: Origem;
   llm: string;
