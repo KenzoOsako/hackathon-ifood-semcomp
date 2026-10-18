@@ -68,6 +68,59 @@ describe("atendente", () => {
     expect((await fale("quero pizza")).tela?.tipo).toBe("mostrar_plano");
   });
 
+  it("ocasião com várias vertentes: bolo (restaurante) e flores (shopping) no mesmo plano, com título e porquê filtrados", async () => {
+    const bolo = { categoria: "bolo", vertical: "RESTAURANT" };
+    const flores = { categoria: "flores", vertical: "SHOPPING" };
+    const { fale } = conversa([
+      [{ name: "buscar_no_ifood", args: bolo }, { name: "buscar_no_ifood", args: flores }],
+      "Pensei em bolo e flores. Qual bolo prefere?",
+      [{ name: "mostrar_plano", args: { ocasiao: "Surpresa de aniversário", itens: [
+        { ...bolo, ref: "bolos-chocolate", porque: "o bolo para cantar parabéns com ela" },
+        { ...flores, ref: "presentes-rosas", porque: "rosas por apenas 119 reais" }, // número: não vai para a tela
+      ] } }],
+      "Montei bolo e flores. É isso?",
+    ]);
+    const opcoes = await fale("hoje é aniversário da minha namorada, queria fazer uma surpresa");
+    expect(opcoes.tela?.plano.opcoes?.map((g) => g.vertical)).toEqual(["RESTAURANT", "SHOPPING"]);
+    const r = await fale("o de chocolate e as rosas");
+    const p = r.tela!.plano;
+    expect(p.titulo).toBe("Surpresa de aniversário");
+    expect(p.blocos.map((b) => [b.vertical, b.principal.ref])).toEqual([["RESTAURANT", "bolos-chocolate"], ["SHOPPING", "presentes-rosas"]]);
+    expect(p.blocos[0].porque).toBe("o bolo para cantar parabéns com ela");
+    expect(p.blocos[1].porque).toBeUndefined();
+  });
+
+  it("promessa sem ação: 'vou buscar' sem ferramenta é cobrado uma vez e ele busca de verdade", async () => {
+    const { estado, fale } = conversa([
+      "Vou buscar as opções de pizza para você.",
+      [{ name: "buscar_no_ifood", args: pizza }],
+      "Separei algumas opções na tela. Qual prefere?",
+    ]);
+    const r = await fale("quero pizza");
+    expect(estado.chamadas).toBe(3);
+    expect(r.tela?.tipo).toBe("mostrar_opcoes");
+  });
+
+  it("promessa que continua vazia e 'está na tela' sem nada na tela viram fala honesta", async () => {
+    const promete = conversa(["Vou olhar o mercado para você.", "Já vou buscar, um instante."]);
+    expect((await promete.fale("ve mercado")).resposta).not.toMatch(/vou (olhar|buscar)/i);
+    const mente = conversa(["As opções de mercado aparecem direto na sua tela agora."]);
+    const r = await mente.fale("cadê as opções?");
+    expect(r.tela).toBeUndefined();
+    expect(r.resposta).not.toMatch(/tela/i);
+  });
+
+  it("nada encontrado não vira plano: o plano anterior continua e 'fechou' não abre revisão vazia", async () => {
+    const { s, fale } = conversa([
+      [{ name: "mostrar_plano", args: { itens: [{ categoria: "item que não existe no catálogo", vertical: "GROCERIES" }] } }],
+      "Não encontrei nada aberto agora. Quer tentar outra coisa?",
+    ]);
+    const r = await fale("quero aquilo");
+    expect(r.tela).toBeUndefined();
+    expect(s.plano).toBeUndefined();
+    expect((await fale("fechou")).tela).toBeUndefined();
+  });
+
   it("'fechou' com plano leva à revisão sem chamar o modelo", async () => {
     const { estado, fale } = conversa([[{ name: "mostrar_plano", args: { itens: [pizza] } }], "Montei. É isso?"]);
     await fale("quero pizza");

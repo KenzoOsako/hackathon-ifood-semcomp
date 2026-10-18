@@ -310,6 +310,15 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Busca posterior no mesmo turno preserva tela de plano/revisão já montada. Com restrição alimentar, memória não reintroduz opções excluídas na busca atual.
 - Cobertura nova: preço sem bloqueio no domínio real e no atendente; precedência da tela de plano; restrição alimentar após busca anterior.
 
+## Várias vertentes num pedido (surpresa de aniversário) — 18/10/2026, ~06h (Hyago)
+- Branch feat/hyago-ocasiao-vertentes. O atendente planeja ocasiões: propõe de uma vez um roteiro de 2–3 itens de verticais diferentes (ex.: bolo + flores), pergunta UMA vez o caminho que muda tudo ("pronto ou fazer?") antes de buscar; "fazer" vira a lista completa de ingredientes do mercado (mostrar_plano direto, sem buscar item por item).
+- Tela: título da ocasião no plano (`PlanoSnapshot.titulo`), selo da vertical (Restaurante/Mercado/Shopping) em cada item e em cada grupo de opções, e uma linha de "por que" por item (`BlocoPlano.porque`, escrita pelo atendente e filtrada: sem números, dado pessoal ou marcação).
+- Mock: bolos (Bolos & Cia, Doce Encanto), flores (Casa dos Presentes, Floricultura Jardim) e ingredientes de bolo (Mercado do Bairro), rotulados como simulados, com as fotos de exemplo do Malveste.
+- Provas: 430 testes (novo: bolo + flores no mesmo plano, título e porquê filtrados, vertical nos grupos); vídeo em mock com Gemini: pergunta pronto/fazer → opções lado a lado (Restaurante + Shopping) → plano "Surpresa de aniversário" → troca para ingredientes (7 itens do Mercado + rosas) → revisão → sacola.
+- Não verificado: catálogo real de bolos e flores perto do endereço da demo (iFood real precisa do login).
+- Ajustes depois do teste real do Hyago (namorado, madrugada): (A) prompt sem roteiro padrão ("bolo e flores" enviesava): pensa em quem é a pessoa e, sem saber o gosto dela, faz UMA pergunta com opções antes do roteiro; (C) promessa sem ação ("vou buscar" sem ferramenta) é cobrada uma vez e, se continuar vazia, vira fala honesta; (D) "está na tela" sem nada ter ido para a tela vira "não encontrei opções abertas"; busca vazia avisa o modelo que NADA foi para a tela; plano sem nenhum item não substitui o plano atual. Provas: 433 testes (3 novos das guardas); mock com Gemini: namorado → "Do que ele mais gosta: hambúrguer, sushi ou um doce?" → busca de hambúrguer.
+- Observado no teste real às ~6h de domingo: buscas reais voltaram vazias (lanche trazia 6 opções às ~5h20), compatível com lojas fechadas de madrugada. Testar a surpresa no horário da demo.
+
 ## Sinais de demanda para o iFood — 18/10/2026 (Malveste)
 - Branch feat/malveste-sinais-demanda. O atendente registra sinais estruturados quando as ferramentas rodam: busca (categoria, vertical, restrições, nº de resultados), plano (ocasião, faixa de pessoas, itens, não atendidos) e aprovação. Sem conversa, texto livre, nome, endereço ou ID; termo com cara de dado pessoal é descartado.
 - `src/data/sinais.ts` guarda em memória (limite 5000) e agrega; `GET /api/sinais` devolve só contagens; `/painel` mostra "Pediram e não tinha", mais procurados, restrições, ocasiões e combinações, com selo de catálogo real/simulado. `mostrar_plano` ganhou o campo opcional `ocasiao`.
@@ -319,3 +328,9 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Corrigidos os quatro alertas publicados pelo Sonar: sort com localeCompare, Promise explicitamente tratada e props Readonly.
 - Painel trata HTTP não-2xx como erro. Rótulos gerais fechados impedem publicação de nomes/texto livre; coleta só com adesão explícita opcional na conversa, desmarcada por padrão.
 - Nova cobertura: nome em ocasião/agregação direta e rota sem consentimento/com adesão/retirada. Integrada main com renomeação Mimo do PR36.
+
+## Integração e correção do PR38 — 18/10/2026
+- Integrada main c579293 (PR36 Mimo + PR37 sinais/consentimento), preservando título/porquê/verticais e removendo duplicação do campo ocasiao no schema.
+- Justificativa contextual descarta afirmações de preço, frete, avaliação, disponibilidade e composição; fatos comerciais permanecem nos campos de catálogo.
+- Composição das fixtures novas de bolo/leite/manteiga/farinha/ovos/açúcar declarada para o filtro simulado; não representa certificação de produtos reais.
+- Regressões reproduzidas na revisão agora passam; teste parametrizado cobre frete grátis, avaliação/composição no porquê e restrições lactose/glúten/ovo no mock.

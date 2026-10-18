@@ -26,7 +26,10 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCa
 const APROVACAO_EXPLICITA = /^(aprovo|confirmo)( o)? plano(?: versao \d+)?$/;
 const VERSAO_CITADA = /\bversao (\d+)\b/;
 const FECHAR = /^(pode|pode fechar|fecha|fechou|fechado|fecha assim|pode ser|isso|isso mesmo|ok|beleza|sim|bora|vamos fechar|quero fechar|fechar)$/;
-const ALCOOL = /cerveja|vinho|vodka|whisky|cacha[cç]a|gin\b|licor|drink|chopp|alco[oó]l/i;
+// Promessa de ação ("vou buscar", "deixa eu olhar") e afirmação sobre a tela, no texto já normalizado (sem acento).
+const PROMESSA = /\b(vou|vamos|deixa eu|deixe-me|ja vou|estou) (te )?(buscar|procurar|olhar|ver|pesquisar|mostrar|montar|separar|checar|verificar)\b/;
+const DIZ_TELA = /\b(na|sua|da|pra|para a) tela\b/;
+const ALCOOL =/cerveja|vinho|vodka|whisky|cacha[cç]a|gin\b|licor|drink|chopp|alco[oó]l/i;
 const PROIBIDO = /pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|conclu[ií]da)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
 
 export const SYSTEM_ATENDENTE = `Você é o Mimo, o atendente do iFood que conversa por voz. Você ajuda a pessoa a decidir o que pedir (refeição, mercado ou presente) e monta um plano para ela aprovar. A compra termina no app do iFood.
@@ -44,6 +47,19 @@ export const SYSTEM_ATENDENTE = `Você é o Mimo, o atendente do iFood que conve
 - Se a busca não achar nada, diga e ofereça outro caminho (outro prato, outra categoria).
 - A tela mostra sozinha as opções de cada busca sua (até três por busca), com foto, nota, preço e prazo. Ao buscar, fale em uma frase o destaque (ex.: a mais bem avaliada) e pergunte qual a pessoa prefere; não leia a lista.
 - A pessoa também escolhe tocando na tela: chega como "quero a <prato> da <loja>" ou "troca <item> pela <prato> da <loja>". Use o ref dessa opção (das buscas ou das alternativas do plano) em mostrar_plano. Para trocar um item do plano, chame mostrar_plano com TODOS os itens do plano, só mudando o ref do item trocado.
+
+# Ocasiões especiais: um roteiro com várias vertentes
+- Aniversário, surpresa, data romântica, festa, visita: o roteiro depende de QUEM é a pessoa. Pense nela: quem é (namorado, namorada, mãe, amigo, criança), do que gosta, o momento. Não existe roteiro padrão; não repita sugestões de outras conversas.
+- Se você não sabe nada do gosto da pessoa, faça primeiro UMA pergunta curta sobre ela, com opções concretas e variadas (ex.: "Do que ele mais gosta: um doce, um salgado caprichado ou um presente?"). Se já souber, proponha DE UMA VEZ um roteiro de 2 ou 3 itens, de lojas e verticais diferentes quando fizer sentido, coerente com o gosto dela, e diga o roteiro em uma frase.
+- Se um item do roteiro tiver um caminho que muda tudo, pergunte isso UMA vez ANTES de buscar esse item, com prós e contras curtos, e não busque nada nesse turno (ex.: um bolo pode ser comprado pronto, que chega rápido, ou feito em casa, que é mais pessoal).
+- "Pronto": busque o item pronto (bolo em confeitaria é RESTAURANT). "Fazer": monte a lista COMPLETA de ingredientes de uma receita simples como itens de mercado (GROCERIES), um item por ingrediente. Ex.: bolo de chocolate → farinha de trigo, ovos, açúcar, chocolate em pó, leite, manteiga, fermento em pó. Lista de mercado NÃO se busca item por item: chame mostrar_plano direto com todos os ingredientes (e os outros itens do plano), que ele mesmo busca cada um.
+- Opções na tela não são plano: depois de buscar, diga "separei algumas opções", nunca "montei o plano". Plano é só depois de mostrar_plano.
+- Para comparar, busque cada item do roteiro e deixe a tela mostrar as opções lado a lado.
+- Em mostrar_plano, dê um nome curto à ocasião (ocasiao) e, para cada item, uma linha de porque ligada à pessoa e ao momento, com o que ela disse do gosto dela, sem preço, nota ou número.
+
+# Faça o que diz, e só diga o que fez
+- Nunca diga que vai buscar, olhar ou mostrar algo sem chamar a ferramenta NA MESMA resposta. Se vai buscar, busque agora.
+- Só diga que algo está na tela se uma ferramenta desta resposta colocou na tela. Se a busca não achou nada, nada aparece na tela: diga que não encontrou.
 
 # Como falar
 - Português do Brasil, natural e curto: no máximo duas ou três frases. A tela mostra os detalhes; você não lê listas.
@@ -88,8 +104,8 @@ const buscarSchema = z.object({
   ordenar: z.enum(["relevancia", "melhor_avaliada", "mais_barata", "mais_rapida"]).optional(),
 });
 const mostrarSchema = z.object({
+  ocasiao: z.string().max(40).optional().describe("Nome curto da ocasião para o título do plano. Ex.: Surpresa de aniversário"),
   pessoas: z.number().int().min(1).max(50).optional().describe("Quantas pessoas vão comer, se a pessoa disse"),
-  ocasiao: z.string().max(40).optional().describe("Tipo da ocasião em 1 a 3 palavras, se a pessoa disse. Ex.: aniversário, churrasco, jantar a dois"),
   itens: z.array(z.object({
     categoria: z.string().min(1).max(60),
     consultas: z.array(z.string().min(1).max(80)).max(3).optional(),
@@ -97,6 +113,7 @@ const mostrarSchema = z.object({
     restricoes: restricoesArg,
     ref: z.string().max(200).optional().describe("ref da opção escolhida, vinda de buscar_no_ifood"),
     sugestao: z.boolean().optional().describe("true se foi você quem sugeriu este item, não a pessoa"),
+    porque: z.string().max(120).optional().describe("Uma linha: por que este item serve à ocasião, sem preço, nota ou número. Ex.: o doce favorito da pessoa para abrir a noite"),
   })).min(1).max(8),
 });
 
@@ -207,15 +224,23 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
 
   let resposta = "";
   const grupos: GrupoOpcoes[] = [];
+  let usouFerramenta = false;
   try {
-    for (let passo = 0; passo <= MAX_PASSOS; passo++) {
+    for (let passo = 0, cobrou = false; passo <= MAX_PASSOS; passo++) {
       const ai = await comTimeout(modelo.invoke(msgs), TIMEOUT_MS) as AIMessage;
       msgs.push(ai);
       const chamadas = ai.tool_calls ?? [];
       if (!chamadas.length || passo === MAX_PASSOS) {
         resposta = typeof ai.content === "string" ? ai.content : ai.content.map((p) => ("text" in p ? p.text : "")).join("");
+        // Prometeu buscar ou mostrar sem chamar ferramenta: cobra UMA vez para fazer de verdade nesta resposta.
+        if (!usouFerramenta && !cobrou && passo < MAX_PASSOS && PROMESSA.test(norm(resposta))) {
+          cobrou = true;
+          msgs.push(new HumanMessage("[nota do sistema] Você disse que ia buscar ou mostrar algo, mas não chamou nenhuma ferramenta. Chame a ferramenta agora; se não for buscar, responda sem prometer."));
+          continue;
+        }
         break;
       }
+      usouFerramenta = true;
       for (const c of chamadas) {
         const td = now();
         const saida = await executarFerramenta(c.name, c.args, s, mem, deps).catch((e): Saida => ({ texto: `ERRO na ferramenta: ${String(e).slice(0, 160)}` }));
@@ -230,13 +255,16 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     }
   } catch (error) {
     console.warn(`[atendente] falhou: ${String(error).slice(0, 200)}`);
-    resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : FRASES.naoEntendi;
+    resposta = tela ? falaDaTela(tela.tipo) : FRASES.naoEntendi;
   }
   tempos.interpretarMs = Math.round(now() - t0) - (tempos.dominioMs ?? 0);
 
   resposta = resposta.replace(/[*#[\]_`]/g, "").replace(/\s+/g, " ").trim();
+  // Só diz o que fez: promessa que continuou vazia, ou "está na tela" sem nada ter ido para a tela, vira fala honesta.
+  if (!usouFerramenta && PROMESSA.test(norm(resposta))) resposta = "Me diz de novo o que você quer que eu procure, que eu busco agora.";
+  if (!tela && DIZ_TELA.test(norm(resposta)) && (!s.plano || /opco|itens|resultado/.test(norm(resposta)))) resposta = "Não encontrei opções abertas para isso agora. Quer que eu tente outra coisa?";
   if (!resposta || PROIBIDO.test(resposta) || temDadoPessoal(resposta)) {
-    resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : "Me conta um pouco mais do que você quer, que eu te ajudo a escolher.";
+    resposta = tela ? falaDaTela(tela.tipo) : "Me conta um pouco mais do que você quer, que eu te ajudo a escolher.";
   }
   if (!s.plano) s.estado = "S1";
   return fim(resposta);
@@ -258,14 +286,14 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const a = buscarSchema.parse(args);
     if (ALCOOL.test(a.categoria)) return { texto: "Não busco bebida alcoólica. Ofereça outra coisa." };
     const opcoes = ordenar(await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao), a.ordenar).slice(0, OPCOES_POR_BUSCA);
-    const grupo = { categoria: a.categoria, itens: opcoes };
+    const grupo = { categoria: a.categoria, vertical: a.vertical, itens: opcoes };
     for (const o of opcoes) { mem.opcoes.set(o.ref, o); mem.grupoDe.set(o.ref, grupo); }
-    const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora.`;
+    const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora. NADA foi para a tela.`;
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
     if (mem.resumoBuscas.length > 8) mem.resumoBuscas.shift();
     registrar(deps, { tipo: "busca", vertical: a.vertical, categoria: a.categoria, restricoes: s.restricoes, resultados: opcoes.length });
     console.info(`[atendente] buscar categoria="${a.categoria}" ordenar=${a.ordenar ?? "relevancia"} opcoes=${opcoes.length}`);
-    return { texto, ...(opcoes.length ? { grupo: { categoria: a.categoria, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
+    return { texto, ...(opcoes.length ? { grupo: { categoria: a.categoria, vertical: a.vertical, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
   }
   if (nome === "mostrar_plano") {
     const a = mostrarSchema.parse(args);
@@ -278,12 +306,22 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const itens = await Promise.all(necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) })));
     const base = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
     // Nomes de loja e item vêm do catálogo: limpos antes de ir à tela e à fala.
-    const escolhido: PlanoSnapshot = { ...base, versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem, s.restricoes.length > 0)) };
+    const titulo = textoLivre(a.ocasiao, 40);
+    const escolhido: PlanoSnapshot = { ...base, ...(titulo ? { titulo } : {}), versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem, s.restricoes.length > 0)) };
     const plano = sanearPlano(await detalharPlano(escolhido, deps.domain.detalharItem?.bind(deps.domain)));
     if (s.restricoes.length) for (const b of plano.blocos) {
       if (b.principal.complementos?.grupos.length) b.principal.complementos.composicaoNaoVerificada = true;
     }
+    for (const b of plano.blocos) {
+      const porque = justificativaContextual(a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.porque);
+      if (porque) b.porque = porque;
+    }
     for (const b of plano.blocos) for (const o of [b.principal, ...b.alternativas]) mem.opcoes.set(o.ref, o);
+    // Nada encontrado: não vira plano (nem substitui o que está na tela), e o modelo é avisado de que nada apareceu.
+    if (!plano.blocos.length) {
+      console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=0 (nada aberto)`);
+      return { texto: `NADA foi para a tela: nenhuma opção aberta com entrega agora para ${plano.naoAtendidas.map((n) => n.categoria).join(", ") || "esses itens"}. Diga isso com clareza e ofereça outro caminho.` };
+    }
     const atualizado = Boolean(s.plano);
     s.plano = plano; s.necessidades = necessidades; s.estado = atualizado ? "S4" : "S3"; s.encaminhado = false;
     s.ultimaVersaoPlano = plano.versao;
@@ -292,8 +330,8 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const resumo = plano.blocos.map((b) => `${descreverBloco(b)}; complementos: ${resumoComplementos(b.principal).join(", ") || "a configurar se houver"}`).join("; ");
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");
     return {
-      texto: `Plano versão ${plano.versao} na tela: ${resumo || "nenhum item encontrado"}.${faltas ? ` Sem opção agora para: ${faltas}.` : ""}`,
-      ...(plano.blocos.length ? { tela: { tipo: atualizado ? "plano_atualizado" as const : "mostrar_plano" as const, plano } } : {}),
+      texto: `Plano versão ${plano.versao} na tela: ${resumo}.${faltas ? ` Sem opção agora para: ${faltas}.` : ""}`,
+      tela: { tipo: atualizado ? "plano_atualizado" as const : "mostrar_plano" as const, plano },
     };
   }
   if (nome === "pedir_revisao") {
@@ -307,6 +345,24 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
 
 // Item do plano para o modelo: a escolhida e as alternativas, com ref, para ele poder trocar quando a pessoa tocar.
 const descreverBloco = (b: PlanoSnapshot["blocos"][number]) => `${b.categoria} (categoria=${b.categoria}, vertical=${b.vertical}): ${b.quantidade}x ${b.principal.item} da ${b.principal.loja} ${reais(b.principal.precoCents)} [ref=${b.principal.ref}]${b.sugestao ? " (sugestão sua)" : ""}${b.alternativas.length ? `; alternativas: ${b.alternativas.map((o) => `${o.item} da ${o.loja} ${reais(o.precoCents)} [ref=${o.ref}]`).join(", ")}` : ""}`;
+
+// Fala de reserva coerente com o que está na tela (opções não são plano).
+const falaDaTela = (tipo: string) => tipo === "mostrar_opcoes" ? "Separei algumas opções na tela. Qual delas você prefere?" : "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?";
+
+// Texto livre do modelo que vai para a tela: sem números (fato só vem do iFood), sem dado pessoal, sem marcação.
+function textoLivre(t: string | undefined, max: number): string | undefined {
+  const limpo = (t ?? "").replace(/[*#[\]_`<>]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
+  if (!limpo || /\d/.test(limpo) || PROIBIDO.test(limpo) || temDadoPessoal(limpo)) return undefined;
+  return limpo;
+}
+
+// O texto do modelo explica o contexto pessoal; atributos de oferta continuam nos campos do catálogo.
+function justificativaContextual(t: string | undefined): string | undefined {
+  const texto = textoLivre(t, 90);
+  if (!texto) return undefined;
+  const atributos = /preco|frete|entrega|prazo|minuto|hora|nota|avaliad|promo|desconto|barat|rapid|gratis|gratuit|cupom|custo|taxa|disponiv|abert|fechad|estoque|qualidade|melhor|segur|alerg|lactose|gluten|composicao|saudavel/;
+  return atributos.test(norm(texto)) ? undefined : texto;
+}
 
 const planoVazio = (): PlanoSnapshot => ({ planoId: "", versao: 0, blocos: [], naoAtendidas: [], pendencias: [], origem: "real" });
 
