@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserDeps } from "./browser-deps";
 import type { LatencySummary, Mark } from "./latency";
 import { SpeechPlayer } from "./player";
-import { FILLERS } from "./turn";
-import { UNCLEAR_PHRASE, VoiceSession, type Utterance, type VoiceApi, type VoiceDiag, type VoiceErrorCode, type VoiceState } from "./session";
+import { PRELOAD_PHRASES } from "./phrases";
+import { VoiceSession, type Utterance, type VoiceApi, type VoiceDiag, type VoiceErrorCode, type VoiceState } from "./session";
 
 export type { Utterance, VoiceApi, VoiceErrorCode, VoiceState };
 
@@ -25,6 +25,8 @@ export interface VoiceOptions {
   getTerms?: () => string[];
   // Reconhecimento incerto: a fala não foi ao agente e o Guide pediu para repetir.
   onUnclear?: (texto: string, confianca: number) => void;
+  // Fim de cada turno com áudio: o resumo de latência daquela rodada.
+  onLatency?: (s: LatencySummary) => void;
 }
 
 export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, options: VoiceOptions = {}) {
@@ -39,7 +41,8 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const onUtt = useRef(onUtterance);
   const termsFn = useRef(options.getTerms);
   const unclearFn = useRef(options.onUnclear);
-  useEffect(() => { onUtt.current = onUtterance; termsFn.current = options.getTerms; unclearFn.current = options.onUnclear; }, [onUtterance, options.getTerms, options.onUnclear]);
+  const latencyFn = useRef(options.onLatency);
+  useEffect(() => { onUtt.current = onUtterance; termsFn.current = options.getTerms; unclearFn.current = options.onUnclear; latencyFn.current = options.onLatency; }, [onUtterance, options.getTerms, options.onUnclear, options.onLatency]);
 
   useEffect(() => {
     const p = new SpeechPlayer(undefined, {
@@ -47,7 +50,7 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
       onAudioStart: () => session.current?.speakingStarted(),
     });
     player.current = p;
-    p.preload([...FILLERS, UNCLEAR_PHRASE]); // frases fixas prontas: tocam sem esperar a rede
+    p.preload([...PRELOAD_PHRASES]); // frases fixas prontas (as da voz e as do agente): tocam sem esperar a rede
     const s = new VoiceSession(createBrowserDeps(p, () => termsFn.current?.() ?? []), {
       onState: setState,
       onError: setError,
@@ -55,7 +58,7 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
       onHandsFree: setHandsFreeState,
       onUtterance: (u, api) => onUtt.current(u, api),
       onUnclear: (t, c) => unclearFn.current?.(t, c),
-      onLatency: setLatency,
+      onLatency: (s) => { setLatency(s); latencyFn.current?.(s); },
       onDiag: setDiag,
     });
     session.current = s;

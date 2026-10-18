@@ -6,8 +6,10 @@
 //  - Manual: Falar / Parar (a pessoa decide quando termina).
 //  - Sem as mãos: o Guide abre o microfone, PARA sozinho depois de um silêncio, reconhece, responde falando e
 //    abre de novo. Falar por cima do Guide (voz sustentada) interrompe a fala.
+import { LIMIARES_CONFIANCA } from "@/agent/frases";
 import { BargeInDetector, EndpointDetector, NoiseFloor, DEFAULT_ENDPOINT, type EndpointOptions } from "./endpoint";
 import { LatencyTrace, type LatencySummary, type Mark } from "./latency";
+import { UNCLEAR_PHRASE } from "./phrases";
 import { computeSignals, type VoiceSignals } from "./signals";
 import { VoiceActivityTracker } from "./vad";
 
@@ -84,9 +86,10 @@ export interface SessionEvents {
   onUnclear?(texto: string, confianca: number): void;
 }
 
-// Abaixo disso o texto reconhecido é duvidoso demais para virar busca (ex.: 0,78 numa frase truncada). Calibrar no teste humano.
-export const LOW_CONFIDENCE = 0.8;
-export const UNCLEAR_PHRASE = "Não entendi bem. Pode repetir?";
+// Abaixo disso o texto é duvidoso demais para virar busca e a voz pede para repetir sem chamar o backend. O limiar vem do
+// contrato com o agente (src/agent/frases.ts); entre este e `confirmar` quem trata é o agente. Calibrar com gravações reais.
+export const LOW_CONFIDENCE = LIMIARES_CONFIANCA.repetir;
+export { UNCLEAR_PHRASE };
 
 const TICK_MS = 50;
 const COOLDOWN_AFTER_SPEECH_MS = 500; // não reabre o microfone na cauda da fala do Guide (eco)
@@ -372,7 +375,7 @@ export class VoiceSession {
       this.trace.mark("stt_done", this.d.now());
       if (data.confianca !== undefined && data.confianca < LOW_CONFIDENCE) return this.afterUnclear(data.texto, data.confianca);
       this.unclearRounds = 0;
-      const sinais = computeSignals({ transcript: data.texto, micOpenedAt: this.micOpenedAt, firstWordAt: this.tracker?.firstWordAt, lastWordAt: this.tracker?.lastWordAt, interrupted: this.interrupted, confianca: data.confianca });
+      const sinais = computeSignals({ transcript: data.texto, micOpenedAt: this.micOpenedAt, firstWordAt: this.tracker?.firstWordAt, lastWordAt: this.tracker?.lastWordAt, interrupted: this.interrupted, confianca: data.confianca, injecao: data.injecao });
       this.setState("idle");
       if (this.handsFree) this.awaitReply();
       const player = this.d.player;

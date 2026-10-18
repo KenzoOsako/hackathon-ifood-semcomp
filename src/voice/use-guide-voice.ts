@@ -6,16 +6,20 @@
 //   <Orb onClick={g.toggle} />   // um botão resolve falar / parar / interromper (g.label diz o que ele faz agora)
 //   g.lines            // conversa para mostrar (voce / agente)
 //   g.screen           // último evento de tela do agente ({ event: "mostrar_plano", payload: PlanoSnapshot })
-//   g.login            // { url } quando o agente pede conexão com o iFood: mostre o botão "Conectar iFood"
+//   g.login            // { url } quando falta conectar o iFood (status ao abrir, ou 401 do agente): botão "Conectar iFood"
 //   g.unclear          // texto que o Guide não entendeu direito (ele já pediu para repetir)
 //   g.sendText("...")  // o texto sempre funciona (mesmo caminho do áudio)
 //   g.cancel()         // descarta a gravação em andamento (Esc faz o mesmo; Esc também interrompe a fala)
-import { useCallback, useEffect, useRef, useState } from "react";
+//   g.rounds / g.stats // rodadas de latência medidas e p50/p95 por etapa (laboratório)
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LOGIN_PATH, needsLogin } from "./auth-status";
+import { summarizeRounds, type LatencySummary } from "./latency";
 import { termsFromPlan } from "./plan-terms";
 import type { VoiceSignals } from "./signals";
 import { runTurn, type TurnCtl } from "./turn";
 import { useVoice, type Utterance } from "./use-voice";
 
+export type GuideStats = ReturnType<typeof summarizeRounds>;
 export interface GuideLine { id: string; from: "voce" | "agente"; text: string }
 export interface GuideScreen { event: string; payload: unknown }
 
@@ -33,13 +37,24 @@ export function useGuideVoice() {
   const [unclear, setUnclear] = useState<string | null>(null);
   const [utterance, setUtterance] = useState<Utterance | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rounds, setRounds] = useState<LatencySummary[]>([]);
+  const [skipFirstRound, setSkipFirstRound] = useState(true);
   const terms = useRef<string[]>([]); // nomes do plano na tela: ajudam o reconhecimento na próxima fala
   const seq = useRef(0);
   const nextId = (p: string) => `${p}-${++seq.current}`;
 
+  // Ao abrir: se o app está em modo real e o iFood não está conectado, o botão já aparece (sem esperar o 401).
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => { if (alive && needsLogin(s)) setLogin({ url: LOGIN_PATH }); })
+      .catch(() => undefined); // sem status, o 401 do agente ainda cobre o caso
+    return () => { alive = false; };
+  }, []);
+
   const run = useCallback(async (texto: string, origem: "voz" | "texto", sinais: VoiceSignals | undefined, ctl: TurnCtl) => {
     setBusy(true);
-    setLogin(null);
     setUnclear(null);
     setLines((l) => [...l, { id: nextId("u"), from: "voce", text: texto }]);
     try {
@@ -58,7 +73,12 @@ export function useGuideVoice() {
       setUtterance(u);
       void run(u.texto, "voz", u.sinais, { mark: api.mark, enqueue: (t) => api.enqueue(t), done: api.turnDone });
     },
-    { getTerms: () => terms.current, onUnclear: (t) => setUnclear(t) },
+    {
+      getTerms: () => terms.current,
+      onUnclear: (t) => setUnclear(t),
+      // Cada turno com áudio termina com um resumo de latência: guarda para o p50/p95.
+      onLatency: (s) => { if (s.timeToFirstAudioMs !== undefined) setRounds((r) => [...r, s]); },
+    },
   );
 
   const { mark, enqueue, turnDone, beginTurn } = voice;
@@ -67,6 +87,9 @@ export function useGuideVoice() {
     if (!t) return;
     void run(t, "texto", undefined, { mark, enqueue: (x) => enqueue(x), done: turnDone, begin: beginTurn });
   }, [run, mark, enqueue, turnDone, beginTurn]);
+
+  const stats = useMemo(() => summarizeRounds(rounds, { skipFirst: skipFirstRound }), [rounds, skipFirstRound]);
+  const clearRounds = useCallback(() => setRounds([]), []);
 
   // Esc: descarta a gravação; se o Guide está falando, interrompe.
   const { state, cancel, stopSpeaking } = voice;
@@ -90,5 +113,5 @@ export function useGuideVoice() {
   }, [state, stop, stopSpeaking, start]);
   const label = { idle: voice.handsFree ? "Escutando…" : "Falar", listening: voice.handsFree ? "Ouvindo… (toque para encerrar)" : "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
 
-  return { ...voice, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText };
+  return { ...voice, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
 }

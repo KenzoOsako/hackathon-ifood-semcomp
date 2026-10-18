@@ -2,7 +2,18 @@
 // LABORATÓRIO DA VOZ (frente de Felipe). Página de teste do ciclo: falar → reconhecer → agente → ouvir.
 // Usa o hook único da voz (use-guide-voice.ts), o mesmo que a interface final deve usar. Aqui só se desenha o laboratório.
 import { useState } from "react";
-import { useGuideVoice } from "@/voice/use-guide-voice";
+import { LATENCY_TARGETS, type LatencySummary } from "@/voice/latency";
+import { useGuideVoice, type GuideStats } from "@/voice/use-guide-voice";
+
+const METRICS = ["sttMs", "backendFirstChunkMs", "ttsFirstByteMs", "timeToFirstAudioMs"] as const;
+const cell = { padding: "4px 8px", borderBottom: "1px solid #eee" } as const;
+const smallButton = { padding: "6px 12px", borderRadius: 8, border: "1px solid #bbb", background: "#fff", color: "#222", cursor: "pointer" } as const;
+
+// Copia as rodadas e as estatísticas para a área de transferência (cola direto no chat ou numa planilha).
+async function exportRounds(rounds: LatencySummary[], stats: GuideStats, skipFirst: boolean) {
+  const payload = { geradoEm: new Date().toISOString(), descartouPrimeira: skipFirst, metas: LATENCY_TARGETS, rodadas: rounds, estatisticas: stats };
+  try { await navigator.clipboard.writeText(JSON.stringify(payload, null, 2)); } catch { /* sem permissão da área de transferência: a tabela continua na tela */ }
+}
 
 export default function VozLab() {
   const g = useGuideVoice();
@@ -69,11 +80,37 @@ export default function VozLab() {
         <small>Fale e veja o <strong>nivel_agora</strong> subir. Se ele ficar em 0, o navegador não está entregando som ao medidor (microfone errado ou contexto de áudio suspenso).</small>
       </details>
 
-      {g.latency && (
+      {g.rounds.length > 0 && (
         <details open style={{ marginTop: 16, color: "#444" }}>
-          <summary>Latência do último turno (ms)</summary>
-          <pre style={{ background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto" }}>{JSON.stringify(g.latency, null, 2)}</pre>
-          <small>Metas: reconhecimento 600 · primeiro pedaço do backend 700 · primeiro byte de voz 450 · até a primeira palavra 1800.</small>
+          <summary>Latência por rodada (ms)</summary>
+          <table style={{ borderCollapse: "collapse", margin: "8px 0", fontSize: 13, width: "100%" }}>
+            <thead>
+              <tr>{["#", "reconhecimento", "backend (1º pedaço)", "voz (1º byte)", "primeira palavra"].map((h) => <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #ddd" }}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {g.rounds.map((r, i) => (
+                <tr key={`r-${i}`} style={{ color: i === 0 && g.skipFirstRound ? "#999" : "#111" }}>
+                  <td style={cell}>{i + 1}{i === 0 && g.skipFirstRound ? " (descartada)" : ""}</td>
+                  {METRICS.map((m) => <td key={m} style={{ ...cell, color: (r[m] ?? 0) > LATENCY_TARGETS[m] ? "#b00020" : undefined }}>{r[m] ?? "-"}</td>)}
+                </tr>
+              ))}
+              <tr style={{ fontWeight: 700 }}>
+                <td style={cell}>p50</td>{METRICS.map((m) => <td key={m} style={cell}>{g.stats[m]?.p50 ?? "-"}</td>)}
+              </tr>
+              <tr style={{ fontWeight: 700 }}>
+                <td style={cell}>p95</td>{METRICS.map((m) => <td key={m} style={cell}>{g.stats[m]?.p95 ?? "-"}</td>)}
+              </tr>
+              <tr style={{ color: "#666" }}>
+                <td style={cell}>meta</td>{METRICS.map((m) => <td key={m} style={cell}>{LATENCY_TARGETS[m]}</td>)}
+              </tr>
+            </tbody>
+          </table>
+          <label style={{ display: "inline-flex", gap: 6, alignItems: "center", marginRight: 12 }}>
+            <input type="checkbox" checked={g.skipFirstRound} onChange={(e) => g.setSkipFirstRound(e.target.checked)} /> descartar a 1ª rodada (aquecimento)
+          </label>
+          <button type="button" onClick={() => void exportRounds(g.rounds, g.stats, g.skipFirstRound)} style={smallButton}>Copiar JSON</button>{" "}
+          <button type="button" onClick={g.clearRounds} style={smallButton}>Limpar</button>
+          <div><small>Vermelho = acima da meta. Com menos de 5 rodadas o p95 é só indicativo.</small></div>
         </details>
       )}
 

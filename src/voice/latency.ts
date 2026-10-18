@@ -38,3 +38,28 @@ export const LATENCY_TARGETS = { sttMs: 600, backendFirstChunkMs: 700, ttsFirstB
 export function overBudget(s: LatencySummary): Array<keyof LatencySummary> {
   return (Object.keys(LATENCY_TARGETS) as Array<keyof typeof LATENCY_TARGETS>).filter((k) => (s[k] ?? 0) > LATENCY_TARGETS[k]);
 }
+
+// Rodadas medidas na tela de laboratório → p50/p95 por etapa (docs/PLANO_INTEGRACAO_VOZ_AGENTE.md, Fase 2).
+export type LatencyMetric = keyof LatencySummary;
+export interface MetricStats { n: number; p50: number; p95: number; max: number }
+
+// Percentil por interpolação linear entre os vizinhos (com poucas rodadas, p95 fica perto do máximo).
+export function percentile(values: number[], p: number): number {
+  if (values.length === 0) return NaN;
+  const v = [...values].sort((a, b) => a - b);
+  const pos = (v.length - 1) * Math.min(1, Math.max(0, p));
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  return v[lo] + (v[hi] - v[lo]) * (pos - lo);
+}
+
+// `skipFirst`: a 1ª rodada paga o aquecimento (compilação, conexão fria) e distorce a medida.
+export function summarizeRounds(rounds: LatencySummary[], opts: { skipFirst?: boolean } = {}): Partial<Record<LatencyMetric, MetricStats>> {
+  const used = opts.skipFirst ? rounds.slice(1) : rounds;
+  const out: Partial<Record<LatencyMetric, MetricStats>> = {};
+  for (const k of Object.keys(LATENCY_TARGETS) as LatencyMetric[]) {
+    const vals = used.map((r) => r[k]).filter((x): x is number => typeof x === "number");
+    if (vals.length) out[k] = { n: vals.length, p50: Math.round(percentile(vals, 0.5)), p95: Math.round(percentile(vals, 0.95)), max: Math.max(...vals) };
+  }
+  return out;
+}
