@@ -104,9 +104,23 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - O chat do esqueleto foi movido sem alterações de lógica para `src/app/agente/page.tsx` (só o container de rolagem mudou) e será refeito no PR da tela do agente. `PhoneFrame` no layout: moldura de 390px no desktop, tela cheia abaixo de 640px.
 - Validação: typecheck, lint, 49 testes e build passaram; capturas em Chrome headless a 375px (via iframe, pois a janela headless tem largura mínima) e 1280px conferidas. Texto sobre vermelho usa `--primary` por contraste AA. Teclado: a bolinha é o único foco da home. Falta teste com leitor de tela.
 
+## Agente: decisões de implementação e preocupações — 17/10/2026, ~20h30 (Hyago)
+- Cérebro no backend: orquestrador (Hyago) decide perguntar/buscar/montar/ajustar; domínio (Kenzo) busca no MCP e ranqueia; LLM interpreta e fala, sem aprovar nem comprar.
+- ElevenLabs só ouve e fala (STT + TTS), sem conduzir a conversa. O agente é entregue funcionando por texto; a voz conecta depois no mesmo endpoint. Provedor/modelo de LLM não fixado (configuração).
+- Prompt do spike (src/voice/agent-prompt.md) dividido em interpretar/responder; dados de exemplo viram fixtures do domínio fake; teto de perguntas, anti-repetição e S5 garantidos em código.
+- Preocupações registradas: latência (2 chamadas de LLM + MCP + TTS; medir por etapa desde o M1), erros de reconhecimento, fala inventando número, atraso de K-3/K-5/K-1/M-1, provedor e chave de LLM a confirmar.
+- Detalhes: docs/BRIEFING_AGENTE.md e docs/PLANO_AGENTE.md. Nenhum código de runtime alterado.
+
+## Agente Guide no backend — M0/M1 (17/10/2026, ~21h, Hyago)
+- Implementado em feat/hyago-agente: src/agent/types.ts, orquestrador (src/agent/orchestrator), domínio simulado com os dados do spike (src/agent/domain-fake), LLM via LangChain (src/agent/llm, provedor/modelo por LLM_PROVIDER/LLM_MODEL; sem eles, interpretador por regras), prompts (src/prompts), evals (src/evals) e POST /api/converse com os guardas de http.ts e sessão por cookie.
+- Regras em código: teto de 3 perguntas (1 em L1), nível só rebaixa, pressa força L0, aprovação só com frase explícita e só devolve planoId+versão, restrição rígida por sessão, plano vazio não é encaminhado, fala do LLM com número fora do snapshot cai para template.
+- Verificação: typecheck, lint, 100 testes (12 cenários de eval + testes do orquestrador) e build passaram; jornada do aniversário e caso rápido rodados no app servido. Revisão independente: 16 achados, altos e médios corrigidos com testes.
+- Não verificado: LLM real (sem LLM_PROVIDER configurado nesta máquina); compatibilidade do schema Zod com withStructuredOutput de cada provedor; domínio real (K-3/K-5) e aprovação na tela (K-1/M-1).
+
 ## Módulos de dados, elegibilidade e ranking com evidências — 17/10/2026
 - Worktree isolado `work/gemini-dados`, branch `feat/kenzo-gemini-dados`, atualizada sobre `origin/main` (`fad6231`, que já integra PRs #11/`03d94bf` em `src/mcp/costs.ts`, #12/`d741885` em `src/domain/handoff.ts` e #13 em `src/ui/`). Implementações existentes de custos e resumo manual preservadas integralmente.
 - `src/mcp/normalize-candidate.ts` e `src/mcp/normalize-candidate.test.ts`: normalização pura para formato interno (não representa schema oficial do iFood, sem chamadas de rede), reutilizando `@/contracts` e `src/mcp/costs.ts`, validando entradas em runtime e preservando ausências (avaliação, prazo, distância, disponibilidade, composição, histórico e taxas) e origem (`real`/`mock`).
 - `src/reco/eligibility.ts` e `src/reco/eligibility.test.ts`: filtros rígidos pré-ranking contra `Constraints` (exclusão por alergia incompatível e por composição ausente/incompleta sem inferir ingredientes pelo nome do prato; teto rígido avaliado sobre o total com encargos necessários; bloqueio de total desconhecido em teto rígido; preferência flexível sem relaxar limite rígido; motivos estruturados de exclusão e pendência).
 - `src/reco/rank-eligible.ts` e `src/reco/rank-eligible.test.ts`: ranking determinístico sobre os candidatos elegíveis (até 3 opções sem preenchimento artificial, defesa contra reaparecimento de excluídos, desempate estável, geração de `Recommendation` validada por `RecommendationSchema` com `origins`, `evidence`, `reasons` e `uncertainties`; histórico recente ausente não gera alegação de "nunca pediu" e frequência não vira "favorito declarado").
 - Validação local no worktree: `npm run typecheck`, `npm run lint`, `npm test` (14 arquivos, 112 testes) e `npm run build` passaram. Módulos prontos para integração pelo agente/rotas; nenhuma rota, contrato compartilhado, Trello, decisão V2 ou operação externa/MCP real foi alterada ou declarada concluída.
+
