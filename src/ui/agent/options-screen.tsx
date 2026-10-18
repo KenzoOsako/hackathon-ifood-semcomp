@@ -72,11 +72,24 @@ export function OptionCard({ option, onSelect, disabled }: { option: Option; onS
   );
 }
 
+type ViewProps = {
+  options: Option[];
+  busy: boolean;
+  error: string | null;
+  onSelect: (index: number) => void;
+  onRetry: () => void;
+};
+
 export function OptionsScreen() {
   const { turn, busy, error, select, retry } = useAgent();
+  const options = turn?.state === "ESCOLHENDO_OPCAO" ? turn.options ?? [] : [];
+  return <OptionsView options={options} busy={busy} error={error} onSelect={(i) => void select(i)} onRetry={() => void retry()} />;
+}
+
+// Parte visual, sem contexto: a prévia de design usa a mesma tela com opções fixas.
+export function OptionsView({ options, busy, error, onSelect, onRetry }: ViewProps) {
   const reduceMotion = useReducedMotion();
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
-  const options = turn?.state === "ESCOLHENDO_OPCAO" ? turn.options ?? [] : [];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -93,7 +106,7 @@ export function OptionsScreen() {
             <AlertTriangle aria-hidden="true" />
             <div className="flex-1">
               <p>{error}</p>
-              <Button variant="outline" size="sm" className="mt-2" disabled={busy} onClick={() => void retry()}>Tentar de novo</Button>
+              <Button variant="outline" size="sm" className="mt-2" disabled={busy} onClick={onRetry}>Tentar de novo</Button>
             </div>
           </Alert>
         )}
@@ -117,7 +130,7 @@ export function OptionsScreen() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.08 }}
                 >
-                  <OptionCard option={option} disabled={busy} onSelect={() => void select(i)} />
+                  <OptionCard option={option} disabled={busy} onSelect={() => onSelect(i)} />
                 </motion.li>
               ))}
             </ul>

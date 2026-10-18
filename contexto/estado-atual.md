@@ -131,3 +131,6 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Acessibilidade: foco vai ao título ao trocar de tela (`useFocusOnMount`), título de página por rota, `muted-foreground` escurecido para `#5c5c5c` (contraste AA sobre o fundo pêssego), cópia com aviso em `role=status` e fallback de seleção manual.
 - Lacuna para o Kenzo: o resumo é montado na UI só reorganizando campos do snapshot; o `buildManualHandoffSummary` de `src/domain/handoff.ts` (K-4) não é servido por nenhuma rota. Ideal: o turno aprovado trazer o texto pronto, para a UI só exibir.
 - Validação: typecheck, lint, 92 testes e build passaram; jornada, foco, títulos e cópia conferidos por CDP a 375px, console limpo. Falta teste com leitor de tela real.
+
+## UI: prévia com mais lojas e itens — 17/10/2026
+- `/agente/previa` ganhou a aba "3 opções" (açaí, hambúrguer e sushi, com rótulos, motivos e preços inventados) e a proposta passou a ter três itens, um com quantidade 2 ("cada" ao lado do preço unitário). Dados fixos e rotulados como simulados; nada chama a API. `OptionsScreen` foi dividida em `OptionsView` (visual) e `OptionsScreen` (contexto) para a prévia reutilizar a mesma tela. Nomes de itens agora podem vir de um mapa (`itemLabel`), útil enquanto a proposta pública só traz a referência.

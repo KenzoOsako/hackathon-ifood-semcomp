@@ -8,7 +8,7 @@ import { Button } from "@/ui/components/button";
 import { useFocusOnMount } from "@/ui/lib/use-focus-on-mount";
 import { useNow } from "@/ui/lib/use-now";
 import { DATA_ORIGIN } from "./agent-context";
-import { fromCents } from "./format";
+import { fromCents, itemLabel } from "./format";
 
 const STATE_LABEL: Record<PublicProposal["state"], string> = {
   draft: "Rascunho",
@@ -22,6 +22,7 @@ const STATE_LABEL: Record<PublicProposal["state"], string> = {
 type Props = {
   proposal: PublicProposal;
   option: Option | null;
+  itemNames?: Record<string, string>;
   busy: boolean;
   error: string | null;
   approvedReply?: string;
@@ -32,7 +33,7 @@ type Props = {
 
 // Mostra o snapshot da proposta como veio do servidor. Aprovar, editar e cancelar são ações separadas
 // e a UI nunca soma custos: ausência de frete/taxas aparece como pendência, não como zero.
-export function ProposalView({ proposal, option, busy, error, approvedReply, onApprove, onCancel, onRetry }: Props) {
+export function ProposalView({ proposal, option, itemNames, busy, error, approvedReply, onApprove, onCancel, onRetry }: Props) {
   const now = useNow(15_000);
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
 
@@ -68,12 +69,11 @@ export function ProposalView({ proposal, option, busy, error, approvedReply, onA
 
         <ul className="mt-3 divide-y divide-border rounded-2xl border border-border">
           {proposal.items.map((item) => {
-            // O nome vem da opção escolhida; a proposta pública só carrega a referência do item.
-            const name = option?.candidate.itemId === item.ref ? option.candidate.itemName : `Item ${item.ref}`;
+            const name = itemLabel(item.ref, option, itemNames);
             return (
               <li key={item.ref} className="flex justify-between gap-3 p-3 text-sm">
                 <span>{item.quantity}× {name}</span>
-                <span className="font-semibold">{fromCents(item.unitPrice.cents)}</span>
+                <span className="font-semibold">{fromCents(item.unitPrice.cents)}{item.quantity > 1 && <span className="font-normal text-muted-foreground"> cada</span>}</span>
               </li>
             );
           })}

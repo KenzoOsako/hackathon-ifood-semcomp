@@ -8,16 +8,15 @@ import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { useFocusOnMount } from "@/ui/lib/use-focus-on-mount";
 import { DATA_ORIGIN } from "./agent-context";
-import { fromCents } from "./format";
+import { fromCents, itemLabel } from "./format";
 
 // Resumo copiável para montar o carrinho no iFood. Só reorganiza campos do snapshot aprovado:
 // o que o servidor não informou aparece como pendente, nunca como zero.
-export function buildSummary(proposal: PublicProposal, option: Option | null): string {
+export function buildSummary(proposal: PublicProposal, option: Option | null, itemNames?: Record<string, string>): string {
   const { cost } = proposal;
   const money = (m: { cents: number } | undefined, missing: string) => (m ? fromCents(m.cents) : missing);
   const items = proposal.items.map((item) => {
-    const name = option?.candidate.itemId === item.ref ? option.candidate.itemName : `Item ${item.ref}`;
-    return `${item.quantity}× ${name} — ${fromCents(item.unitPrice.cents)}`;
+    return `${item.quantity}× ${itemLabel(item.ref, option, itemNames)} — ${fromCents(item.unitPrice.cents)}`;
   });
   return [
     DATA_ORIGIN === "mock" ? "Resumo do FoodPilot (dados simulados)" : "Resumo do FoodPilot",
@@ -31,12 +30,12 @@ export function buildSummary(proposal: PublicProposal, option: Option | null): s
   ].filter((line): line is string => line !== null).join("\n");
 }
 
-type Props = { proposal: PublicProposal; option: Option | null };
+type Props = { proposal: PublicProposal; option: Option | null; itemNames?: Record<string, string> };
 
-export function ContinueView({ proposal, option }: Props) {
+export function ContinueView({ proposal, option, itemNames }: Props) {
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
-  const summary = buildSummary(proposal, option);
+  const summary = buildSummary(proposal, option, itemNames);
 
   async function copy() {
     try {
