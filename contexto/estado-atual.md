@@ -1,3 +1,17 @@
+## Imagens reais — validação autenticada em 18/10/2026
+
+- Kenzo: MCP real + Gemini local, fotos/logos oficiais carregados no plano/revisão/sacola; texto e fala “Prefiro a opção mais rápida” verificados. Sacola é simulação e nenhuma compra ocorreu.
+- 556 testes aprovados/10 ignorados, typecheck/lint/build; lint com avisos preexistentes. Revisão independente concluída. Evidências e limites em docs/IMAGENS_REAIS_IFOOD.md.
+- Refinamento por critério manteve opção atual; troca de categoria não interpretada pelo agente (fora da feature). Associação de mídia em trocas/versionamento coberta automaticamente.
+- .env preservado e ignorado. MCP_MODE=real apenas no processo. PR da feature será preparado para merge humano; produção exige configuração/redirect e validação no destino.
+
+## Imagens do catálogo — 18/10/2026 (Kenzo)
+
+- Transferência explícita: responsabilidades de Hyago passam a Kenzo; autoria histórica preservada.
+- Branch feat/kenzo-imagens-reais-ifood, base 7918d15. Implementação de mídia em resultados/revisão/sacola; detalhes e auditoria em docs/IMAGENS_REAIS_IFOOD.md.
+- Typecheck/lint/build aprovados; 555 testes passaram, 10 ignorados; lint tem 10 avisos preexistentes.
+- Teste real bloqueado: OAuth local não configurado (login HTTP 503). Voz/mídia real e CDN ainda sem comprovação. Sem PR até cumprir os gates do plano; nenhuma escrita remota ou compra.
+
 # Estado atual — 17/10/2026
 
 ## K-3 — contrato e domínio local do plano composto
@@ -272,3 +286,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Removidos: orquestrador, LLM por regras, prompts antigos, juiz de relevância, telemetria do orquestrador, evals e qualidade (caos/invariantes/mutação). Sessão foi para `src/agent/sessao.ts`.
 - Provas: teste do Hyago no iFood real ("funcionou muito melhor"); conversa em mock pela API (algo diferente → buscou 3 cozinhas sozinho → comparou notas → plano → revisão → sacola); 6 testes novos das guardas do atendente (modelo roteirizado) + 2 da sacola.
 - Conhecido: "pra 2 pessoas" saiu 1x no mock (quantidade); latência 2–4 s quando pesquisa.
+## Entregáveis: documento único, seção 01 (Malveste) — 18/10/2026
+- O agente passou a se chamar **Mimo** (decisão do time; o nome FoodPilot ainda aparece nos documentos antigos). `docs/entregaveis/mimo-entregaveis.html` é a fonte única dos entregáveis 01 a 06; o PDF (`mimo-entregaveis.pdf`) sai dele pelo Chrome headless (comando no comentário do HTML).
+- PDF com 3 páginas, formato de relatório: bloco de identificação e seção 01 com 1.1 a 1.7 (sumário, problema, público, proposta de valor, solução com o equilíbrio de perguntas, diferenciais, modelo de negócio com canal, impacto e custos). O Mimo é apresentado como recurso do próprio iFood, não como fornecedor externo; escopo, validação, riscos, roadmap e parcerias foram cortados a pedido do time. 02 a 06 ainda não entraram.
+- A 01 condensa a proposta canônica com a Direção V2, com hipóteses rotuladas e sem números de impacto. Rascunho para revisão do time; os arquivos `01-…` a `06-…` desta pasta seguem como esqueletos.
+- 02 (Desenho de Solução) adicionado: página própria com o diagrama de fluxo em 8 etapas (`docs/entregaveis/img/fluxo-solucao.svg` e `.png`). Checklist em `docs/entregaveis/CHECKLIST.md`.
