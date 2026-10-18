@@ -2,15 +2,15 @@
 // LABORATÓRIO DA VOZ (frente de Felipe). Página de teste do ciclo: falar → reconhecer → agente → ouvir.
 // Usa o hook único da voz (use-guide-voice.ts), o mesmo que a interface final deve usar. Aqui só se desenha o laboratório.
 import { useState } from "react";
-import { LATENCY_TARGETS, type LatencySummary } from "@/voice/latency";
-import { useGuideVoice, type GuideStats } from "@/voice/use-guide-voice";
+import { LATENCY_TARGETS } from "@/voice/latency";
+import { useGuideVoice, type GuideRound, type GuideStats } from "@/voice/use-guide-voice";
 
 const METRICS = ["sttMs", "firstSoundMs", "backendFirstChunkMs", "ttsFirstByteMs", "timeToFirstAudioMs"] as const;
 const cell = { padding: "4px 8px", borderBottom: "1px solid #eee" } as const;
 const smallButton = { padding: "6px 12px", borderRadius: 8, border: "1px solid #bbb", background: "#fff", color: "#222", cursor: "pointer" } as const;
 
 // Copia as rodadas e as estatísticas para a área de transferência (cola direto no chat ou numa planilha).
-async function exportRounds(rounds: LatencySummary[], stats: GuideStats, skipFirst: boolean) {
+async function exportRounds(rounds: GuideRound[], stats: GuideStats, skipFirst: boolean) {
   const payload = { geradoEm: new Date().toISOString(), descartouPrimeira: skipFirst, metas: LATENCY_TARGETS, rodadas: rounds, estatisticas: stats };
   try { await navigator.clipboard.writeText(JSON.stringify(payload, null, 2)); } catch { /* sem permissão da área de transferência: a tabela continua na tela */ }
 }
@@ -86,23 +86,24 @@ export default function VozLab() {
           <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", margin: "8px 0", fontSize: 13, width: "100%" }}>
             <thead>
-              <tr>{["#", "reconhecimento", "1º som (espera conta)", "backend (1º pedaço)", "voz (1º byte)", "1ª palavra útil"].map((h) => <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #ddd" }}>{h}</th>)}</tr>
+              <tr>{["#", "reconhecimento", "1º som (espera conta)", "backend (1º pedaço)", "voz (1º byte)", "1ª palavra útil", "confiança"].map((h) => <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #ddd" }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {g.rounds.map((r, i) => (
                 <tr key={`r-${i}`} style={{ color: i === 0 && g.skipFirstRound ? "#999" : "#111" }}>
                   <td style={cell}>{i + 1}{i === 0 && g.skipFirstRound ? " (descartada)" : ""}</td>
                   {METRICS.map((m) => <td key={m} style={{ ...cell, color: (r[m] ?? 0) > LATENCY_TARGETS[m] ? "#b00020" : undefined }}>{r[m] ?? "-"}</td>)}
+                  <td style={{ ...cell, color: r.confianca !== undefined && r.confianca < 0.85 ? "#7a5b00" : undefined }}>{r.confianca ?? "-"}</td>
                 </tr>
               ))}
               <tr style={{ fontWeight: 700 }}>
-                <td style={cell}>p50</td>{METRICS.map((m) => <td key={m} style={cell}>{g.stats[m]?.p50 ?? "-"}</td>)}
+                <td style={cell}>p50</td>{METRICS.map((m) => <td key={m} style={cell}>{g.stats[m]?.p50 ?? "-"}</td>)}<td style={cell}></td>
               </tr>
               <tr style={{ fontWeight: 700 }}>
-                <td style={cell}>p95</td>{METRICS.map((m) => <td key={m} style={cell}>{g.stats[m]?.p95 ?? "-"}</td>)}
+                <td style={cell}>p95</td>{METRICS.map((m) => <td key={m} style={cell}>{g.stats[m]?.p95 ?? "-"}</td>)}<td style={cell}></td>
               </tr>
               <tr style={{ color: "#666" }}>
-                <td style={cell}>meta</td>{METRICS.map((m) => <td key={m} style={cell}>{LATENCY_TARGETS[m]}</td>)}
+                <td style={cell}>meta</td>{METRICS.map((m) => <td key={m} style={cell}>{LATENCY_TARGETS[m]}</td>)}<td style={cell}>≥0,6</td>
               </tr>
             </tbody>
           </table>
@@ -112,7 +113,7 @@ export default function VozLab() {
           </label>
           <button type="button" onClick={() => void exportRounds(g.rounds, g.stats, g.skipFirstRound)} style={smallButton}>Copiar JSON</button>{" "}
           <button type="button" onClick={g.clearRounds} style={smallButton}>Limpar</button>
-          <div><small>Vermelho = acima da meta. Com menos de 5 rodadas o p95 é só indicativo.</small></div>
+          <div><small>Vermelho = acima da meta; confiança em âmbar = abaixo de 0,85 (faixa em que o agente deve confirmar). Com menos de 5 rodadas o p95 é só indicativo.</small></div>
         </details>
       )}
 

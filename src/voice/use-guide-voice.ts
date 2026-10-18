@@ -20,6 +20,8 @@ import { runTurn, type TurnCtl } from "./turn";
 import { useVoice, type Utterance } from "./use-voice";
 
 export type GuideStats = ReturnType<typeof summarizeRounds>;
+// Uma rodada de latência + a confiança do reconhecimento da fala (sem o texto: não guardamos o que a pessoa disse).
+export type GuideRound = LatencySummary & { confianca?: number };
 export interface GuideLine { id: string; from: "voce" | "agente"; text: string }
 export interface GuideScreen { event: string; payload: unknown }
 
@@ -37,7 +39,8 @@ export function useGuideVoice() {
   const [unclear, setUnclear] = useState<string | null>(null);
   const [utterance, setUtterance] = useState<Utterance | null>(null);
   const [busy, setBusy] = useState(false);
-  const [rounds, setRounds] = useState<LatencySummary[]>([]);
+  const [rounds, setRounds] = useState<GuideRound[]>([]);
+  const lastConfidence = useRef<number | undefined>(undefined);
   const [skipFirstRound, setSkipFirstRound] = useState(true);
   const terms = useRef<string[]>([]); // nomes do plano na tela: ajudam o reconhecimento na próxima fala
   const seq = useRef(0);
@@ -82,6 +85,7 @@ export function useGuideVoice() {
   const voice = useVoice(
     (u, api) => {
       setUtterance(u);
+      lastConfidence.current = u.confianca;
       void run(u.texto, "voz", u.sinais, { mark: api.mark, enqueue: (t) => api.enqueue(t), done: api.turnDone, end: api.turnEnded });
     },
     {
@@ -89,7 +93,7 @@ export function useGuideVoice() {
       onUnclear: (t) => setUnclear(t),
       onListening: abortTurn,
       // Cada turno com áudio termina com um resumo de latência: guarda para o p50/p95.
-      onLatency: (s) => { if (s.timeToFirstAudioMs !== undefined) setRounds((r) => [...r, s]); },
+      onLatency: (s) => { if (s.timeToFirstAudioMs !== undefined) setRounds((r) => [...r, { ...s, confianca: lastConfidence.current }]); },
     },
   );
 
