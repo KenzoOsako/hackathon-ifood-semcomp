@@ -107,6 +107,18 @@ describe("rota /api/voice/stt", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect((fetchMock.mock.calls[1][1].body as FormData).getAll("keyterms")).toHaveLength(0);
   });
+  it("recusa COM palavras-chave e a tentativa SEM elas volta vazia: encerra como vazio, no máximo duas chamadas", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("palavra-chave invalida", { status: 400 }))
+      .mockResolvedValueOnce(Response.json(scribe({ text: "" })))
+      .mockResolvedValue(Response.json(scribe({ text: "não deveria chegar aqui" }))); // uma 3ª chamada devolveria texto: o teste a denunciaria
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await stt(req(audioBytes()));
+    expect(r.status).toBe(422); // vazio
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((fetchMock.mock.calls[0][1].body as FormData).getAll("keyterms").length).toBeGreaterThan(0);
+    expect((fetchMock.mock.calls[1][1].body as FormData).getAll("keyterms")).toHaveLength(0);
+  });
   it("recusa do provedor sem palavras-chave não gera nova tentativa (não há o que tirar)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("x", { status: 400 }));
     vi.stubGlobal("fetch", fetchMock);

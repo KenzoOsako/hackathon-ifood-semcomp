@@ -76,6 +76,7 @@ export function useGuideVoice() {
     turnAbort.current?.abort();
     const ac = new AbortController();
     turnAbort.current = ac;
+    if (origem === "texto") lastConfidence.current = undefined; // texto digitado não tem confiança de reconhecimento: não herda a da fala anterior
     setBusy(true);
     setUnclear(null);
     setLines((l) => [...l, { id: nextId("u"), from: "voce", text: texto }]);

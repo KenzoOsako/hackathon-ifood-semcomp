@@ -73,7 +73,7 @@ Orçamento de latência até a primeira palavra: STT ≤ 600 ms + 1º pedaço do
 
 ## 6. Como a gente trabalha
 - Cada frente na sua branch; o Kenzo integra. Acumulamos trabalho antes do PR para não sobrecarregá-lo.
-- Antes de subir: `npm run typecheck`, `npm run lint`, `npm test` (347 testes) e `npm run build`.
+- Antes de subir: `npm run typecheck`, `npm run lint`, `npm test` (348 testes) e `npm run build`.
 - Chaves só no `.env` local. Nunca no código nem em doc.
 - Mudou o contrato de eventos, o schema de entrada ou o comportamento de aprovação? Avise no grupo e atualize este arquivo.
 

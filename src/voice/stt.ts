@@ -79,15 +79,18 @@ export async function transcribe(audio: Uint8Array, mime: string, cfg: SttConfig
     throw new SttError("BUDGET");
   }
   let data: ScribeResponse;
+  let retriedWithoutTerms = false; // a nova tentativa sem palavras-chave só acontece uma vez, por qualquer motivo
   try {
     data = await callScribe(audio, mime, cfg, keyterms, signal);
   } catch (error) {
     // O provedor pode recusar as palavras-chave (limites que mudam); sem elas a fala ainda é reconhecida.
     if (!(error instanceof SttError) || error.code !== "PROVIDER" || keyterms.length === 0 || signal?.aborted) throw error;
+    retriedWithoutTerms = true;
     data = await callScribe(audio, mime, cfg, [], signal);
   }
-  // Medido na bateria de 17/10: com palavras-chave, uma fala saiu VAZIA e sem elas saiu certa. Tenta uma vez sem.
-  if (!(data.text ?? "").trim() && keyterms.length > 0) data = await callScribe(audio, mime, cfg, [], signal);
+  // Medido na bateria de 17/10: com palavras-chave, uma fala saiu VAZIA e sem elas saiu certa. Tenta uma vez sem
+  // (a menos que a tentativa sem palavras-chave já tenha acontecido acima: aí vazio é vazio, no máximo duas chamadas).
+  if (!(data.text ?? "").trim() && keyterms.length > 0 && !retriedWithoutTerms) data = await callScribe(audio, mime, cfg, [], signal);
   if (data.audio_duration_secs) recordStt(data.audio_duration_secs);
   const raw = (data.text ?? "").trim();
   if (!raw) throw new SttError("EMPTY");
