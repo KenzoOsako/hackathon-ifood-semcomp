@@ -53,16 +53,28 @@ const words = (s) => strip(s).split(" ").filter(Boolean);
 
 function wer(ref, hyp) {
   const r = words(ref), h = words(hyp);
-  const d = Array.from({ length: r.length + 1 }, (_, i) => [i, ...Array(h.length).fill(0)]);
+  const d = Array.from({ length: r.length + 1 }, (_, i) => [i, ...new Array(h.length).fill(0)]);
   for (let j = 1; j <= h.length; j++) d[0][j] = j;
-  for (let i = 1; i <= r.length; i++) for (let j = 1; j <= h.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (r[i - 1] === h[j - 1] ? 0 : 1));
+  for (let i = 1; i <= r.length; i++) {
+    for (let j = 1; j <= h.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (r[i - 1] === h[j - 1] ? 0 : 1));
+    }
+  }
   return { errors: d[r.length][h.length], n: r.length };
 }
 
 async function pool(items, size, fn) {
   const out = new Array(items.length);
   let i = 0;
-  await Promise.all(Array.from({ length: size }, async () => { for (;;) { const k = i++; if (k >= items.length) return; out[k] = await fn(items[k], k); } }));
+  const runWorker = async () => {
+    const k = i++;
+    if (k >= items.length) {
+      return;
+    }
+    out[k] = await fn(items[k], k);
+    await runWorker();
+  };
+  await Promise.all(Array.from({ length: size }, () => runWorker()));
   return out;
 }
 
@@ -75,7 +87,11 @@ async function tts(text, voice) {
 async function stt(buf, withTerms) {
   const fd = new FormData();
   fd.append("model_id", MODEL); fd.append("language_code", "por"); fd.append("tag_audio_events", "false");
-  if (withTerms) for (const k of KEYTERMS) fd.append("keyterms", k);
+  if (withTerms) {
+    for (const k of KEYTERMS) {
+      fd.append("keyterms", k);
+    }
+  }
   fd.append("file", new Blob([buf], { type: "audio/mpeg" }), "f.mp3");
   const r = await fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: H, body: fd });
   if (!r.ok) throw new Error("STT " + r.status + " " + (await r.text()).slice(0, 120));
@@ -83,7 +99,7 @@ async function stt(buf, withTerms) {
   return { text: (j.text || "").trim(), secs: j.audio_duration_secs || 0 };
 }
 
-(async () => {
+try {
   const vr = await (await fetch("https://api.elevenlabs.io/v1/voices", { headers: H })).json();
   const br = vr.voices.filter((v) => v.labels?.accent === "brazilian").slice(0, VOICES_N);
   if (br.length === 0) throw new Error("Nenhuma voz brasileira na conta");
@@ -118,7 +134,10 @@ async function stt(buf, withTerms) {
   const worst = results.map((r) => ({ r, e: wer(r.ref, r.com).errors })).filter((x) => x.e > 0).sort((a, b) => b.e - a.e).slice(0, 8);
   console.log(`\nPiores casos COM palavras-chave (${worst.length} mostrados):`);
   for (const { r, e } of worst) console.log(`  [${r.voiceName}, ${e} erro(s)]\n    ref: ${r.ref}\n    com: ${r.com}\n    sem: ${r.sem}`);
-  const out = (process.env.TEMP || ".") + "/voice-eval.json";
+  const out = ".voice-eval.json";
   fs.writeFileSync(out, JSON.stringify({ model: MODEL, voices: br.map((v) => v.name), results }, null, 1));
   console.log(`\nÁudio total reconhecido (sem palavras-chave): ${secs.toFixed(0)} s | detalhes em ${out}`);
-})().catch((e) => { console.error("ERRO:", e.message); process.exit(1); });
+} catch (e) {
+  console.error("ERRO:", e.message);
+  process.exit(1);
+}

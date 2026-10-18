@@ -33,17 +33,19 @@ export async function readLimited(req: Request, maxBytes: number): Promise<Uint8
   if (!reader) throw new VoiceHttpError("BAD_REQUEST");
   const chunks: Uint8Array[] = [];
   let length = 0;
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      length += value.byteLength;
-      if (length > maxBytes) {
-        await reader.cancel();
-        throw new VoiceHttpError("TOO_LARGE");
-      }
-      chunks.push(value);
+  const readNext = async (): Promise<void> => {
+    const { value, done } = await reader.read();
+    if (done) return;
+    length += value.byteLength;
+    if (length > maxBytes) {
+      await reader.cancel();
+      throw new VoiceHttpError("TOO_LARGE");
     }
+    chunks.push(value);
+    await readNext();
+  };
+  try {
+    await readNext();
   } finally {
     reader.releaseLock();
   }

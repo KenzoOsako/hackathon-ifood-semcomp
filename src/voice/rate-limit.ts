@@ -4,8 +4,8 @@
 import { randomBytes } from "node:crypto";
 
 export class SlidingWindow {
-  private hits = new Map<string, number[]>();
-  constructor(private limit: number, private windowMs: number, private now: () => number = Date.now) {}
+  private readonly hits = new Map<string, number[]>();
+  constructor(private readonly limit: number, private readonly windowMs: number, private readonly now: () => number = Date.now) {}
 
   // `cost` permite contar caracteres em vez de requisições.
   hit(key: string, cost = 1): { ok: true } | { ok: false; retryAfterMs: number } {
@@ -33,9 +33,9 @@ export type VoiceKind = "tts" | "stt" | "warm";
 const num = (v: string | undefined, d: number) => (v === undefined || v === "" ? d : Number(v));
 
 export class VoiceLimits {
-  private perVisitor: Record<VoiceKind, SlidingWindow>;
-  private ttsChars: SlidingWindow;
-  private newVisitors: SlidingWindow;
+  private readonly perVisitor: Record<VoiceKind, SlidingWindow>;
+  private readonly ttsChars: SlidingWindow;
+  private readonly newVisitors: SlidingWindow;
 
   constructor(env: Record<string, string | undefined> = process.env, now: () => number = Date.now) {
     this.perVisitor = {

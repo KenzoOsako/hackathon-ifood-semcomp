@@ -10,7 +10,7 @@ export interface LatencySummary {
 }
 
 export class LatencyTrace {
-  private t = new Map<Mark, number>();
+  private readonly t = new Map<Mark, number>();
 
   mark(name: Mark, at: number = performance.now()): void {
     if (!this.t.has(name)) this.t.set(name, at); // só o primeiro marco de cada tipo

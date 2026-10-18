@@ -99,8 +99,8 @@ export class VoiceSession {
   private chunks: Blob[] = [];
   private tracker?: VoiceActivityTracker;
   private endpoint?: EndpointDetector;
-  private barge = new BargeInDetector();
-  private noise = new NoiseFloor();
+  private readonly barge = new BargeInDetector();
+  private readonly noise = new NoiseFloor();
   private diag: VoiceDiag = {};
   private micOpenedAt = 0;
   private interrupted = false;
@@ -112,7 +112,7 @@ export class VoiceSession {
   private awaitingReply = false; // entregou a fala e espera o agente responder: o microfone NÃO reabre ainda
   private cancelReplyTimeout?: () => void;
 
-  constructor(private d: SessionDeps, private ev: SessionEvents) {}
+  constructor(private readonly d: SessionDeps, private readonly ev: SessionEvents) {}
 
   // ---------- API pública ----------
 
@@ -257,19 +257,21 @@ export class VoiceSession {
     if (this.state === "listening") this.setState("idle");
   }
 
-  private tick() {
-    if (!this.mic || this.destroyed) return;
-    const t = this.d.now();
-    const level = this.mic.meter.read();
-    this.ev.onLevel(level);
-    // Ruído de fundo: só aprende quando ninguém está falando (nem o usuário, nem o Guide).
-    const speakingNow = this.d.player.speaking;
-    if (!speakingNow) this.noise.push(level);
-    const thr = this.noise.speechThreshold();
-    this.diag = { ...this.diag, level, floor: this.noise.floor, threshold: thr };
-    this.ev.onDiag?.(this.diag);
+  private handleListeningTick(level: number, t: number, thr: number) {
+    this.tracker?.push(level, t, thr);
+    const decision = this.endpoint!.feed(level, t, thr);
+    if (decision === "max") {
+      this.finalize();
+      return;
+    }
+    // Fim de fala por silêncio e desistência por falta de fala só valem no modo sem as mãos;
+    // no manual, quem decide é a pessoa.
+    if (!this.handsFree) return;
+    if (decision === "end") this.finalize();
+    else if (decision === "no_speech") this.onSilentRound();
+  }
 
-    const speaking = this.d.player.speaking;
+  private syncSpeakingState(speaking: boolean, t: number) {
     if (speaking !== this.wasSpeaking) {
       this.wasSpeaking = speaking;
       if (!speaking) {
@@ -277,15 +279,24 @@ export class VoiceSession {
         this.clearAwait();
       }
     }
+  }
+
+  private tick() {
+    if (!this.mic || this.destroyed) return;
+    const t = this.d.now();
+    const level = this.mic.meter.read();
+    this.ev.onLevel(level);
+    // Ruído de fundo: só aprende quando ninguém está falando (nem o usuário, nem o Guide).
+    const speaking = this.d.player.speaking;
+    if (!speaking) this.noise.push(level);
+    const thr = this.noise.speechThreshold();
+    this.diag = { ...this.diag, level, floor: this.noise.floor, threshold: thr };
+    this.ev.onDiag?.(this.diag);
+
+    this.syncSpeakingState(speaking, t);
 
     if (this.state === "listening") {
-      this.tracker?.push(level, t, thr);
-      const decision = this.endpoint!.feed(level, t, thr);
-      if (decision === "max") this.finalize();
-      // Fim de fala por silêncio e desistência por falta de fala só valem no modo sem as mãos;
-      // no manual, quem decide é a pessoa.
-      else if (this.handsFree && decision === "end") this.finalize();
-      else if (this.handsFree && decision === "no_speech") this.onSilentRound();
+      this.handleListeningTick(level, t, thr);
       return;
     }
 

@@ -28,7 +28,7 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState<VoiceErrorCode | null>(null);
   const [level, setLevel] = useState(0);
-  const [handsFree, setHandsFreeState] = useState(false);
+  const [handsFreeState, setHandsFreeState] = useState(false);
   const [latency, setLatency] = useState<LatencySummary | null>(null);
   const [diag, setDiag] = useState<VoiceDiag>({});
   const session = useRef<VoiceSession | null>(null);
@@ -66,5 +66,5 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const turnDone = useCallback(() => session.current?.turnDone(), []);
   const stopSpeaking = useCallback(() => session.current?.stopSpeaking(), []);
 
-  return { state, error, errorMessage: error ? MESSAGES[error] : null, level, handsFree, latency, diag, start, stop, setHandsFree, speak, enqueue, mark, beginTurn, turnDone, stopSpeaking };
+  return { state, error, errorMessage: error ? MESSAGES[error] : null, level, handsFree: handsFreeState, latency, diag, start, stop, setHandsFree, speak, enqueue, mark, beginTurn, turnDone, stopSpeaking };
 }

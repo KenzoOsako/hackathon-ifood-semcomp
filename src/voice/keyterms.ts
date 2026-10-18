@@ -14,7 +14,7 @@ const MAX_LEN = 50;
 export function sanitizeTerm(raw: string): string | null {
   const t = raw
     .normalize("NFC")
-    .replace(/[^\p{L}\p{N} '\-]/gu, " ") // só letras (com acento), números, espaço, hífen e apóstrofo
+    .replace(/[^\p{L}\p{N} '-]/gu, " ") // só letras (com acento), números, espaço, hífen e apóstrofo
     .replace(/\s{2,}/g, " ")
     .trim();
   return t.length >= 2 && t.length <= MAX_LEN ? t : null;

@@ -5,10 +5,10 @@ import { useCallback, useState } from "react";
 import { converseTurn } from "@/voice/converse-client";
 import { useVoice, type Utterance } from "@/voice/use-voice";
 
-interface Line { from: "voce" | "agente"; text: string }
+interface Line { id: string; from: "voce" | "agente"; text: string }
 
 export default function VozLab() {
-  const [lines, setLines] = useState<Line[]>([{ from: "agente", text: "Oi! Eu sou o Guide! Em que posso te ajudar hoje?" }]);
+  const [lines, setLines] = useState<Line[]>([{ id: "init", from: "agente", text: "Oi! Eu sou o Guide! Em que posso te ajudar hoje?" }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -25,7 +25,7 @@ export default function VozLab() {
 
   const send = useCallback(async (text: string, ctl: Ctl) => {
     setBusy(true);
-    setLines((l) => [...l, { from: "voce", text }]);
+    setLines((l) => [...l, { id: `u-${l.length}`, from: "voce", text }]);
     let spoke = false;
     let firstSeen = false;
     try {
@@ -41,7 +41,7 @@ export default function VozLab() {
         else if (ev.type === "error") { spoke = true; said.push(ev.reply); ctl.enqueue(ev.reply); }
         else if (ev.type === "screen") setTerms(termsFromPlan(ev.payload));
       }
-      if (said.length) setLines((l) => [...l, { from: "agente", text: said.join(" ") }]);
+      if (said.length) setLines((l) => [...l, { id: `a-${l.length}`, from: "agente", text: said.join(" ") }]);
     } finally {
       if (!spoke) ctl.done(); // sem resposta falada: libera o microfone do modo sem as mãos
       setBusy(false);
@@ -59,6 +59,15 @@ export default function VozLab() {
 
   const listening = voice.state === "listening";
   const label = { idle: voice.handsFree ? "Escutando…" : "Falar", listening: voice.handsFree ? "Ouvindo… (toque para encerrar)" : "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
+  const handleVoiceAction = () => {
+    if (listening) {
+      voice.stop();
+    } else if (voice.state === "speaking") {
+      voice.stopSpeaking();
+    } else {
+      void voice.start();
+    }
+  };
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", minHeight: "100vh", colorScheme: "light" }}>
@@ -66,23 +75,22 @@ export default function VozLab() {
       <p style={{ marginTop: 0, color: "#555" }}>Clique em <strong>Falar</strong>, diga algo e clique em <strong>Parar</strong>. Tocar no botão enquanto o Guide fala interrompe a fala. Agente do Hyago (dados simulados).</p>
 
       <section aria-live="polite" style={{ display: "grid", gap: 8, margin: "16px 0" }}>
-        {lines.map((l, i) => (
-          <div key={i} style={{ padding: "8px 12px", borderRadius: 12, background: l.from === "voce" ? "#ffe3e5" : "#f1f1f1", color: "#111", justifySelf: l.from === "voce" ? "end" : "start", whiteSpace: "pre-wrap" }}>{l.text}</div>
+        {lines.map((l) => (
+          <div key={l.id} style={{ padding: "8px 12px", borderRadius: 12, background: l.from === "voce" ? "#ffe3e5" : "#f1f1f1", color: "#111", justifySelf: l.from === "voce" ? "end" : "start", whiteSpace: "pre-wrap" }}>{l.text}</div>
         ))}
       </section>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <button
-          onClick={() => (listening ? voice.stop() : voice.state === "speaking" ? voice.stopSpeaking() : void voice.start())}
+          type="button"
+          onClick={handleVoiceAction}
           disabled={voice.state === "transcribing" || busy}
           aria-pressed={listening}
           style={{ padding: "14px 22px", borderRadius: 999, border: 0, background: listening ? "#222" : "#ea1d2c", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
         >
           {label}
         </button>
-        <div role="meter" aria-label="Nível do microfone" aria-valuenow={Math.round(voice.level * 100)} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 10, background: "#eee", borderRadius: 5, overflow: "hidden" }}>
-          <div style={{ width: `${voice.level * 100}%`, height: "100%", background: "#ea1d2c", transition: "width 60ms linear" }} />
-        </div>
+        <meter aria-label="Nível do microfone" value={Math.round(voice.level * 100)} min={0} max={100} style={{ flex: 1, height: 16 }} />
       </div>
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 12px", cursor: "pointer" }}>
@@ -94,7 +102,7 @@ export default function VozLab() {
 
       <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), { mark: voice.mark, enqueue: (t) => voice.enqueue(t), done: voice.turnDone, begin: voice.beginTurn }); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ou digite aqui (o texto sempre funciona)" aria-label="Mensagem" disabled={busy} style={{ background: "#fff", color: "#111", flex: 1, padding: 12, borderRadius: 10, border: "1px solid #ccc", fontSize: 16 }} />
-        <button disabled={busy} style={{ padding: "0 18px", borderRadius: 10, border: 0, background: "#222", color: "#fff" }}>Enviar</button>
+        <button type="submit" disabled={busy} style={{ padding: "0 18px", borderRadius: 10, border: 0, background: "#222", color: "#fff" }}>Enviar</button>
       </form>
 
       <details open style={{ marginTop: 12, color: "#444" }}>

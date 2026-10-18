@@ -4,7 +4,7 @@ import { warmUp } from "@/voice/tts";
 
 // Chamada quando o usuário abre o microfone: aquece a conexão com o provedor de voz para a primeira fala
 // não pagar a conexão fria. Sempre 204 (é só otimização) e não consome o limite de gasto.
-export async function POST(req: Request) {
+export function POST(req: Request) {
   const who = identifyVoiceVisitor(req);
   const done = (res: Response) => withVisitorCookie(res, who.setCookie);
   try {

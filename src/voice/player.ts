@@ -53,7 +53,7 @@ export class SpeechPlayer {
   private reportedAudio = false;
   private idleWaiters: Array<() => void> = [];
 
-  constructor(private onChange?: (speaking: boolean) => void, private hooks: PlayerHooks = {}, private deps: PlayerDeps = {}) {}
+  constructor(private readonly onChange?: (speaking: boolean) => void, private readonly hooks: PlayerHooks = {}, private readonly deps: PlayerDeps = {}) {}
 
   private set(speaking: boolean) {
     if (this.speaking !== speaking) {
@@ -102,19 +102,23 @@ export class SpeechPlayer {
     return this.speaking || this.running ? new Promise((resolve) => this.idleWaiters.push(resolve)) : Promise.resolve();
   }
 
+  private async drainQueue(gen: number): Promise<void> {
+    if (this.queue.length === 0 || gen !== this.gen) return;
+    const item = this.queue.shift()!;
+    const blob = await item.blob;
+    if (gen !== this.gen) return;
+    if (blob) await this.playBlob(blob, gen);
+    else await (this.deps.speakFallback ?? browserVoice)(item.text);
+    await this.drainQueue(gen);
+  }
+
   private async run(): Promise<void> {
     if (this.running) return;
     this.running = true;
     const gen = this.gen;
     this.set(true);
     try {
-      while (this.queue.length > 0 && gen === this.gen) {
-        const item = this.queue.shift()!;
-        const blob = await item.blob;
-        if (gen !== this.gen) break;
-        if (blob) await this.playBlob(blob, gen);
-        else await (this.deps.speakFallback ?? browserVoice)(item.text);
-      }
+      await this.drainQueue(gen);
     } finally {
       if (gen === this.gen) {
         this.running = false;

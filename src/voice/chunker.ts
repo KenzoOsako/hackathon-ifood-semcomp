@@ -28,7 +28,7 @@ export class SpeechChunker {
   private buf = "";
   private emitted = 0;
 
-  constructor(private opts: ChunkOptions = DEFAULT_CHUNK) {}
+  constructor(private readonly opts: ChunkOptions = DEFAULT_CHUNK) {}
 
   private min(): number {
     return this.emitted === 0 ? this.opts.firstMinChars : this.opts.minChars;
@@ -43,21 +43,31 @@ export class SpeechChunker {
     }
   }
 
+  private findSentenceCut(): number {
+    const min = this.min();
+    for (let i = 0; i < this.buf.length; i++) {
+      if (endsSentence(this.buf, i) && i + 1 >= min) return i + 1;
+    }
+    return -1;
+  }
+
+  private findOverflowCut(): number {
+    if (this.buf.length <= this.opts.maxChars) return -1;
+    const min = this.min();
+    const window = this.buf.slice(0, this.opts.maxChars);
+    const comma = Math.max(window.lastIndexOf(", "), window.lastIndexOf("; "), window.lastIndexOf(": "));
+    if (comma > min) return comma + 1;
+    const space = window.lastIndexOf(" ");
+    return space > min ? space : this.opts.maxChars;
+  }
+
   // Recebe um trecho novo (por exemplo, tokens do modelo) e devolve os pedaços que já estão prontos.
   push(delta: string): string[] {
     this.buf += delta;
     const out: string[] = [];
     for (;;) {
-      let cut = -1;
-      for (let i = 0; i < this.buf.length; i++) {
-        if (endsSentence(this.buf, i) && i + 1 >= this.min()) { cut = i + 1; break; }
-      }
-      // frase longa demais sem ponto: corta na última vírgula (ou similar) antes do limite
-      if (cut < 0 && this.buf.length > this.opts.maxChars) {
-        const window = this.buf.slice(0, this.opts.maxChars);
-        const comma = Math.max(window.lastIndexOf(", "), window.lastIndexOf("; "), window.lastIndexOf(": "));
-        cut = comma > this.min() ? comma + 1 : window.lastIndexOf(" ") > this.min() ? window.lastIndexOf(" ") : this.opts.maxChars;
-      }
+      const sentenceCut = this.findSentenceCut();
+      const cut = sentenceCut >= 0 ? sentenceCut : this.findOverflowCut();
       if (cut < 0) break;
       this.take(cut, out);
     }

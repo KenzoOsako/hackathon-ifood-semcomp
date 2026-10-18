@@ -28,7 +28,7 @@ export class EndpointDetector {
   private speechStart?: number;
   private lastVoiced?: number;
 
-  constructor(private startAt: number, private o: EndpointOptions = DEFAULT_ENDPOINT) {}
+  constructor(private readonly startAt: number, private readonly o: EndpointOptions = DEFAULT_ENDPOINT) {}
 
   get heardSpeech(): boolean {
     return this.speechStart !== undefined;
@@ -63,7 +63,7 @@ export const DEFAULT_BARGE_IN: BargeInOptions = { threshold: 0.06, minMs: 350 };
 
 export class BargeInDetector {
   private runStart?: number;
-  constructor(private o: BargeInOptions = DEFAULT_BARGE_IN) {}
+  constructor(private readonly o: BargeInOptions = DEFAULT_BARGE_IN) {}
 
   reset(): void {
     this.runStart = undefined;
@@ -82,8 +82,8 @@ export class BargeInDetector {
 // Estima o ruído de fundo (nível baixo recente) e devolve limites RELATIVOS a ele. Microfones de notebook entregam
 // níveis muito diferentes; um número fixo falha em uns e dispara em outros. Medido na prática: ajustar no teste humano.
 export class NoiseFloor {
-  private recent: number[] = [];
-  constructor(private windowSize = 60) {} // ~3 s a 20 amostras/s
+  private readonly recent: number[] = [];
+  constructor(private readonly windowSize = 60) {} // ~3 s a 20 amostras/s
 
   push(level: number): void {
     this.recent.push(level);

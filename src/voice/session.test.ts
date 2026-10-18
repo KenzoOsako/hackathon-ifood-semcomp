@@ -340,6 +340,6 @@ describe("modo sem as mãos", () => {
     expect(player.speaking).toBe(false);
     const before = recorders.length;
     await clock.advance(3000);
-    expect(recorders.length).toBe(before);
+    expect(recorders).toHaveLength(before);
   });
 });

@@ -4,7 +4,7 @@
 export function rms(samples: ArrayLike<number>): number {
   if (samples.length === 0) return 0;
   let sum = 0;
-  for (let i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+  for (const s of Array.from(samples)) sum += s * s;
   return Math.sqrt(sum / samples.length);
 }
 
@@ -21,7 +21,7 @@ export class VoiceActivityTracker {
   active = false;
   private runStart?: number;
 
-  constructor(private opts: VadOptions = DEFAULT_VAD) {}
+  constructor(private readonly opts: VadOptions = DEFAULT_VAD) {}
 
   // `t` em ms (performance.now). Chamar a cada amostra de nível, em ordem crescente de tempo.
   push(level: number, t: number, threshold: number = this.opts.threshold): void {
