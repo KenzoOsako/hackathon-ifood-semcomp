@@ -12,7 +12,15 @@ Objetivo: os dois trabalham em paralelo, cada um na sua pasta, e só juntam no p
 - `contexto/estado-atual.md`: cada um acrescenta **uma seção própria no fim**; conflito se resolve juntando as duas.
 - Mudou algo do contrato abaixo? Avisa o outro antes de commitar.
 
-## Fase 0 — Congelar o contrato (juntos, ~15 min)
+## Fase 0 — Congelar o contrato · **resolvida em 18/10 ~01h (Hyago), branch `feat/hyago-gemini-inferencia`**
+O que entrou no código (o Felipe só consome):
+- `src/voice/signals.ts`: `confianca` opcional (0 a 1) no `VoiceSignalsSchema`. Único toque na pasta da voz, combinado.
+- `src/agent/frases.ts`: `FRASES` (movidas do orquestrador), `FRASES_FIXAS` (lista para pré-gerar áudio) e `LIMIARES_CONFIANCA = { repetir: 0.6, confirmar: 0.85 }`.
+- `src/agent/contrato-voz.test.ts`: trava o contrato (confiança no schema, faixas em ordem, frases sem markdown e ≤ 600 caracteres, `fraseEspera` vira `ack` no cliente da voz).
+- Login (401 `IFOOD_LOGIN` + `loginUrl`) e eventos (`converse-events.ts`) ficaram como estavam.
+- Merge de #17, #18, #19 e #20 já feito pelo Kenzo.
+
+Itens originais da Fase 0:
 1. **`confianca` em `sinais`** (Felipe, no PR #18 antes do merge): `confianca: z.number().min(0).max(1).optional()` no `VoiceSignalsSchema`. O schema é `strictObject`: sem isso o agente recusa o campo.
 2. **Faixas de confiança:** `< 0,6` a voz não envia e pede "Pode repetir?"; `0,6–0,85` envia e o agente confirma antes de buscar; `≥ 0,85` segue normal. Limiares em constante dos dois lados, calibrados na Fase 2.
 3. **Frase de espera em duas camadas:** a voz toca uma frase **neutra** em cache logo depois do STT ("Hum, um instante."), sempre. O agente só manda `fraseEspera` quando decide buscar ("Deixa eu ver as opções.").
