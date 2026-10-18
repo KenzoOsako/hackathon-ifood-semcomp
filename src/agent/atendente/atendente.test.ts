@@ -108,6 +108,27 @@ describe("atendente", () => {
     });
   });
 
+  it("buscas pedidas juntas rodam juntas, e a tela e a conversa seguem a ordem pedida, não a de chegada", async () => {
+    const s = novaSessao(`s-${Math.random()}`);
+    reiniciarAtendente(s.subjectRef);
+    const domain = new FakeDomain();
+    let ativas = 0, pico = 0;
+    const original = domain.buscarNecessidade.bind(domain);
+    // A 1ª busca demora mais que a 2ª: se a ordem dependesse da chegada, o grupo "hamburguer" viria antes.
+    domain.buscarNecessidade = async (n, o) => {
+      ativas++; pico = Math.max(pico, ativas);
+      await new Promise((r) => setTimeout(r, n.categoria === "pizza" ? 40 : 5));
+      try { return await original(n, o); } finally { ativas--; }
+    };
+    const { modelo } = roteiro([
+      [{ name: "buscar_no_ifood", args: pizza }, { name: "buscar_no_ifood", args: { categoria: "hamburguer", vertical: "RESTAURANT" } }],
+      "Tem pizza e hambúrguer. Qual prefere?",
+    ]);
+    const r = await executarAtendente(s, { texto: "o que tem de bom?", origem: "texto" }, { modelo, nomeModelo: "roteiro", domain });
+    expect(pico).toBe(2);
+    expect(r.tela?.plano.opcoes?.map((g) => g.categoria)).toEqual(["pizza", "hamburguer"]);
+  });
+
   it("'fechou' com plano leva à revisão sem chamar o modelo", async () => {
     const { estado, fale } = conversa([[{ name: "mostrar_plano", args: { itens: [pizza] } }], "Montei. É isso?"]);
     await fale("quero pizza");

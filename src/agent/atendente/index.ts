@@ -35,6 +35,7 @@ export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conv
 - Escute, entenda o que a pessoa quer de verdade e CONDUZA. Nunca deixe a pessoa sem um próximo passo.
 - Pedido vago ou em aberto ("algo diferente", "tô com fome", "não sei"): ajude a decidir com 2 ou 3 opções concretas e variadas, ou ofereça escolher por ela.
 - Quando a pessoa quiser saber o que existe, comparar ou escolher ("qual o melhor avaliado?", "o que tem de japonês?", "e mais barato?"): USE a ferramenta buscar_no_ifood e responda com base no que voltou (loja, prato, nota, preço). Pode buscar mais de uma categoria para comparar.
+- Para explorar (pedido em aberto, "algo diferente", "o que tem de bom?") ou comparar categorias, chame buscar_no_ifood para 2 ou 3 categorias DIFERENTES na MESMA resposta, em vez de uma por vez: as buscas rodam juntas e a resposta sai bem mais rápido. Pedido específico de um só prato: uma busca só.
 - Se a pessoa delegar ("escolhe você", "tanto faz") ou tiver pressa, decida você e siga.
 - Pedido claro e específico ("pizza calabresa grande pra 4"): busque e mostre o plano direto, sem perguntas.
 - Faça no máximo uma pergunta por vez, curta, com opções para escolher. No máximo três perguntas na conversa inteira: depois disso, decida.
@@ -251,11 +252,26 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
         resposta = typeof ai.content === "string" ? ai.content : ai.content.map((p) => ("text" in p ? p.text : "")).join("");
         break;
       }
-      for (const c of chamadas) {
+      // Buscas consecutivas no iFood rodam JUNTAS (a espera é do iFood, ~1,2 s cada; o limite de chamadas simultâneas do domínio
+      // protege o MCP). Qualquer outra ferramenta (plano, complementos, revisão) segue em ordem e depois das buscas pedidas antes dela.
+      const rodar = async (c: (typeof chamadas)[number]) => {
         const td = now();
         const saida = await executarFerramenta(c.name, c.args, s, mem, deps).catch((e): Saida => ({ texto: `ERRO na ferramenta: ${String(e).slice(0, 160)}` }));
-        tempos.dominioMs = (tempos.dominioMs ?? 0) + Math.round(now() - td);
-        ptrace.ferramentas.push({ nome: c.name, args: c.args, ms: Math.round(now() - td), ...(saida.diag ? { diag: saida.diag } : {}), ...(traceCompleto() ? { saida: saida.texto } : {}) });
+        return { saida, ms: Math.round(now() - td) };
+      };
+      const feitas: Awaited<ReturnType<typeof rodar>>[] = [];
+      for (let i = 0; i < chamadas.length;) {
+        let j = i + 1;
+        if (chamadas[i].name === "buscar_no_ifood") while (j < chamadas.length && chamadas[j].name === "buscar_no_ifood") j++;
+        const tg = now();
+        feitas.push(...await Promise.all(chamadas.slice(i, j).map(rodar)));
+        tempos.dominioMs = (tempos.dominioMs ?? 0) + Math.round(now() - tg); // tempo de parede do grupo, não a soma
+        i = j;
+      }
+      // Efeitos aplicados na ordem em que o modelo pediu, para a tela e a conversa não dependerem de qual busca terminou primeiro.
+      chamadas.forEach((c, k) => {
+        const { saida, ms } = feitas[k];
+        ptrace.ferramentas.push({ nome: c.name, args: c.args, ms, ...(saida.diag ? { diag: saida.diag } : {}), ...(traceCompleto() ? { saida: saida.texto } : {}) });
         if (saida.grupo) {
           grupos.push(saida.grupo);
           if (!tela || tela.tipo === "mostrar_opcoes") tela = { tipo: "mostrar_opcoes", plano: { ...(s.plano ?? planoVazio()), opcoes: grupos.slice(-GRUPOS_NA_TELA) } };
@@ -266,7 +282,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
         }
         if (saida.tela) tela = saida.tela;
         msgs.push(new ToolMessage({ tool_call_id: c.id ?? c.name, content: saida.texto }));
-      }
+      });
     }
   } catch (error) {
     console.warn(`[atendente] falhou: ${String(error).slice(0, 200)}`);
