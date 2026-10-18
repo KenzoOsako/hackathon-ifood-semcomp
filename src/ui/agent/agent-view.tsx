@@ -127,10 +127,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
             {/* O fim da lista esmaece para indicar que há mais; o espaço extra deixa o último cartão sair da máscara. */}
             <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
               {searching && (
-                <div className="grid gap-2.5"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
+                <div className="divide-y divide-border overflow-hidden rounded-2xl bg-card shadow-sm"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
               )}
               {!searching && p.view === "options" && (
-                <ul className="grid gap-2.5">
+                <ul className="divide-y divide-border overflow-hidden rounded-2xl bg-card shadow-sm">
                   {p.options.map((option, i) => (
                     <motion.li
                       key={option.candidate.itemId}
