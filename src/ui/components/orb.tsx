@@ -1,29 +1,36 @@
-"use client";
-import * as React from "react";
-import { motion, useReducedMotion, type MotionProps } from "motion/react";
+import type { CSSProperties } from "react";
 import { cn } from "@/ui/lib/utils";
+import { OrbWaves } from "./orb-waves";
 
-// Estados que a voz (Felipe) e o agente vão acionar. Sempre acompanhados de texto na tela:
-// o orbe sozinho não pode ser a única indicação do estado.
+// Estados que a voz (Felipe) e o agente acionam. Sempre acompanhados de texto na tela.
 export type OrbState = "idle" | "listening" | "thinking" | "speaking" | "error";
+// fab: botão flutuante da home (só o núcleo) · hero: abertura do agente · strip: faixa dos resultados.
+export type OrbSize = "fab" | "hero" | "strip";
 
-const MOTION: Record<OrbState, MotionProps> = {
-  idle: { animate: { scale: [1, 1.04, 1] }, transition: { duration: 3.2, repeat: Infinity, ease: "easeInOut" } },
-  listening: { animate: { scale: [1, 1.12, 1] }, transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" } },
-  // O brilho do gradiente gira junto com o elemento, o que lê como "processando".
-  thinking: { animate: { rotate: 360 }, transition: { duration: 1.6, repeat: Infinity, ease: "linear" } },
-  speaking: { animate: { scale: [1, 1.09, 0.98, 1.06, 1] }, transition: { duration: 0.9, repeat: Infinity, ease: "easeInOut" } },
-  error: { animate: { x: [0, -6, 6, -4, 4, 0] }, transition: { duration: 0.4 } },
-};
+const DIAMETER: Record<OrbSize, string> = { fab: "4rem", hero: "9.5rem", strip: "4rem" };
 
-type OrbProps = { className?: string; pulse?: boolean; state?: OrbState };
+type OrbProps = { size?: OrbSize; state?: OrbState; className?: string };
 
-// Sem `state`, é um orbe decorativo (a bolinha da home); com `state`, anima conforme o estado.
-function Orb({ className, pulse = false, state }: Readonly<OrbProps>) {
-  const reduceMotion = useReducedMotion();
-  const classes = cn("orb", pulse && "orb-pulse", state === "error" && "opacity-60 grayscale", className);
-  if (!state || reduceMotion) return <span aria-hidden="true" className={classes} />;
-  return <motion.span key={state} aria-hidden="true" className={classes} {...MOTION[state]} />;
+// Um só orbe para as três telas. O tamanho anima por CSS (--orb-d) quando a tela troca de hero para strip.
+export function Orb({ size = "hero", state = "idle", className }: Readonly<OrbProps>) {
+  const full = size !== "fab";
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("orb-scene", className)}
+      data-size={size}
+      data-state={state}
+      style={{ "--orb-d": DIAMETER[size] } as CSSProperties}
+    >
+      {full && <OrbWaves />}
+      {full && (
+        <>
+          <span className="orb-ring" />
+          <span className="orb-ring" />
+          <span className="orb-ring" />
+        </>
+      )}
+      <span className="orb-core" />
+    </span>
+  );
 }
-
-export { Orb };

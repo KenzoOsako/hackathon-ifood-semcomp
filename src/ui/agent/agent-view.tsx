@@ -8,14 +8,12 @@ import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
-import type { OrbState } from "@/ui/components/orb";
+import { Orb, type OrbState } from "@/ui/components/orb";
 import { cn } from "@/ui/lib/utils";
 import { DATA_ORIGIN, type Msg, type View } from "./agent-context";
 import { ContinueView } from "./continue-view";
-import { OrbStage } from "./orb-stage";
 import { ProposalView } from "./proposal-view";
 import { ResultRow } from "./result-row";
-import { WaveField } from "./wave-field";
 
 // Estados vindos da voz (Felipe). Enquanto não houver voz, a UI só usa idle/thinking/error.
 export type VoiceState = "idle" | "listening" | "speaking" | "error";
@@ -66,16 +64,32 @@ export function AgentView(p: AgentViewProps) {
   if (p.error) orbState = "error";
   if (p.busy) orbState = "thinking";
   const lastReply = [...p.msgs].reverse().find((m) => m.from === "agente")?.text;
+  // Parado, mostra a última resposta do agente (no modo texto ela é a "fala"); nos demais estados, o estado.
+  const spoken = orbState === "idle" || orbState === "speaking" ? (lastReply ?? STATE_LABEL.idle) : STATE_LABEL[orbState];
+  const caption = (
+    <div className={cn("w-full px-6 text-center", hasView ? "max-h-24 overflow-y-auto pt-2 text-sm" : "pb-1 text-base")}>
+      <p role="status" aria-live="polite" className="whitespace-pre-wrap leading-snug text-[color:var(--agent-voice)]">{spoken}</p>
+      {p.error && (
+        <Alert variant="destructive" className="mt-2 text-left">
+          <AlertTriangle aria-hidden="true" />
+          <div className="flex-1">
+            <p>{p.error}</p>
+            <Button variant="outline" size="sm" className="mt-2" disabled={p.busy} onClick={p.onRetry}>Tentar de novo</Button>
+          </div>
+        </Alert>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="agent-bg flex min-h-0 flex-1 flex-col">
       <section
         aria-label="Resultados"
-        className={cn("flex min-h-0 flex-col overflow-hidden bg-background transition-[flex-grow,opacity] duration-500", hasView ? "grow opacity-100" : "grow-0 basis-0 opacity-0")}
+        className={cn("flex min-h-0 flex-col overflow-hidden transition-[flex-grow,opacity] duration-500", hasView ? "grow opacity-100" : "grow-0 basis-0 opacity-0")}
       >
         {p.view === "options" && (
           <>
-            <header className="bg-background px-3 pb-2 pt-3">
+            <header className="px-3 pb-2 pt-3">
               <div className="flex items-center gap-2">
                 <Button asChild variant="outline" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
                 <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border border-border px-4 text-base">
@@ -119,45 +133,27 @@ export function AgentView(p: AgentViewProps) {
         )}
       </section>
 
-      <section
-        aria-label="Assistente"
-        className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0 bg-gradient-to-t from-accent/70 to-background" : "agent-bg grow")}
-      >
-        {/* Com resultados na tela, o fundo do assistente vira um campo de ondas e o orbe flutua no canto. */}
-        {hasView && <WaveField state={orbState} />}
+      <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0" : "grow")}>
         {!hasView && (
           <header className="flex items-center gap-2 px-3 py-2">
             <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
-            <span className="font-display text-lg font-bold">FoodPilot</span>
+            <span className="font-display text-lg font-medium">FoodPilot</span>
             <Badge variant="simulated" className="ml-auto">Simulado</Badge>
           </header>
         )}
 
-        <div className={cn("relative flex min-h-0 gap-3 px-4", hasView ? "flex-row-reverse items-end pt-2" : "flex-1 flex-col items-center overflow-y-auto py-2 text-center")}>
-          {!hasView && <h1 className="font-display text-balance text-3xl font-bold leading-tight">Qual a sua vibe de hoje?</h1>}
-          <OrbStage state={orbState} compact={hasView} />
-          <div className={cn("min-w-0", hasView ? "flex-1 pb-3" : "grid justify-items-center gap-3")}>
-            <p role="status" aria-live="polite" className="text-sm font-semibold text-muted-foreground">{STATE_LABEL[orbState]}</p>
-            {lastReply && (
-              <p className={cn("whitespace-pre-wrap text-sm leading-snug", hasView ? "mt-1 line-clamp-3" : "text-base")}>{lastReply}</p>
-            )}
-            {p.error && (
-              <Alert variant="destructive" className="mt-2 w-full text-left">
-                <AlertTriangle aria-hidden="true" />
-                <div className="flex-1">
-                  <p>{p.error}</p>
-                  <Button variant="outline" size="sm" className="mt-2" disabled={p.busy} onClick={p.onRetry}>Tentar de novo</Button>
-                </div>
-              </Alert>
-            )}
-            {!hasView && p.msgs.length === 0 && (
-              <ul className="flex flex-wrap justify-center gap-2" aria-label="Sugestões">
-                {SUGGESTIONS.map((s) => (
-                  <li key={s}><Button variant="outline" size="sm" disabled={p.busy} onClick={() => p.onSend(s)}>{s}</Button></li>
-                ))}
-              </ul>
-            )}
-          </div>
+        <div className={cn("flex min-h-0 flex-col items-center", hasView ? "" : "flex-1 justify-center overflow-y-auto text-center")}>
+          {!hasView && <h1 className="px-4 font-display text-balance text-3xl font-medium leading-tight">Qual a sua vibe de hoje?</h1>}
+          {hasView && caption}
+          <Orb size={hasView ? "strip" : "hero"} state={orbState} />
+          {!hasView && caption}
+          {!hasView && p.msgs.length === 0 && (
+            <ul className="flex flex-wrap justify-center gap-2 px-4" aria-label="Sugestões">
+              {SUGGESTIONS.map((s) => (
+                <li key={s}><Button variant="outline" size="sm" disabled={p.busy} onClick={() => p.onSend(s)}>{s}</Button></li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <footer className="relative px-3 pb-3">
@@ -191,11 +187,11 @@ export function AgentView(p: AgentViewProps) {
             }}
           >
             {/* Sem onMicClick a voz ainda não existe: o botão fica desabilitado e o texto é o caminho completo. */}
-            <Button type="button" variant="secondary" size="icon" disabled={!p.onMicClick} onClick={p.onMicClick}
+            <Button type="button" variant={orbState === "listening" ? "default" : "secondary"} size="icon" disabled={!p.onMicClick} onClick={p.onMicClick}
               aria-label={p.onMicClick ? "Falar" : "Falar (voz em breve)"} title={p.onMicClick ? undefined : "Voz em breve"}>
               <Mic />
             </Button>
-            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder={hasView ? "Refine ou peça outra coisa…" : "Fale ou digite…"} aria-label="Mensagem" maxLength={4000} />
+            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Refine ou peça outra coisa…" aria-label="Mensagem" maxLength={4000} />
             <Button type="submit" size="icon" disabled={p.busy || !input.trim()} aria-label="Enviar"><Send /></Button>
           </form>
         </footer>

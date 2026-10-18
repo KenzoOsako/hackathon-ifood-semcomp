@@ -164,3 +164,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Validação local no worktree: `npm run typecheck`, `npm run lint`, `npm test` (14 arquivos, 112 testes) e `npm run build` passaram. Módulos prontos para integração pelo agente/rotas; nenhuma rota, contrato compartilhado, Trello, decisão V2 ou operação externa/MCP real foi alterada ou declarada concluída.
 
 
+
+## UI: orbe compartilhado (PR A) — 17/10/2026
+- Branch `feat/malveste-ui-orbe`. Um só `<Orb size="fab|hero|strip" state=... />` (`src/ui/components/orb.tsx` e `orb-waves.tsx`) substitui `OrbStage`, `WaveField` e o orbe com Motion: núcleo em gradiente (âmbar, vinho e vermelho) com borda dupla, três anéis (1,4x, 1,75x e 2,15x o diâmetro) e três ondas senoidais em SVG atrás, com máscara nas pontas. O diâmetro vem de `--orb-d` (anima ao passar de hero para strip) e a amplitude da onda de `--wave-amp` por estado (idle, listening, thinking, speaking, error). Só CSS/SVG; `prefers-reduced-motion` desliga tudo. Usado na bolinha da home (`fab`, só o núcleo), na abertura (`hero`, 9,5 rem) e na faixa dos resultados (`strip`, 64 px, centralizada, com a legenda acima).
+- Novos tokens `--orb-*` e `--cream-*` (fundo creme-pêssego com pontinhos a cada 14 px, aplicado à tela inteira do agente). Vermelho de marca #EA1D2C só em borda, orbe e ícones; texto sobre vermelho segue em #D91A29 (AA). Mesclada a `main` (PR #15 e limpeza do Sonar) mantendo as telas unificadas.
+- Validação: typecheck, lint, 144 testes e build passaram; capturas a 375px de home, abertura, ouvindo e faixa falando, console limpo.

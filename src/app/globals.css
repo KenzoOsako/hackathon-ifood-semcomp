@@ -29,12 +29,20 @@
   --simulated: #fff4d6;
   --simulated-foreground: #8a4b00;
   --radius: 1rem;
-  /* Cores só do orbe e do fundo do agente (decorativas, nunca texto). */
-  --orb-coral: #ff7a59;
-  --orb-amber: #ffa94d;
-  --orb-wine: #9b1c3c;
-  --warm: #fcf7ef;
-  --peach: #ffe3d4;
+  /* Orbe e fundo das telas do agente (decorativos, nunca texto). #EA1D2C puro dá 4,46:1 com branco,
+     então texto sobre vermelho continua usando --primary. */
+  --orb-amber: #ffa05a;
+  --orb-wine: #9c1b40;
+  --orb-top: #f4573f;
+  --orb-bottom: #d93a3a;
+  --orb-wave-1: #ee6b6e;
+  --orb-wave-2: #f08a5d;
+  --orb-wave-3: #c9304f;
+  --cream-top: #ffefe2;
+  --cream-mid: #fdf4ea;
+  --cream-bottom: #fcf8f2;
+  --cream-dot: rgb(232 66 63 / 0.1);
+  --agent-voice: #6b5b55;
 }
 
 @theme inline {
@@ -70,149 +78,133 @@
   --font-display: var(--font-bricolage), var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* Orbe do assistente: massa orgânica com gradiente de malha (vermelho, coral, âmbar e vinho) que
-   muda de forma devagar. Sem imagem. A camada ::before gira para dar a sensação de cor em movimento. */
-.orb {
-  position: relative;
-  display: block;
-  overflow: hidden;
-  isolation: isolate;
-  background:
-    radial-gradient(circle at 28% 30%, var(--orb-coral) 0%, transparent 55%),
-    radial-gradient(circle at 74% 30%, var(--orb-amber) 0%, transparent 50%),
-    radial-gradient(circle at 36% 78%, var(--orb-wine) 0%, transparent 55%),
-    radial-gradient(circle at 78% 78%, var(--primary) 0%, transparent 60%),
-    var(--brand);
-  border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
-  animation: blob-morph 8s ease-in-out infinite alternate;
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--brand) 30%, transparent);
-}
-.orb::before {
-  content: "";
-  position: absolute;
-  inset: -30%;
-  z-index: -1;
-  background: conic-gradient(from 0deg, var(--orb-coral), var(--orb-amber), var(--orb-wine), var(--primary), var(--orb-coral));
-  opacity: 0.45;
-  filter: blur(18px);
-  animation: blob-spin 14s linear infinite;
-}
-.orb-pulse {
-  animation: blob-morph 8s ease-in-out infinite alternate, orb-pulse 2.4s ease-in-out infinite;
-}
-@keyframes orb-pulse {
-  0%,
-  100% {
-    box-shadow: 0 10px 30px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 0 0 color-mix(in srgb, var(--brand) 45%, transparent);
-  }
-  50% {
-    box-shadow: 0 10px 30px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 0 12px transparent;
-  }
-}
-
-/* Fundo da tela do agente: tons quentes de creme e pêssego com um brilho atrás do orbe e uma grade
-   de pontos que some nas bordas. Fica em um wrapper fixo (não rola com o conteúdo). */
+/* Fundo das telas do agente: creme-pêssego em degradê vertical com pontinhos a cada 14px. */
 .agent-bg {
   position: relative;
   isolation: isolate;
-  background: radial-gradient(110% 60% at 50% 30%, var(--peach) 0%, color-mix(in srgb, var(--peach) 40%, var(--warm)) 45%, var(--warm) 80%);
+  background: linear-gradient(180deg, var(--cream-top) 0%, var(--cream-mid) 55%, var(--cream-bottom) 100%);
 }
 .agent-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image: radial-gradient(color-mix(in srgb, var(--primary) 16%, transparent) 1px, transparent 1.3px);
-  background-size: 20px 20px;
-  -webkit-mask-image: radial-gradient(70% 45% at 50% 30%, #000 0%, transparent 100%);
-  mask-image: radial-gradient(70% 45% at 50% 30%, #000 0%, transparent 100%);
-}
-
-/* Palco do orbe: halo, contornos ondulados (como curvas de nível) e ondas que se expandem.
-   O estado (data-state) muda só o ritmo; no erro tudo para e fica cinza. */
-.orb-stage {
-  position: relative;
-  width: var(--stage, 18rem);
-  height: var(--stage, 18rem);
-  flex-shrink: 0;
-  transition: width 0.6s ease, height 0.6s ease;
-}
-.orb-stage > * {
-  position: absolute;
-  border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
-}
-.orb-halo {
-  inset: 14%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--orb-coral) 40%, transparent), transparent 68%);
-  filter: blur(10px);
-  animation: halo-breathe 4.5s ease-in-out infinite;
-}
-.orb-contour {
-  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
-  animation: blob-morph 11s ease-in-out infinite alternate;
-}
-.orb-contour:nth-of-type(2) { inset: 18%; background: color-mix(in srgb, var(--orb-coral) 14%, transparent); animation-duration: 9s; }
-.orb-contour:nth-of-type(3) { inset: 12%; border-color: color-mix(in srgb, var(--primary) 16%, transparent); animation-duration: 12s; animation-direction: alternate-reverse; }
-.orb-contour:nth-of-type(4) { inset: 6%; border-color: color-mix(in srgb, var(--primary) 11%, transparent); animation-duration: 15s; }
-.orb-contour:nth-of-type(5) { inset: 0; border-color: color-mix(in srgb, var(--primary) 7%, transparent); animation-duration: 18s; animation-direction: alternate-reverse; }
-.orb-wave {
-  inset: 22%;
-  border: 1.5px solid color-mix(in srgb, var(--primary) 30%, transparent);
-  opacity: 0;
-  animation: orb-wave 6s ease-out infinite, blob-morph 7s ease-in-out infinite alternate;
-}
-.orb-wave:nth-of-type(7) { animation-delay: 2s, 0s; }
-.orb-wave:nth-of-type(8) { animation-delay: 4s, 0s; }
-.orb-stage[data-state="listening"] .orb-wave { animation-duration: 2.4s, 5s; }
-.orb-stage[data-state="listening"] .orb-wave:nth-of-type(7) { animation-delay: 0.8s, 0s; }
-.orb-stage[data-state="listening"] .orb-wave:nth-of-type(8) { animation-delay: 1.6s, 0s; }
-.orb-stage[data-state="speaking"] .orb-wave { animation-duration: 1.5s, 4s; }
-.orb-stage[data-state="speaking"] .orb-wave:nth-of-type(7) { animation-delay: 0.5s, 0s; }
-.orb-stage[data-state="speaking"] .orb-wave:nth-of-type(8) { animation-delay: 1s, 0s; }
-.orb-stage[data-state="thinking"] .orb-contour { animation-duration: 3s; }
-.orb-stage[data-state="thinking"] .orb::before { animation-duration: 3s; }
-.orb-stage[data-state="error"] .orb-halo,
-.orb-stage[data-state="error"] .orb-contour { animation: none; filter: grayscale(1); opacity: 0.45; }
-.orb-stage[data-state="error"] .orb-wave { animation: none; opacity: 0.35; transform: scale(1.1); border-color: color-mix(in srgb, var(--foreground) 25%, transparent); }
-
-@keyframes halo-breathe {
-  0%, 100% { transform: scale(0.94); opacity: 0.8; }
-  50% { transform: scale(1.06); opacity: 1; }
-}
-@keyframes blob-morph {
-  0% { border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%; }
-  50% { border-radius: 44% 56% 42% 58% / 56% 44% 58% 42%; }
-  100% { border-radius: 52% 48% 60% 40% / 42% 58% 46% 54%; }
-}
-@keyframes blob-spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes orb-wave {
-  0% { transform: scale(0.85); opacity: 0; }
-  15% { opacity: 0.8; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-/* Campo de ondas do painel inferior: linhas finas que correm devagar, como o mar do desenho.
-   Cada linha é um seno periódico (400 unidades) repetido duas vezes; deslizar 50% fecha o ciclo sem emenda. */
-.wave-field {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
+  background-image: radial-gradient(var(--cream-dot) 1px, transparent 1.2px);
+  background-size: 14px 14px;
   pointer-events: none;
 }
-.wave-line {
+
+/* Orbe do assistente (usado na home, na abertura e na faixa dos resultados). O diâmetro vem de --orb-d
+   e anéis e ondas escalam a partir dele. O estado (data-state) muda só o ritmo; tudo para com
+   prefers-reduced-motion (regra global) e nunca é a única indicação do estado, que também é dito em texto. */
+@property --orb-d {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 4rem;
+}
+.orb-scene {
+  --wave-amp: 0.45;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: calc(var(--orb-d) * var(--orb-h, 1.7));
+  flex-shrink: 0;
+  transition: --orb-d 0.6s ease;
+  pointer-events: none;
+}
+.orb-scene[data-size="fab"] {
+  --orb-h: 1;
+  width: var(--orb-d);
+}
+.orb-scene[data-size="hero"] { --orb-h: 2.2; }
+.orb-scene[data-state="listening"] { --wave-amp: 1; }
+.orb-scene[data-state="thinking"] { --wave-amp: 0.15; }
+.orb-scene[data-state="speaking"] { --wave-amp: 0.7; }
+.orb-scene[data-state="error"] { --wave-amp: 0.2; }
+
+.orb-core {
+  position: relative;
+  z-index: 2;
+  width: var(--orb-d);
+  height: var(--orb-d);
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 72% 24%, var(--orb-amber) 0%, transparent 48%),
+    radial-gradient(circle at 24% 82%, var(--orb-wine) 0%, transparent 58%),
+    linear-gradient(135deg, var(--orb-top), var(--orb-bottom));
+  box-shadow:
+    0 0 0 4px rgb(255 255 255 / 0.55),
+    0 0 0 5px rgb(232 66 63 / 0.25),
+    0 10px 28px rgb(232 66 63 / 0.36);
+  animation: orb-breathe 4s ease-in-out infinite;
+}
+.orb-core::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 36% 22%, rgb(255 255 255 / 0.55) 0%, transparent 45%);
+}
+.orb-scene[data-state="listening"] .orb-core { animation-duration: 1.2s; }
+.orb-scene[data-state="speaking"] .orb-core { animation: orb-breathe 0.8s ease-in-out infinite; }
+.orb-scene[data-state="thinking"] .orb-core { animation: orb-spin 3s linear infinite; }
+.orb-scene[data-state="error"] .orb-core { animation: none; filter: grayscale(1); opacity: 0.6; }
+
+.orb-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--orb-d) * var(--k));
+  height: calc(var(--orb-d) * var(--k));
+  border-radius: 9999px;
+  border: 1px solid rgb(232 66 63 / var(--a));
+  transform: translate(-50%, -50%);
+}
+.orb-ring:nth-of-type(1) { --k: 1.4; --a: 0.28; }
+.orb-ring:nth-of-type(2) { --k: 1.75; --a: 0.18; }
+.orb-ring:nth-of-type(3) { --k: 2.15; --a: 0.1; }
+.orb-scene[data-state="listening"] .orb-ring { animation: orb-ring 2s ease-out infinite; }
+.orb-scene[data-state="listening"] .orb-ring:nth-of-type(2) { animation-delay: 0.4s; }
+.orb-scene[data-state="listening"] .orb-ring:nth-of-type(3) { animation-delay: 0.8s; }
+.orb-scene[data-state="error"] .orb-ring { border-color: rgb(0 0 0 / 0.1); }
+
+/* Ondas senoidais atrás do orbe: um ciclo de 400 unidades repetido duas vezes; deslizar 50% fecha o
+   ciclo sem emenda. A máscara some as pontas e --wave-amp (por estado) controla a altura. */
+.orb-waves {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  transform: scaleY(var(--wave-amp));
+  transition: transform 0.5s ease;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16%, #000 84%, transparent);
+}
+.orb-wave {
   position: absolute;
   left: 0;
-  bottom: 0;
+  top: 0;
   width: 200%;
-  height: 74%;
+  height: 100%;
   animation: wave-slide linear infinite;
 }
-.wave-field[data-state="listening"] .wave-line { animation-duration: 6s !important; }
-.wave-field[data-state="speaking"] .wave-line { animation-duration: 4s !important; }
-.wave-field[data-state="thinking"] .wave-line { animation-duration: 5s !important; }
-.wave-field[data-state="error"] .wave-line { animation-play-state: paused; filter: grayscale(1); }
+.orb-scene[data-state="error"] .orb-waves { filter: grayscale(1); }
+.orb-scene[data-state="thinking"] .orb-wave { animation-duration: 20s !important; }
+
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+@keyframes orb-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes orb-ring {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.12); opacity: 0; }
+}
 @keyframes wave-slide {
   to { transform: translateX(-50%); }
 }
