@@ -7,7 +7,7 @@ Mantenedor da voz: Felipe. Branch: `feat/felipe-voz-stt`. O código de voz está
 ## 1. Ouvir seu agente falando (2 minutos)
 ```bash
 npm install
-npm run dev -- -p 3100        # abra http://localhost:3100/voz no Chrome
+npm run dev -- -p 8080        # abra http://localhost:8080/voz no Chrome (8080 é a porta padrão do time: é o redirect do OAuth do iFood)
 ```
 - A chave da ElevenLabs e o `ELEVENLABS_VOICE_ID` ficam no `.env` local (ver `.env.example`).
 - Sem chave, o texto funciona e a fala cai no `speechSynthesis` do navegador.

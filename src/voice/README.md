@@ -31,7 +31,7 @@
 Microfone negado, ruído, provedor fora do ar, interrupção, queda para texto (aceite AC-12 do plano).
 
 ## Como testar agora
-`npm run dev` e abrir http://localhost:3000/voz no Chrome. Clique em **Falar**, diga algo e clique em **Parar**. Tocar no botão enquanto o Guide fala **interrompe** a fala. O campo de texto sempre funciona. O diagnóstico da última fala (texto, confiança, sinais, dados sensíveis removidos) aparece embaixo.
+`npm run dev -- -p 8080` (porta padrão do time, a do redirect do OAuth do iFood) e abrir http://localhost:8080/voz no Chrome. Clique em **Falar**, diga algo e clique em **Parar**. Tocar no botão enquanto o Guide fala **interrompe** a fala. O campo de texto sempre funciona. O diagnóstico da última fala (texto, confiança, sinais, dados sensíveis removidos) aparece embaixo.
 
 ## Variáveis (`.env`, nunca no repositório)
 `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID` (padrão `eleven_flash_v2_5`), `ELEVENLABS_STT_MODEL` (padrão `scribe_v2`), `TTS_CHAR_BUDGET`, `STT_SECONDS_BUDGET`.
