@@ -58,7 +58,7 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
         {DATA_ORIGIN === "mock" && !embedded && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           {approved ? <CircleCheck className="size-4 text-success-foreground" aria-hidden="true" /> : <Hourglass className="size-4" aria-hidden="true" />}
           {expired && !approved ? STATE_LABEL.expired : STATE_LABEL[proposal.state]}
@@ -90,9 +90,9 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
           <dd>{cost.delivery ? fromCents(cost.delivery.cents) : <span className="text-warning-foreground">Não informado</span>}</dd>
           <dt className="text-muted-foreground">Taxas</dt>
           <dd>{cost.fees ? fromCents(cost.fees.cents) : <span className="text-warning-foreground">Não informadas</span>}</dd>
-          <dt className="border-t border-border pt-2 font-semibold">Total</dt>
-          <dd className="border-t border-border pt-2 font-display text-xl font-medium">
-            {cost.total ? fromCents(cost.total.cents) : <span className="text-base text-warning-foreground">Pendente</span>}
+          <dt className="self-end border-t border-border pt-2 font-display text-lg font-medium">Total</dt>
+          <dd className="border-t border-border pt-2 font-display text-3xl font-medium leading-none">
+            {cost.total ? fromCents(cost.total.cents) : <span className="rounded-full bg-warning px-3 py-1 font-sans text-base font-semibold text-warning-foreground">Pendente</span>}
           </dd>
         </dl>
         {cost.total && <p className="mt-1 text-right text-xs text-muted-foreground">{cost.status === "confirmed" ? "Valor confirmado" : "Valor estimado"}</p>}
@@ -140,11 +140,11 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
       </main>
 
       {!approved && (
-        <footer className="grid gap-2 border-t border-border bg-background px-4 pb-4 pt-3">
+        <footer className="grid gap-1.5 border-t border-border bg-background px-4 pb-3 pt-2.5">
           <Button disabled={!open || blockers || busy} onClick={onApprove}>Aprovar proposta</Button>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" disabled={busy} onClick={onEditOrder}>Mudar o pedido</Button>
-            <Button variant="ghost" disabled={busy || proposal.state === "cancelled"} onClick={onCancel}>Cancelar proposta</Button>
+            <Button variant="outline" size="sm" disabled={busy} onClick={onEditOrder}>Mudar o pedido</Button>
+            <Button variant="ghost" size="sm" disabled={busy || proposal.state === "cancelled"} onClick={onCancel}>Cancelar proposta</Button>
           </div>
         </footer>
       )}

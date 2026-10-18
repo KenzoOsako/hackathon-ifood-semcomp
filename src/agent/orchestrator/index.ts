@@ -2,6 +2,7 @@
 // Estados S0–S7 conforme docs/AGENTE_CONVERSA_E_FLUXO.md §3. O prompt orienta; este arquivo garante
 // teto de perguntas, nível que só rebaixa, encaminhamento único e que aprovação nunca é executada aqui.
 import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
+import { FRASES } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, EventoFeedback, LlmPort, Necessidade, Nivel, PlanoSnapshot, TurnoInterpretado } from "../types";
 
@@ -13,21 +14,8 @@ const TIMEOUT_RESPONDER_MS = 8000;
 const HISTORICO = 12;
 const MAX_SESSOES = 2000;
 
-export const FRASES = {
-  espera: "Deixa eu ver as opções.",
-  encaminhar: "Pronto, o plano está na sua tela. É só revisar e aprovar; a compra termina no iFood.",
-  jaEncaminhado: "O plano continua na sua tela para você revisar e aprovar. Quer ajustar algo?",
-  aprovacaoEnviada: "Enviei sua aprovação desta versão do plano para validação. Confira na tela; a compra termina no iFood.",
-  semPlano: "Ainda não montei um plano. Me diz o que você quer resolver: refeição, mercado ou presente?",
-  semNecessidade: "Me diz o que você quer: refeição, mercado ou presente?",
-  oQueFaco: "Eu ajudo com refeição, mercado e presentes, e monto um plano para você aprovar. O que você quer resolver?",
-  foraEscopo: "Isso eu não consigo ajudar. Posso ajudar com refeição, mercado ou presente?",
-  naoEntendi: "Não consegui entender agora. Pode repetir de outro jeito?",
-  erroFerramenta: "Não consegui buscar as opções agora. Quer tentar de novo?",
-  repetir: "Pode repetir só o nome?",
-  semDadoCriterio: "Não tenho essa informação para comparar essas opções ainda. Quer ajustar de outro jeito?",
-  semMudanca: "Essa já é a melhor opção para esse critério. Quer ajustar outra coisa?",
-} as const;
+// Frases fixas moram em ../frases (contrato com a voz); reexportadas para quem já importava daqui.
+export { FRASES };
 
 // Frases livres do LLM que não podem chegar ao usuário.
 // Números da fala do plano são checados à parte, contra o snapshot (falaRespeitaSnapshot).
