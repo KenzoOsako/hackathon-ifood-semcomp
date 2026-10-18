@@ -86,3 +86,7 @@
 
 ## Complementos por item — 18/10/2026
 Escolhas vinculadas a planoId/versão/necessidade/ref; IDs e preços vêm do detalhe do catálogo. Adicionais são por unidade. Falha do detalhe, grupo obrigatório incompleto ou composição desconhecida de adicional para restrição não viram escolha confirmada. Sacola segue local e simulada. Implementação e validações: docs/COMPLEMENTOS_ITENS.md.
+
+## D-018 — Preço não bloqueia opções no atendente (18/10/2026, Kenzo)
+- Decisão explícita: retirar a regra de limite de preço do fluxo do atendente, inclusive exclusão por teto no domínio mock/real. Preços e fretes continuam visíveis para a pessoa escolher; ordenar por preço continua disponível.
+- Restrições alimentares continuam rígidas: opções de buscas anteriores só podem ser reutilizadas sob restrição se ainda constarem nos candidatos elegíveis atuais.

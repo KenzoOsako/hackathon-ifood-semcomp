@@ -80,7 +80,7 @@ const buscarSchema = z.object({
   consultas: z.array(z.string().min(1).max(80)).max(3).optional().describe("Até 3 termos de busca concretos para o mesmo item (sinônimos). Ex.: sushi → sushi, temaki, combinado"),
   vertical: VerticalArg,
   restricoes: restricoesArg,
-  orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
+
   ordenar: z.enum(["relevancia", "melhor_avaliada", "mais_barata", "mais_rapida"]).optional(),
 });
 const mostrarSchema = z.object({
@@ -90,7 +90,6 @@ const mostrarSchema = z.object({
     consultas: z.array(z.string().min(1).max(80)).max(3).optional(),
     vertical: VerticalArg,
     restricoes: restricoesArg,
-    orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
     ref: z.string().max(200).optional().describe("ref da opção escolhida, vinda de buscar_no_ifood"),
     sugestao: z.boolean().optional().describe("true se foi você quem sugeriu este item, não a pessoa"),
   })).min(1).max(8),
@@ -122,9 +121,9 @@ function acumularRestricoes(s: AgentSession, novas: string[]) {
   if (unidas.some(r => !s.restricoes.includes(r))) { s.ultimaVersaoPlano = Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0); s.plano = undefined; s.estado = "S1"; s.encaminhado = false; }
   s.restricoes = unidas;
 }
-const necessidadeDe = (a: { categoria: string; consultas?: string[]; vertical: Necessidade["vertical"]; sugestao?: boolean; restricoes?: string[]; orcamento?: Necessidade["orcamento"] }, s: AgentSession): Necessidade => {
+const necessidadeDe = (a: { categoria: string; consultas?: string[]; vertical: Necessidade["vertical"]; sugestao?: boolean; restricoes?: string[] }, s: AgentSession): Necessidade => {
   acumularRestricoes(s, a.restricoes ?? []);
-  return { id: `a${++seqNecessidade}`, vertical: a.vertical, categoria: a.categoria, restricoes: [...s.restricoes], ...(a.orcamento ? { orcamento: a.orcamento } : {}), ...(a.consultas?.length ? { consultas: a.consultas } : {}), ...(a.sugestao ? { fonte: "inferido" as const } : {}) };
+  return { id: `a${++seqNecessidade}`, vertical: a.vertical, categoria: a.categoria, restricoes: [...s.restricoes], ...(a.consultas?.length ? { consultas: a.consultas } : {}), ...(a.sugestao ? { fonte: "inferido" as const } : {}) };
 };
 
 export async function executarAtendente(s: AgentSession, input: ConverseInput, deps: AtendenteDeps): Promise<AgentReply> {
@@ -217,7 +216,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
         tempos.dominioMs = (tempos.dominioMs ?? 0) + Math.round(now() - td);
         if (saida.grupo) {
           grupos.push(saida.grupo);
-          tela = { tipo: "mostrar_opcoes", plano: { ...(s.plano ?? planoVazio()), opcoes: grupos.slice(-GRUPOS_NA_TELA) } };
+          if (!tela || tela.tipo === "mostrar_opcoes") tela = { tipo: "mostrar_opcoes", plano: { ...(s.plano ?? planoVazio()), opcoes: grupos.slice(-GRUPOS_NA_TELA) } };
         }
         if (saida.tela) tela = saida.tela;
         msgs.push(new ToolMessage({ tool_call_id: c.id ?? c.name, content: saida.texto }));
@@ -272,7 +271,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const itens = await Promise.all(necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) })));
     const base = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
     // Nomes de loja e item vêm do catálogo: limpos antes de ir à tela e à fala.
-    const escolhido: PlanoSnapshot = { ...base, versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem)) };
+    const escolhido: PlanoSnapshot = { ...base, versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem, s.restricoes.length > 0)) };
     const plano = sanearPlano(await detalharPlano(escolhido, deps.domain.detalharItem?.bind(deps.domain)));
     if (s.restricoes.length) for (const b of plano.blocos) {
       if (b.principal.complementos?.grupos.length) b.principal.complementos.composicaoNaoVerificada = true;
@@ -306,15 +305,15 @@ const planoVazio = (): PlanoSnapshot => ({ planoId: "", versao: 0, blocos: [], n
 // A opção que a pessoa escolheu vira a principal do bloco; a anterior vira alternativa. Vale uma alternativa do bloco ou
 // uma opção que a pessoa viu numa busca da MESMA categoria; opção de outra necessidade é recusada. As outras opções
 // dessa busca também ficam como alternativas, para trocar tocando.
-function escolher(b: PlanoSnapshot["blocos"][number], ref: string | undefined, mem: Memoria): PlanoSnapshot["blocos"][number] {
+function escolher(b: PlanoSnapshot["blocos"][number], ref: string | undefined, mem: Memoria, exigirElegibilidadeAtual: boolean): PlanoSnapshot["blocos"][number] {
   const mesmaCategoria = (r: string) => { const g = mem.grupoDe.get(r); return g && norm(g.categoria) === norm(b.categoria) ? g : undefined; };
   let principal = b.principal;
   if (ref && ref !== b.principal.ref) {
-    const escolhida = b.alternativas.find((o) => o.ref === ref) ?? (mesmaCategoria(ref) ? mem.opcoes.get(ref) : undefined);
+    const escolhida = b.alternativas.find((o) => o.ref === ref) ?? (!exigirElegibilidadeAtual && mesmaCategoria(ref) ? mem.opcoes.get(ref) : undefined);
     if (!escolhida) throw new Error("OPCAO_FORA_DA_NECESSIDADE");
     principal = escolhida;
   }
-  const vistas = (ref && mesmaCategoria(ref)?.itens) || mesmaCategoria(principal.ref)?.itens || [];
+  const vistas = exigirElegibilidadeAtual ? [] : (ref && mesmaCategoria(ref)?.itens) || mesmaCategoria(principal.ref)?.itens || [];
   const unicas = new Map<string, OpcaoPlano>();
   for (const o of [b.principal, ...b.alternativas, ...vistas]) if (o.ref !== principal.ref && !unicas.has(o.ref)) unicas.set(o.ref, o);
   return { ...b, principal, alternativas: [...unicas.values()].slice(0, MAX_ALTERNATIVAS) };

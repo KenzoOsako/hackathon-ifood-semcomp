@@ -304,3 +304,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Branch feat/hyago-mais-opcoes. Tela nova `mostrar_opcoes` ("Opções para você"): o que o atendente pesquisa aparece na hora (até 3 por busca, até 3 buscas), com nota, prazo, frete, preço e foto; tocar em "Selecionar" manda "quero a <prato> da <loja>". No plano, cada item tem "Ver mais opções" com alternativas reais (as do domínio + as outras opções que a pessoa viu na busca); tocar manda "troca <item> pela <prato> da <loja>". O atendente recebe o plano com refs das alternativas para trocar.
 - Provas: typecheck, lint, build e testes (atendente com teste novo da tela de opções e das alternativas); vídeo da jornada em mock com Gemini: busca por nota → opções → escolher tocando → plano → trocar tocando (v2) → revisão → sacola.
 - Próximo: Task 2 (justificar cada opção: chips de dados reais + uma linha de "por que pra você").
+
+## Ajuste solicitado por Kenzo no PR35 — 18/10/2026
+- Removido orçamento dos schemas das ferramentas e sua propagação; domínio real/mock não exclui opções por teto legado. Mantidos preços/fretes e ordenação.
+- Busca posterior no mesmo turno preserva tela de plano/revisão já montada. Com restrição alimentar, memória não reintroduz opções excluídas na busca atual.
+- Cobertura nova: preço sem bloqueio no domínio real e no atendente; precedência da tela de plano; restrição alimentar após busca anterior.

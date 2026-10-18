@@ -197,11 +197,11 @@ export class McpDomain implements DomainPort {
     void ocasiao; // quantidade é calculada ao montar o plano
     // Restrições com filtro oficial do MCP (ex.: LAC_FREE) vão no refinamento; as demais passam pelo filtro
     // rígido do Kenzo, que exclui item sem composição conhecida. Em ambos os casos o plano pede confirmação.
-    // Filtros rígidos do Kenzo: alergia sem composição conhecida exclui; teto rígido sobre o total.
+    // Filtros rígidos do Kenzo: alergia sem composição conhecida exclui; preço não exclui opções.
     const filtro = filterEligibleCandidates(convertidos.map((c) => c.normalizado), {
       allergies: n.restricoes.filter((r) => !RESTRICOES_MCP[norm(r)]),
       missingCompositionPolicy: "exclude-from-safe-claims",
-    }, n.orcamento?.tipo === "teto" ? { hardBudgetLimit: brlToMoney(n.orcamento.max) } : n.orcamento ? { flexibleBudgetLimit: brlToMoney(n.orcamento.max) } : undefined);
+    });
     const porId = new Map(convertidos.map((c) => [c.normalizado.itemId, c]));
     const ordenados = filtro.eligible
       .filter((e) => e.candidate.available !== false)
