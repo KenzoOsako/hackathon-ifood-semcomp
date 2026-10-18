@@ -3,11 +3,9 @@ import { useState } from "react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Button } from "@/ui/components/button";
 import { useNow } from "@/ui/lib/use-now";
-import { ContinueView } from "./continue-view";
-import { OptionsView } from "./options-screen";
-import { ProposalView } from "./proposal-view";
+import { AgentView } from "./agent-view";
 
-// Prévia de design com dados fixos e inventados (nenhuma loja ou preço é real). O mock do servidor tem
+// Prévia da tela única do agente com dados fixos e inventados (nenhuma loja ou preço é real). O mock do servidor tem
 // poucas lojas e toda proposta nasce com pendências, então esta tela é a forma de ver como ficaria com
 // mais variedade e com o estado aprovável. Nada daqui chama a API.
 const OPTIONS: Option[] = [
@@ -62,47 +60,31 @@ const STORE: Option = {
   reasons: [{ kind: "times_ordered", value: 5, text: "você já pediu aqui 5 vezes" }],
 };
 
-type Scenario = "opcoes" | "aprovavel" | "pendente" | "expirada" | "aprovada";
+type Scenario = "inicio" | "opcoes" | "aprovavel" | "pendente" | "expirada" | "aprovada";
 const SCENARIOS: { id: Scenario; label: string }[] = [
-  { id: "opcoes", label: "3 opções" },
+  { id: "inicio", label: "Início" },
+  { id: "opcoes", label: "3 lojas" },
   { id: "aprovavel", label: "Proposta" },
-  { id: "pendente", label: "Com pendências" },
+  { id: "pendente", label: "Pendências" },
   { id: "expirada", label: "Expirada" },
   { id: "aprovada", label: "Aprovada" },
 ];
+const VIEW = { inicio: null, opcoes: "options", aprovavel: "proposal", pendente: "proposal", expirada: "proposal", aprovada: "continue" } as const;
 
 export function PreviewScreen() {
-  const [scenario, setScenario] = useState<Scenario>("opcoes");
+  const [scenario, setScenario] = useState<Scenario>("inicio");
   const now = useNow(60_000);
   if (now === null) return null;
   const soon = new Date(now + 5 * 60_000).toISOString();
 
-  const PROPOSALS: Record<Exclude<Scenario, "opcoes">, PublicProposal> = {
+  const PROPOSALS: Record<Exclude<Scenario, "inicio" | "opcoes">, PublicProposal> = {
     aprovavel: { ...BASE, expiresAt: soon },
     pendente: { ...BASE, expiresAt: soon, cost: { items: BASE.cost.items, status: "unknown" }, unresolved: ["Taxas e total não confirmados", "Frete desconhecido"] },
     expirada: { ...BASE, expiresAt: "2000-01-01T00:00:00.000Z" },
     aprovada: { ...BASE, state: "approved", expiresAt: soon },
   };
-
-  let screen;
-  if (scenario === "opcoes") {
-    screen = <OptionsView options={OPTIONS} busy={false} error={null} onSelect={() => setScenario("aprovavel")} onRetry={() => {}} />;
-  } else if (scenario === "aprovada") {
-    screen = <ContinueView proposal={PROPOSALS.aprovada} option={STORE} itemNames={ITEM_NAMES} />;
-  } else {
-    screen = (
-      <ProposalView
-        proposal={PROPOSALS[scenario]}
-        option={STORE}
-        itemNames={ITEM_NAMES}
-        busy={false}
-        error={null}
-        onApprove={() => setScenario("aprovada")}
-        onCancel={() => {}}
-        onRetry={() => {}}
-      />
-    );
-  }
+  const proposal = scenario === "inicio" || scenario === "opcoes" ? undefined : PROPOSALS[scenario];
+  const msgs = scenario === "inicio" ? [] : [{ id: 0, from: "agente" as const, text: "Encontrei 3 opções perto de você. Toque em uma para revisar." }];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -113,7 +95,24 @@ export function PreviewScreen() {
           </Button>
         ))}
       </div>
-      {screen}
+      <AgentView
+        view={VIEW[scenario]}
+        options={OPTIONS}
+        proposal={proposal}
+        selected={STORE}
+        itemNames={ITEM_NAMES}
+        msgs={msgs}
+        query="Algo diferente hoje"
+        busy={false}
+        error={null}
+        onSend={() => setScenario("opcoes")}
+        onSelect={() => setScenario("aprovavel")}
+        onApprove={() => setScenario("aprovada")}
+        onCancel={() => setScenario("inicio")}
+        onEditOrder={() => setScenario("opcoes")}
+        onRetry={() => {}}
+        onNewSearch={() => setScenario("inicio")}
+      />
     </div>
   );
 }

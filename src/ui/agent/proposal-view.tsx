@@ -25,15 +25,17 @@ type Props = {
   itemNames?: Record<string, string>;
   busy: boolean;
   error: string | null;
+  embedded?: boolean;
   approvedReply?: string;
   onApprove: () => void;
   onCancel: () => void;
+  onEditOrder: () => void;
   onRetry: () => void;
 };
 
 // Mostra o snapshot da proposta como veio do servidor. Aprovar, editar e cancelar são ações separadas
 // e a UI nunca soma custos: ausência de frete/taxas aparece como pendência, não como zero.
-export function ProposalView({ proposal, option, itemNames, busy, error, approvedReply, onApprove, onCancel, onRetry }: Props) {
+export function ProposalView({ proposal, option, itemNames, busy, error, embedded = false, approvedReply, onApprove, onCancel, onEditOrder, onRetry }: Props) {
   const now = useNow(15_000);
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
 
@@ -47,9 +49,11 @@ export function ProposalView({ proposal, option, itemNames, busy, error, approve
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Button asChild variant="ghost" size="icon" aria-label="Voltar para as opções">
-          <Link href="/agente/opcoes"><ArrowLeft /></Link>
-        </Button>
+        {!embedded && (
+          <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início">
+            <Link href="/"><ArrowLeft /></Link>
+          </Button>
+        )}
         <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold outline-none">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
         {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
@@ -139,7 +143,7 @@ export function ProposalView({ proposal, option, itemNames, busy, error, approve
         <footer className="grid gap-2 border-t border-border bg-background px-4 pb-4 pt-3">
           <Button disabled={!open || blockers || busy} onClick={onApprove}>Aprovar proposta</Button>
           <div className="grid grid-cols-2 gap-2">
-            <Button asChild variant="outline"><Link href="/agente">Mudar o pedido</Link></Button>
+            <Button variant="outline" disabled={busy} onClick={onEditOrder}>Mudar o pedido</Button>
             <Button variant="ghost" disabled={busy || proposal.state === "cancelled"} onClick={onCancel}>Cancelar proposta</Button>
           </div>
         </footer>

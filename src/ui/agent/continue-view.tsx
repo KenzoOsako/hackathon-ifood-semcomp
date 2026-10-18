@@ -30,9 +30,9 @@ export function buildSummary(proposal: PublicProposal, option: Option | null, it
   ].filter((line): line is string => line !== null).join("\n");
 }
 
-type Props = { proposal: PublicProposal; option: Option | null; itemNames?: Record<string, string> };
+type Props = { proposal: PublicProposal; option: Option | null; itemNames?: Record<string, string>; embedded?: boolean; onNewSearch: () => void };
 
-export function ContinueView({ proposal, option, itemNames }: Props) {
+export function ContinueView({ proposal, option, itemNames, onNewSearch }: Props) {
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
   const summary = buildSummary(proposal, option, itemNames);
@@ -101,7 +101,7 @@ export function ContinueView({ proposal, option, itemNames }: Props) {
       </main>
 
       <footer className="grid gap-2 border-t border-border bg-background px-4 pb-4 pt-3">
-        <Button asChild><Link href="/agente">Fazer outra busca</Link></Button>
+        <Button onClick={onNewSearch}>Fazer outra busca</Button>
         <Button asChild variant="ghost"><Link href="/">Voltar ao início</Link></Button>
       </footer>
     </div>

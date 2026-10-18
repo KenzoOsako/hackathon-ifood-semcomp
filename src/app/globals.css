@@ -132,9 +132,10 @@
    O estado (data-state) muda só o ritmo; no erro tudo para e fica cinza. */
 .orb-stage {
   position: relative;
-  width: 18rem;
-  height: 18rem;
+  width: var(--stage, 18rem);
+  height: var(--stage, 18rem);
   flex-shrink: 0;
+  transition: width 0.6s ease, height 0.6s ease;
 }
 .orb-stage > * {
   position: absolute;
