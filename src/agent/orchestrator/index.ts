@@ -3,6 +3,7 @@
 // teto de perguntas, nível que só rebaixa, encaminhamento único e que aprovação nunca é executada aqui.
 import { ZodError } from "zod";
 import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
+import { criarRelevancia } from "../relevancia";
 import { FRASES, LIMIARES_CONFIANCA } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
 import { temDadoPessoal } from "../privacidade";
@@ -21,7 +22,7 @@ export { FRASES };
 
 // Frases livres do LLM que não podem chegar ao usuário.
 // Números da fala do plano são checados à parte, contra o snapshot (falaRespeitaSnapshot).
-const PROIBIDO = /pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|concluida|concluída)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
+const PROIBIDO = /\b(adicionei|adicionado|adicionada|coloquei|comprei|reservei|finalizei|fechei o pedido)\b|carrinho|pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|concluida|concluída)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
 
 export interface Deps { llm: LlmPort; domain: DomainPort; now?: () => number }
 
@@ -278,7 +279,8 @@ async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: 
   const td = now();
   let plano: PlanoSnapshot;
   try {
-    const itens = await Promise.all(s.necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) })));
+    const ctx = { relevancia: criarRelevancia(deps.llm) };
+    const itens = await Promise.all(s.necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao, ctx) })));
     plano = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
   } catch {
     tempos.dominioMs = Math.round(now() - td);
@@ -327,7 +329,7 @@ async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; 
   try {
     const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder(input, signal));
     // Fala com número fora do snapshot, conteúdo proibido ou dado pessoal cai para o template.
-    if (!fala || !falaRespeitaSnapshot(fala, input.plano) || PROIBIDO.test(fala) || temDadoPessoal(fala) || /muito pedid|\bnovo\b|\bnova\b/i.test(fala)) return respostaTemplate(input);
+    if (!fala || !falaRespeitaSnapshot(fala, input.plano) || (input.plano.blocos.some((b) => b.cobertura === "proxima") && !/parecid|pr[óo]xim|n[ãa]o (achei|encontrei)/i.test(fala)) || PROIBIDO.test(fala) || temDadoPessoal(fala) || /muito pedid|\bnovo\b|\bnova\b/i.test(fala)) return respostaTemplate(input);
     return fala;
   } catch {
     return respostaTemplate(input);

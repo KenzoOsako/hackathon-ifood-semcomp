@@ -4,8 +4,9 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import type { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { sanearTurno } from "./sanear";
 import { SYSTEM_INTERPRETAR, mensagemInterpretar } from "@/prompts/interpretar";
+import { SYSTEM_RELEVANCIA, VeredictosSchema, mensagemRelevancia } from "@/prompts/relevancia";
 import { SYSTEM_RESPONDER, mensagemResponder } from "@/prompts/responder";
-import { TurnoInterpretadoSchema, type InterpretarInput, type LlmPort, type ResponderInput, type TurnoInterpretado } from "../types";
+import { TurnoInterpretadoSchema, type CandidatoJulgado, type InterpretarInput, type LlmPort, type Necessidade, type ResponderInput, type TurnoInterpretado, type Veredito } from "../types";
 
 export type Provedor = "anthropic" | "openai" | "google";
 
@@ -34,11 +35,32 @@ export class LangChainLlm implements LlmPort {
   constructor(private readonly model: BaseChatModel, provedor: string, modelo: string) { this.nome = `${provedor}:${modelo}`; }
 
   async interpretar(input: InterpretarInput, signal?: AbortSignal): Promise<TurnoInterpretado> {
-    const estruturado = this.model.withStructuredOutput(TurnoInterpretadoSchema, { name: "turno_interpretado", includeRaw: true });
-    const out = await estruturado.invoke([["system", SYSTEM_INTERPRETAR], ["human", mensagemInterpretar(input)]], { signal });
-    // Validar de novo na borda: a saída do provedor não é confiável por si só. Se a validação estrita falhou
-    // (parsed nulo), aproveita a resposta crua sem os campos de enfeite fora do formato.
-    return TurnoInterpretadoSchema.parse(out.parsed ?? sanearTurno(bruto(out.raw)));
+    const uma = async (): Promise<TurnoInterpretado> => {
+      const estruturado = this.model.withStructuredOutput(TurnoInterpretadoSchema, { name: "turno_interpretado", includeRaw: true });
+      const out = await estruturado.invoke([["system", SYSTEM_INTERPRETAR], ["human", mensagemInterpretar(input)]], { signal });
+      // Validar de novo na borda: a saída do provedor não é confiável por si só. Se a validação estrita falhou
+      // (parsed nulo), aproveita a resposta crua sem os campos de enfeite fora do formato.
+      return TurnoInterpretadoSchema.parse(out.parsed ?? sanearTurno(bruto(out.raw)));
+    };
+    const turno = await uma();
+    // Confiabilidade do modelo: um pedido claro que volta SEM necessidades (esquecimento ocasional) ganha uma nova
+    // tentativa, uma só. Se a segunda também vier vazia ou falhar, vale a primeira e o agente pergunta o que a pessoa quer.
+    if (turno.intencao === "pedido" && turno.necessidades.length === 0 && input.session.necessidades.length === 0 && !signal?.aborted) {
+      try {
+        const outra = await uma();
+        if (outra.necessidades.length > 0) return outra;
+      } catch { /* mantém a primeira resposta */ }
+    }
+    return turno;
+  }
+
+  // Juiz de relevância: uma chamada curta e estruturada. Índice fora da lista é ignorado (a saída do provedor não é confiável).
+  async julgar(input: { necessidade: Necessidade; candidatos: CandidatoJulgado[] }, signal?: AbortSignal): Promise<Record<string, Veredito>> {
+    const estruturado = this.model.withStructuredOutput(VeredictosSchema, { name: "veredictos_relevancia" });
+    const out = VeredictosSchema.parse(await estruturado.invoke([["system", SYSTEM_RELEVANCIA], ["human", mensagemRelevancia(input.necessidade, input.candidatos)]], { signal }));
+    const mapa: Record<string, Veredito> = {};
+    for (const { i, v } of out.itens) { const c = input.candidatos[i]; if (c) mapa[c.ref] = v; }
+    return mapa;
   }
 
   async responder(input: ResponderInput, signal?: AbortSignal): Promise<string> {

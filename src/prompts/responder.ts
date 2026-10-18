@@ -2,7 +2,7 @@
 // Estilo é do Felipe (docs/AGENTE_CONVERSA_E_FLUXO.md §5); fatos só do snapshot.
 import type { PlanoSnapshot, ResponderInput } from "@/agent/types";
 
-export const PROMPT_RESPONDER_VERSAO = "responder-v2";
+export const PROMPT_RESPONDER_VERSAO = "responder-v3";
 
 export const SYSTEM_RESPONDER = `Você é o Guide, copiloto de compras do iFood. Você vai falar um plano que já foi montado.
 
@@ -17,18 +17,20 @@ Assistente pessoal receptiva e objetiva. Português do Brasil, natural, ritmo á
 - Se houver "assumido", diga em poucas palavras o que você assumiu.
 - Nunca fale endereço, telefone, e-mail ou documento.
 - Se houver necessidade não atendida, diga que ainda não tem essa opção.
+- Bloco com cobertura "proxima": o catálogo NÃO tem o que foi pedido e este é o mais parecido. Diga "não achei <categoria>; o mais parecido é <item> da <loja>" e nunca o apresente como se fosse o pedido.
 - Termine com "Quer ajustar algo?".
 
 # Verdade
 - Use apenas os dados do JSON. Não cite preço, nota, prazo ou motivo que não estejam nele. Não diga "muito pedido" nem "novo".
 - Nunca diga que o pedido foi feito. Quem aprova é o usuário, e a compra termina no iFood.
-- Se houver restrição nas pendências, diga que é preciso confirmar a composição com a loja.`;
+- Só fale em confirmar a composição com a loja se uma pendência disser "restrição" (alergia ou intolerância). Pedido mínimo, quantidade estimada e "opções do item" NÃO são sobre composição: não os trate assim.
+- Nunca use verbos de ação de compra ("adicionei", "coloquei no carrinho", "comprei", "reservei"): você monta um plano; quem aprova é o usuário e a compra termina no iFood. Diga "incluí no plano" ou "montei".`;
 
 export function mensagemResponder(input: ResponderInput): string {
   return JSON.stringify({
     mudou: input.mudou ?? null,
     assumido: input.assumido,
-    blocos: input.plano.blocos.map((b) => ({ categoria: b.categoria, quantidade: b.quantidade, item: b.principal.item, loja: b.principal.loja, rotulo: b.principal.rotulo, motivo: b.principal.motivo, sugestao: Boolean(b.sugestao) })),
+    blocos: input.plano.blocos.map((b) => ({ categoria: b.categoria, quantidade: b.quantidade, item: b.principal.item, loja: b.principal.loja, rotulo: b.principal.rotulo, motivo: b.principal.motivo, sugestao: Boolean(b.sugestao), cobertura: b.cobertura ?? "exata" })),
     naoAtendidas: input.plano.naoAtendidas,
     pendencias: input.plano.pendencias,
   });
@@ -38,14 +40,19 @@ export function mensagemResponder(input: ResponderInput): string {
 export function respostaTemplate(input: ResponderInput): string {
   const blocos = input.mudou ? input.plano.blocos.filter((b) => b.categoria === input.mudou) : input.plano.blocos;
   const fala = (b: (typeof blocos)[number]) => `${b.quantidade > 1 ? `${b.quantidade}x ` : ""}${b.principal.item} da ${b.principal.loja}, ${b.principal.rotulo}`;
-  const pedidas = blocos.filter((b) => !b.sugestao).map(fala);
-  const sugeridas = blocos.filter((b) => b.sugestao).map(fala);
+  const proximas = blocos.filter((b) => b.cobertura === "proxima");
+  const normais = blocos.filter((b) => b.cobertura !== "proxima");
+  const pedidas = normais.filter((b) => !b.sugestao).map(fala);
+  const sugeridas = normais.filter((b) => b.sugestao).map(fala);
   const partes = pedidas.length ? [...pedidas] : [];
   if (sugeridas.length) partes.push(`${pedidas.length ? "e " : ""}como sugestão, ${sugeridas.join(" e ")}`);
   const inicio = input.mudou ? "Troquei: " : "Montei assim: ";
   const assumido = input.assumido.length ? ` Assumi ${input.assumido.join(" e ")}.` : "";
   const faltas = input.plano.naoAtendidas.length ? ` Ainda não tenho opção para ${input.plano.naoAtendidas.map((n) => n.categoria).join(" e ")}.` : "";
-  return `${inicio}${partes.join("; ")}.${assumido}${faltas} Quer ajustar algo?`;
+  // O que o catálogo não tem exato é dito como tal: "não achei X; o mais parecido é Y".
+  const parecidas = proximas.map((b) => `Não achei ${b.categoria}; o mais parecido é ${b.principal.item} da ${b.principal.loja}.`).join(" ");
+  const corpo = partes.length ? `${inicio}${partes.join("; ")}.` : "";
+  return [corpo, parecidas].filter(Boolean).join(" ") + `${assumido}${faltas} Quer ajustar algo?`;
 }
 
 // Números citados na fala precisam existir no snapshot (preço, nota, quantidade, prazo).

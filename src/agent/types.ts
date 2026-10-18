@@ -3,6 +3,7 @@
 // docs/AGENTE_CONVERSA_E_FLUXO.md §4.2 para a troca ser só de implementação.
 import { z } from "zod";
 import { VoiceSignalsSchema } from "@/voice/signals";
+import { MAX_NECESSIDADES } from "./limites";
 
 export const VerticalSchema = z.enum(["RESTAURANT", "GROCERIES", "SHOPPING"]);
 export type Vertical = z.infer<typeof VerticalSchema>;
@@ -25,6 +26,8 @@ export const NecessidadeSchema = z.object({
   orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
   // "inferido": sugestão do Guide a partir da ocasião; "dito" (ou ausente): o usuário pediu.
   fonte: z.enum(["dito", "inferido"]).optional(),
+  // Termos de busca do planejador: o catálogo busca ITEM por termo, então cada consulta é um produto ou prato.
+  consultas: z.array(z.string().max(80)).max(6).optional().describe("1 a 3 termos de busca concretos para ESTE item (um produto ou prato por termo, sinônimos reais). Ex.: leite → leite integral; churrasco → picanha, costela"),
 });
 export type Necessidade = z.infer<typeof NecessidadeSchema>;
 
@@ -36,7 +39,7 @@ export const TurnoInterpretadoSchema = z.object({
   intencao: z.enum(["pedido", "responder", "consentir", "ajustar", "aprovar", "fora_escopo", "incerto", "conversa"]),
   nivel: z.enum(["L0", "L1", "L2"]),
   ocasiao: OcasiaoSchema.default({}),
-  necessidades: z.array(NecessidadeSchema).max(5).default([]),
+  necessidades: z.array(NecessidadeSchema).max(MAX_NECESSIDADES).default([]),
   pergunta: z.string().max(240).optional(),
   confirmacao: z.string().max(240).optional(),
   ajuste: z.object({ categoria: z.string().max(60).optional(), criterio: CriterioSchema }).optional(),
@@ -58,6 +61,9 @@ export type ConverseInput = z.infer<typeof ConverseInputSchema>;
 
 export type Origem = "simulado" | "real";
 
+// "exata": é o que foi pedido; "proxima": o catálogo não tem o pedido, esta é a mais parecida (o Guide diz isso).
+export type Cobertura = "exata" | "proxima";
+
 export interface OpcaoPlano {
   ref: string;
   loja: string;
@@ -69,6 +75,7 @@ export interface OpcaoPlano {
   rotulo: string;   // vem do ranking do domínio, nunca do LLM
   motivo: string;   // idem
   origem: Origem;
+  cobertura?: Cobertura;
 }
 
 export interface BlocoPlano {
@@ -79,6 +86,7 @@ export interface BlocoPlano {
   principal: OpcaoPlano;
   alternativas: OpcaoPlano[];
   sugestao?: boolean; // necessidade inferida pelo Guide, não pedida pelo usuário
+  cobertura?: Cobertura;
 }
 
 export interface PlanoSnapshot {
@@ -96,9 +104,17 @@ export type EventoFeedback =
   | { tipo: "necessidade_nao_atendida"; categoria: string; causa: string }
   | { tipo: "friccao"; perguntas: number; nivel: Nivel; turnos: number };
 
+// Relevância: o que a busca devolveu serve para o que foi pedido? (src/agent/relevancia.ts)
+export type Veredito = "serve" | "proximo" | "nao_serve";
+export interface CandidatoJulgado { ref: string; item: string; loja?: string }
+export interface RelevancePort {
+  julgar(n: Necessidade, candidatos: CandidatoJulgado[]): Promise<Map<string, Veredito>>;
+}
+export interface ContextoBusca { relevancia?: RelevancePort }
+
 // Ferramentas do domínio que o agente pode chamar. Nenhuma compra, aprova ou paga.
 export interface DomainPort {
-  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]>;
+  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao, ctx?: ContextoBusca): Promise<OpcaoPlano[]>;
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot>;
   ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot>;
   registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void>;
@@ -145,6 +161,8 @@ export interface LlmPort {
   readonly nome: string;
   interpretar(input: InterpretarInput, signal?: AbortSignal): Promise<TurnoInterpretado>;
   responder(input: ResponderInput, signal?: AbortSignal): Promise<string>;
+  // Juiz de relevância (opcional: sem ele vale só a camada léxica). Devolve ref → veredito.
+  julgar?(input: { necessidade: Necessidade; candidatos: CandidatoJulgado[] }, signal?: AbortSignal): Promise<Record<string, Veredito>>;
 }
 
 export interface AgentReply {
