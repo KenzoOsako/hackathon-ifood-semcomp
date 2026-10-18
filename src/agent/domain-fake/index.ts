@@ -72,6 +72,19 @@ function toOpcao(o: Oferta, criterio: Exclude<Criterio, "outra">): OpcaoPlano {
 }
 
 export class FakeDomain implements DomainPort {
+  async detalharItem(opcao: OpcaoPlano): Promise<OpcaoPlano> {
+    const lanche = /burger|hambúrguer/i.test(opcao.item);
+    return { ...opcao, complementos: { status: "verificado", selecoes: [], grupos: lanche ? [
+      { id: "mock-molho", nome: "Molho", minimo: 1, maximo: 1, opcoes: [
+        { id: "mock-sem-molho", nome: "Sem molho", precoCents: 0, disponivel: true },
+        { id: "mock-maionese", nome: "Maionese", precoCents: 150, disponivel: true },
+      ] },
+      { id: "mock-extras", nome: "Extras", minimo: 0, maximo: 3, opcoes: [
+        { id: "mock-guardanapo", nome: "Guardanapo", precoCents: 0, disponivel: true },
+        { id: "mock-queijo", nome: "Queijo extra", precoCents: 300, disponivel: true },
+      ] },
+    ] : [] } };
+  }
   private readonly planos = new Map<string, { subjectRef: string; snapshot: PlanoSnapshot; necessidades: Necessidade[]; ocasiao: Ocasiao }>();
   readonly eventos: { subjectRef: string; evento: EventoFeedback }[] = [];
 

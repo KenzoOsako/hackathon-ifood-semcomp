@@ -6,6 +6,7 @@ import type { Option, OptionLabel, Reason } from "@/contracts";
 
 import { catalogImage, type CatalogMedia } from "@/ui/lib/catalog-media";
 import { mockMediaFor } from "@/ui/lib/mock-media";
+import { precoConfigurado } from "@/agent/complementos";
 
 export type PlanoTela = PlanoSnapshot & { sacola?: Sacola };
 export type GuideTela = { tipo: TipoTela; plano: PlanoTela };
@@ -44,7 +45,7 @@ export function paraOption(o: OpcaoPlano): { option: Option; tag: string; media:
         merchantName: o.loja,
         itemId: o.ref,
         itemName: o.item,
-        price: o.precoCents / 100,
+        price: precoConfigurado(o) / 100,
         ...(o.freteCents !== undefined ? { deliveryFee: o.freteCents / 100 } : {}),
         ...(o.nota !== undefined ? { rating: o.nota } : {}),
         ...(minutos ? { deliveryTimeMinutes: Number(minutos) } : {}),
