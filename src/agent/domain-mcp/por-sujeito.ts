@@ -34,7 +34,6 @@ export function dominioRealDo(subjectRef: string): Promise<McpDomain> {
       if (eventosReais.length > 5000) eventosReais.shift();
     }));
     d.catch(() => dominios.delete(subjectRef));
-    void d.then((x: McpDomain) => x.sondarCatalogo()).catch(() => undefined);
     dominios.set(subjectRef, d);
     if (dominios.size > 200) dominios.delete(dominios.keys().next().value!);
   }

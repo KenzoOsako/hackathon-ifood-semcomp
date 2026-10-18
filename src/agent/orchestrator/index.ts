@@ -326,7 +326,12 @@ async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: 
     // Plano vazio não vira plano: nada para encaminhar ou aprovar.
     s.plano = undefined; s.estado = "S1";
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(" e ");
-    return fechar(s, input, deps, { resposta: `Ainda não tenho opção compatível para ${faltas}. Quer tentar outra coisa?` }, tempos, t0);
+    // O motivo real vai na fala: "existe, mas nada aberto com entrega agora" não é "não achei" (e muda o que a pessoa faz a seguir).
+    const fora = plano.naoAtendidas.length > 0 && plano.naoAtendidas.every((x) => /nenhuma loja está aberta/.test(x.motivo));
+    const resposta = fora
+      ? `Encontrei ${faltas} no iFood, mas nenhuma loja está aberta com entrega agora. Quer tentar um prato pronto ou outra coisa?`
+      : `Não encontrei ${faltas} perto de você. Quer tentar outra coisa?`;
+    return fechar(s, input, deps, { resposta }, tempos, t0);
   }
   s.plano = plano; s.estado = "S3"; s.encaminhado = false;
   evento(deps, s, { tipo: "opcoes_exibidas", planoId: plano.planoId, versao: plano.versao, blocos: plano.blocos.length, origem: plano.origem });

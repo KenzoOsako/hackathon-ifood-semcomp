@@ -63,11 +63,20 @@ describe("a frente da lista não é a mais barata", () => {
   });
 });
 
-describe("sonda de catálogo", () => {
-  it("vertical que não devolve nada aqui entra em semCatalogo", async () => {
-    const tools: McpTools = { callTool: async (_n, a) => (a.merchantType === "GROCERIES" ? { results: [] } : amostras.pizza) };
-    const d = new McpDomain(tools, { latitude: 1.23, longitude: 4.56, fonte: "fixa" });
-    await d.sondarCatalogo();
+describe("vertical sem item algum: aprende por observação, e item sem entrega agora não é 'inexistente'", () => {
+  it("vazio duas vezes entra em semCatalogo; itens existentes mas fechados não", async () => {
+    const vazio: McpTools = { callTool: async (_n, a) => (a.merchantType === "GROCERIES" ? { results: [] } : amostras.pizza) };
+    const d = new McpDomain(vazio, { latitude: 1.23, longitude: 4.56, fonte: "fixa" });
+    await d.buscarNecessidade({ id: "a", vertical: "GROCERIES", categoria: "leite", restricoes: [] }, {});
+    await d.buscarNecessidade({ id: "b", vertical: "GROCERIES", categoria: "ovos", restricoes: [] }, {});
     expect(d.semCatalogo()).toEqual(["GROCERIES"]);
+
+    const fechado = { results: amostras.pizza.results.map((r) => ({ ...r, merchant: { ...r.merchant, isOpen: false } })) };
+    const d2 = new McpDomain({ callTool: async () => fechado }, { latitude: 9.87, longitude: 6.54, fonte: "fixa" });
+    const n = { id: "c", vertical: "RESTAURANT" as const, categoria: "pizza", restricoes: [] };
+    expect(await d2.buscarNecessidade(n, {})).toEqual([]);
+    expect(d2.semCatalogo()).toEqual([]);
+    const plano = await d2.montarPlano({ subjectRef: "s", ocasiao: {}, itens: [{ necessidade: n, opcoes: [] }] });
+    expect(plano.naoAtendidas[0].motivo).toMatch(/nenhuma loja está aberta com entrega agora/);
   });
 });

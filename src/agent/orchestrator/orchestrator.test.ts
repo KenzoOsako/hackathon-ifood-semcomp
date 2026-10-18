@@ -145,7 +145,7 @@ describe("orquestrador", () => {
     expect(s.necessidades[0].restricoes).toContain("lactose");
     // Todas as pizzas simuladas têm lactose: nenhuma é oferecida e o plano vazio não é criado.
     expect(s.plano).toBeUndefined();
-    expect(r.resposta).toMatch(/não tenho opção compatível para pizza/);
+    expect(r.resposta).toMatch(/Não encontrei pizza perto de você/);
   });
 
   it("erro do domínio não inventa opção", async () => {

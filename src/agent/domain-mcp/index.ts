@@ -157,7 +157,8 @@ function rotular(c: Candidato, lista: Candidato[], preferido?: CriterioComDado):
   return { ...c.opcao, rotulo: "alternativa", motivo: "outra opção aberta e com entrega" };
 }
 
-const VAZIAS = new Map<string, Map<Vertical, number>>();
+const VAZIAS = new Map<string, Map<Vertical, { n: number; em: number }>>();
+const TTL_VAZIA_MS = 10 * 60_000;
 
 // Onde procurar quando a vertical escolhida não tem catálogo aqui.
 const ALTERNATIVA: Partial<Record<Vertical, Vertical>> = { GROCERIES: "RESTAURANT", RESTAURANT: "GROCERIES" };
@@ -168,25 +169,26 @@ export type PlanosStore = Map<string, PlanoGuardado>;
 export class McpDomain implements DomainPort {
   // Candidatos da última busca por necessidade, para montar e ajustar o plano sem nova chamada.
   private readonly ultimaBusca = new Map<string, Candidato[]>();
-  // Quais verticais não têm catálogo aberto neste local: aprendido uma vez e valendo para todas as sessões do processo.
-  private get verticaisVazias(): Map<Vertical, number> {
+  // Verticais sem NENHUM item devolvido neste local. É aprendido por observação e vale 10 minutos (catálogo muda com a hora:
+  // mercado sem entrega de madrugada não é mercado inexistente). Só conta quando a busca volta sem item algum.
+  private vazias(): Map<Vertical, { n: number; em: number }> {
     const chave = `${this.local.latitude.toFixed(2)},${this.local.longitude.toFixed(2)}`;
     let m = VAZIAS.get(chave); if (!m) { m = new Map(); VAZIAS.set(chave, m); }
     return m;
   }
-
-  // Verticais sem catálogo aqui (o planejador não deve montar pedido por elas, ex.: ingredientes sem mercado).
-  semCatalogo(): string[] { return [...this.verticaisVazias].filter(([, n]) => n >= 2).map(([v]) => v); }
-
-  // Sonda em segundo plano, uma vez por local: marca como vazia a vertical que não devolve nada.
-  async sondarCatalogo(): Promise<void> {
-    const sondas: [Vertical, string][] = [["GROCERIES", "leite"], ["SHOPPING", "presente"]];
-    await Promise.allSettled(sondas.map(async ([tipo, query]) => {
-      if (this.verticaisVazias.has(tipo)) return;
-      const r = await this.tools.callTool("searchOffers", { query, userLocation: { latitude: this.local.latitude, longitude: this.local.longitude }, resultKind: "ITEM", merchantType: tipo, pageSize: 5, refinements: { onlyOpen: true } });
-      this.verticaisVazias.set(tipo, extrairItens(r).length === 0 ? 2 : 0);
-    }));
+  private contagemVazia(tipo: Vertical): number {
+    const v = this.vazias().get(tipo);
+    return v && Date.now() - v.em < TTL_VAZIA_MS ? v.n : 0;
   }
+  private marcarVazia(tipo: Vertical, vazio: boolean): void {
+    this.vazias().set(tipo, { n: vazio ? this.contagemVazia(tipo) + 1 : 0, em: Date.now() });
+  }
+
+  // Verticais sem catálogo agora (o planejador não deve montar pedido por elas).
+  semCatalogo(): string[] { return (["GROCERIES", "RESTAURANT", "SHOPPING"] as Vertical[]).filter((v) => this.contagemVazia(v) >= 2); }
+
+  // Por que uma necessidade ficou sem opção ("há itens, mas nada aberto com entrega agora" é diferente de "não existe").
+  private readonly semResultado = new Map<string, string>();
 
   constructor(
     private readonly tools: McpTools,
@@ -219,15 +221,17 @@ export class McpDomain implements DomainPort {
     // exemplo), busca onde há catálogo, e lembra disso para não gastar chamadas à toa nos próximos pedidos.
     const alternativa = ALTERNATIVA[n.vertical as Vertical];
     let tipo = n.vertical as Vertical;
-    const pular = alternativa !== undefined && (this.verticaisVazias.get(tipo) ?? 0) >= 2;
+    const pular = alternativa !== undefined && this.contagemVazia(tipo) >= 2;
     let { respostas, unicos } = pular && alternativa ? await buscarEm(alternativa) : await buscarEm(tipo);
     if (pular && alternativa) tipo = alternativa;
     else if (unicos.size === 0 && alternativa) {
-      this.verticaisVazias.set(tipo, (this.verticaisVazias.get(tipo) ?? 0) + 1);
+      this.marcarVazia(tipo, true);
       const outra = await buscarEm(alternativa).catch(() => undefined);
       if (outra && outra.unicos.size > 0) { ({ respostas, unicos } = outra); tipo = alternativa; }
-    } else if (unicos.size > 0) this.verticaisVazias.set(tipo, 0);
+    } else if (unicos.size > 0) this.marcarVazia(tipo, false);
     const observedAt = new Date().toISOString();
+    const abertos = [...unicos.values()].filter((i) => i.merchant.isOpen === true).length;
+    const comEntrega = [...unicos.values()].filter((i) => i.merchant.isOpen === true && !!i.merchant.deliveryMethod).length;
     const convertidos = [...unicos.values()].map((i) => paraCandidato(i, observedAt)).filter((c): c is NonNullable<typeof c> => !!c);
     void ocasiao; // quantidade é calculada ao montar o plano
     // Restrições com filtro oficial do MCP (ex.: LAC_FREE) vão no refinamento; as demais passam pelo filtro
@@ -275,9 +279,9 @@ export class McpDomain implements DomainPort {
       else if (proximo.length > 0 && n.fonte !== "inferido") { todos = proximo; cobertura = "proxima"; }
       else todos = [];
       todos = todos.slice(0, MAX_CANDIDATOS);
-      console.info(`[busca] ${n.vertical} "${n.categoria}" consultas=${consultas.length} respostas=${respostas.length} itens=${unicos.size} elegiveis=${pool.length} serve=${serve.length} proximo=${proximo.length} fonte=${n.fonte ?? "dito"}`);
+      console.info(`[busca] ${n.vertical} "${n.categoria}" consultas=${consultas.length} respostas=${respostas.length} itens=${unicos.size} abertos=${abertos} comEntrega=${comEntrega} elegiveis=${pool.length} serve=${serve.length} proximo=${proximo.length} fonte=${n.fonte ?? "dito"}`);
     } else {
-      console.info(`[busca] ${n.vertical} "${n.categoria}" consultas=${consultas.length} respostas=${respostas.length} itens=${unicos.size} elegiveis=${pool.length} (sem juiz)`);
+      console.info(`[busca] ${n.vertical} "${n.categoria}" consultas=${consultas.length} respostas=${respostas.length} itens=${unicos.size} abertos=${abertos} comEntrega=${comEntrega} elegiveis=${pool.length} (sem juiz)`);
     }
     // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
     const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
@@ -290,12 +294,14 @@ export class McpDomain implements DomainPort {
       return cobertura === "proxima" ? { ...o, rotulo: "mais parecida", motivo: `não encontrei "${n.categoria}"; esta é a opção mais parecida`, cobertura } : o;
     });
     this.ultimaBusca.set(n.id, candidatos.map((c, i) => ({ ...c, opcao: opcoes[i] })));
+    // Sem opção: diz POR QUÊ. Há itens, mas nada aberto com entrega agora (ex.: mercado de madrugada) não é "não existe".
+    if (opcoes.length === 0) this.semResultado.set(n.id, unicos.size > 0 && pool.length === 0 ? "fora_de_horario" : "nao_encontrado"); else this.semResultado.delete(n.id);
     return opcoes;
   }
 
   async montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot> {
     const candidatos = new Map(input.itens.map((it) => [it.necessidade.id, this.ultimaBusca.get(it.necessidade.id) ?? []]));
-    const snapshot = construir(randomUUID(), 1, input.ocasiao, input.itens.map((it) => ({ necessidade: it.necessidade, lista: candidatos.get(it.necessidade.id) ?? [] })));
+    const snapshot = construir(randomUUID(), 1, input.ocasiao, input.itens.map((it) => ({ necessidade: it.necessidade, lista: candidatos.get(it.necessidade.id) ?? [] })), this.semResultado);
     this.planos.set(snapshot.planoId, { subjectRef: input.subjectRef, snapshot, ocasiao: input.ocasiao, necessidades: input.itens.map((i) => i.necessidade), candidatos });
     if (this.planos.size > 5000) this.planos.delete(this.planos.keys().next().value!);
     return structuredClone(snapshot);
@@ -338,7 +344,7 @@ export class McpDomain implements DomainPort {
   }
 }
 
-function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { necessidade: Necessidade; lista: Candidato[] }[]): PlanoSnapshot {
+function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { necessidade: Necessidade; lista: Candidato[] }[], motivos: Map<string, string> = new Map()): PlanoSnapshot {
   const blocos: BlocoPlano[] = [];
   const naoAtendidas: PlanoSnapshot["naoAtendidas"] = [];
   const pendencias: string[] = [];
@@ -347,7 +353,7 @@ function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { n
     if (!principal) {
       // Sugestão do próprio Guide que não achou nada some em silêncio: a pessoa não pediu, então "não tenho" só gera ruído.
       if (n.fonte === "inferido") continue;
-      naoAtendidas.push({ categoria: n.categoria, motivo: n.restricoes.length ? "nenhuma opção aberta com composição confirmada para a restrição" : "nenhuma opção aberta com entrega no iFood agora" });
+      naoAtendidas.push({ categoria: n.categoria, motivo: n.restricoes.length ? "nenhuma opção aberta com composição confirmada para a restrição" : motivos.get(n.id) === "fora_de_horario" ? "existe no iFood, mas nenhuma loja está aberta com entrega agora" : "não encontrei no iFood perto de você" });
       continue;
     }
     const quantidade = quantidadePara(n, ocasiao);
