@@ -12,7 +12,7 @@ import { falaDoPlanoValida, sanearPlano, limparNome } from "../guardas-fala";
 import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } from "../complementos";
 import { temDadoPessoal } from "../privacidade";
 import { montarSacola } from "../sacola";
-import type { AgentReply, AgentSession, ConverseInput, DomainPort, GrupoOpcoes, Necessidade, OpcaoPlano, PlanoSnapshot } from "../types";
+import { novoRelatorio, type AgentReply, type AgentSession, type ConverseInput, type DomainPort, type GrupoOpcoes, type Necessidade, type OpcaoPlano, type PlanoSnapshot, type RelatorioBusca } from "../types";
 
 const MAX_PASSOS = 4;          // rodadas de ferramenta por turno (buscar, buscar, mostrar...)
 const TIMEOUT_MS = 12_000;     // por chamada ao modelo
@@ -153,7 +153,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   s.turnos += 1;
   let tela: AgentReply["tela"];
   let aprovacao: AgentReply["aprovacao"];
-  const trace: { guarda?: string; passos: PassoTrace[]; erro?: string; saneada?: boolean; reserva?: string; provedor?: boolean; falaVsPlano?: { ok: boolean; motivo?: string } } = { passos: [] };
+  const trace: { guarda?: string; passos: PassoTrace[]; erro?: string; saneada?: boolean; reserva?: string; provedor?: boolean; mcp?: { consultas: number; falhas: string[]; cache: number; retries: number }; falaVsPlano?: { ok: boolean; motivo?: string } } = { passos: [] };
 
   let usado = deps.nomeModelo; // modelo que de fato respondeu (o reserva, se o titular falhou)
   const fim = (resposta: string): AgentReply => {
@@ -260,6 +260,10 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
           grupos.push(saida.grupo);
           if (!tela || tela.tipo === "mostrar_opcoes") tela = { tipo: "mostrar_opcoes", plano: { ...(s.plano ?? planoVazio()), opcoes: grupos.slice(-GRUPOS_NA_TELA) } };
         }
+        if (saida.rels?.length) {
+          const m = (trace.mcp ??= { consultas: 0, falhas: [], cache: 0, retries: 0 });
+          for (const r of saida.rels) { m.consultas += r.consultas; m.falhas.push(...r.falhas); m.cache += r.cache; m.retries += r.retries; }
+        }
         if (saida.tela) tela = saida.tela;
         msgs.push(new ToolMessage({ tool_call_id: c.id ?? c.name, content: saida.texto }));
       }
@@ -283,7 +287,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   return fim(resposta);
 }
 
-type Saida = { texto: string; tela?: AgentReply["tela"]; grupo?: GrupoOpcoes; diag?: unknown };
+type Saida = { texto: string; tela?: AgentReply["tela"]; grupo?: GrupoOpcoes; diag?: unknown; rels?: RelatorioBusca[] };
 
 async function executarFerramenta(nome: string, args: unknown, s: AgentSession, mem: Memoria, deps: AtendenteDeps): Promise<Saida> {
   if (nome === "configurar_complementos") {
@@ -298,7 +302,8 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
   if (nome === "buscar_no_ifood") {
     const a = buscarSchema.parse(args);
     if (ALCOOL.test(a.categoria)) return { texto: "Não busco bebida alcoólica. Ofereça outra coisa." };
-    const doDominio = await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao);
+    const rel = novoRelatorio();
+    const doDominio = await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao, rel);
     const ordenadas = ordenar(doDominio, a.ordenar);
     const opcoes = ordenadas.slice(0, OPCOES_POR_BUSCA);
     // Diagnóstico: o domínio já cortou para os melhores do SEU ranking; o critério do modelo só reordena esses.
@@ -309,7 +314,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
     if (mem.resumoBuscas.length > 8) mem.resumoBuscas.shift();
     console.info(`[atendente] buscar categoria="${a.categoria}" ordenar=${a.ordenar ?? "relevancia"} opcoes=${opcoes.length}`);
-    return { texto, diag, ...(opcoes.length ? { grupo: { categoria: a.categoria, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
+    return { texto, diag: { ...diag, mcp: rel }, rels: [rel], ...(opcoes.length ? { grupo: { categoria: a.categoria, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
   }
   if (nome === "mostrar_plano") {
     const a = mostrarSchema.parse(args);
@@ -322,12 +327,14 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     // recente já trouxe, usa essa busca em vez de ir ao iFood de novo (~2 s sem nada novo; o detalharPlano abaixo ainda
     // confere preço e disponibilidade da escolhida no iFood).
     let semBusca = 0;
+    const rels: RelatorioBusca[] = [];
     const itens = await Promise.all(necessidades.map(async (n, k) => {
       const ref = a.itens[k]?.ref;
       const grupo = ref ? mem.grupoDe.get(ref) : undefined;
       const visto = ref ? mem.opcoes.get(ref) : undefined;
       if (grupo && visto && grupo.em !== undefined && Date.now() - grupo.em < VALIDADE_BUSCA_MS) { semBusca++; return { necessidade: n, opcoes: [visto, ...grupo.itens.filter((o) => o.ref !== visto.ref)] }; }
-      return { necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) };
+      const rel = novoRelatorio(); rels.push(rel);
+      return { necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao, rel) };
     }));
     const base = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
     // Nomes de loja e item vêm do catálogo: limpos antes de ir à tela e à fala.
@@ -346,7 +353,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");
     return {
       texto: `Plano versão ${plano.versao} na tela: ${resumo || "nenhum item encontrado"}.${faltas ? ` Sem opção agora para: ${faltas}.` : ""}`,
-      diag,
+      diag, rels,
       ...(plano.blocos.length ? { tela: { tipo: atualizado ? "plano_atualizado" as const : "mostrar_plano" as const, plano } } : {}),
     };
   }

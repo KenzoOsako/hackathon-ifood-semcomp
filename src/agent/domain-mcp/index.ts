@@ -12,11 +12,32 @@ import { descricaoDe } from "../descricao";
 import { urlDoIfood } from "../guardas-fala";
 import { MAX_CONSULTAS } from "../limites";
 import { normalizarComplementos } from "../complementos";
-import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
+import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, RelatorioBusca, Vertical } from "../types";
 
 // Porta mínima para o cliente MCP: o domínio não conhece transporte nem token.
 export interface McpTools { callTool(name: string, args: Record<string, unknown>): Promise<unknown> }
 export interface Localizacao { latitude: number; longitude: number; fonte: "endereco" | "fixa" }
+
+// O MCP do iFood é uma credencial compartilhada e devolve INTERNAL quando recebe rajada (medido em 18/10: 4 de 5 chamadas
+// simultâneas falharam). Por isso: no máximo N chamadas ao mesmo tempo no processo e UMA nova tentativa em INTERNAL.
+const MAX_CONCORRENTES = Number(process.env.MCP_CONCORRENCIA) || 3;
+const gFila = globalThis as unknown as { __guideMcpFila?: { ativos: number; espera: (() => void)[] } };
+const fila = (gFila.__guideMcpFila ??= { ativos: 0, espera: [] });
+export async function comLimite<T>(fn: () => Promise<T>, max = MAX_CONCORRENTES): Promise<T> {
+  if (fila.ativos >= max) await new Promise<void>((liberar) => fila.espera.push(liberar)); // a vaga passa direto para quem espera
+  else fila.ativos++;
+  try { return await fn(); }
+  finally { const prox = fila.espera.shift(); if (prox) prox(); else fila.ativos--; }
+}
+const ehInterno = (e: unknown) => /INTERNAL/.test(String(e));
+const PAUSA_RETRY_MS = 300;
+
+// Cache de busca: só resposta COM itens, por consulta + vertical + restrições + local, 3 min. Vazio e erro nunca entram
+// (um "não existe" falso, vindo de erro do iFood, ficaria repetido por minutos). getItem nunca é cacheado: confere preço e
+// disponibilidade da opção escolhida na hora de montar o plano.
+const TTL_CACHE_MS = 3 * 60_000;
+const MAX_CACHE = 200;
+const cacheLigado = () => process.env.ATENDENTE_CACHE !== "off";
 
 const MAX_CANDIDATOS = 10;
 // Candidatos que entram na avaliação de relevância (antes de cortar pelo ranking de preço, que sozinho põe lixo barato na frente).
@@ -165,10 +186,37 @@ export class McpDomain implements DomainPort {
   ) {}
 
   // Toda ida ao MCP passa por aqui só para medir o tempo (log); não muda o que é enviado nem o resultado.
-  private async chamar(nome: string, args: Record<string, unknown>): Promise<unknown> {
+  private async chamar(nome: string, args: Record<string, unknown>, rel?: RelatorioBusca): Promise<unknown> {
     const t = performance.now();
-    try { return await this.tools.callTool(nome, args); }
-    finally { console.info(`[mcp] ${nome} ${Math.round(performance.now() - t)}ms${typeof args.query === "string" ? ` q="${args.query}"` : ""}`); }
+    try {
+      return await comLimite(async () => {
+        try { return await this.tools.callTool(nome, args); }
+        catch (e) {
+          if (!ehInterno(e)) throw e;
+          if (rel) rel.retries++;
+          console.warn(`[mcp] ${nome} INTERNAL; nova tentativa`);
+          await new Promise((r) => setTimeout(r, PAUSA_RETRY_MS));
+          return await this.tools.callTool(nome, args);
+        }
+      });
+    } finally {
+      const ms = Math.round(performance.now() - t);
+      rel?.ms.push(ms);
+      console.info(`[mcp] ${nome} ${ms}ms${typeof args.query === "string" ? ` q="${args.query}"` : ""}`);
+    }
+  }
+
+  private readonly cacheBusca = new Map<string, { ate: number; resposta: unknown }>();
+  private async buscarComCache(args: Record<string, unknown> & { query: string }, rel?: RelatorioBusca): Promise<unknown> {
+    const chave = JSON.stringify(args);
+    const hit = cacheLigado() ? this.cacheBusca.get(chave) : undefined;
+    if (hit && hit.ate > Date.now()) { if (rel) rel.cache++; return hit.resposta; }
+    const resposta = await this.chamar("searchOffers", args, rel);
+    if (cacheLigado() && extrairItens(resposta).length > 0) {
+      this.cacheBusca.set(chave, { ate: Date.now() + TTL_CACHE_MS, resposta });
+      if (this.cacheBusca.size > MAX_CACHE) this.cacheBusca.delete(this.cacheBusca.keys().next().value!);
+    }
+    return resposta;
   }
 
   async detalharItem(opcao: OpcaoPlano): Promise<OpcaoPlano> {
@@ -188,18 +236,21 @@ export class McpDomain implements DomainPort {
     }
   }
 
-  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao, relatorio?: RelatorioBusca): Promise<OpcaoPlano[]> {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);
     // O catálogo busca ITEM por termo: o planejador devolve 1 a 3 termos concretos (sinônimos reais), em paralelo.
     const consultas = consultasDe(n);
-    const buscas = await Promise.allSettled(consultas.map((query) => this.chamar("searchOffers", {
+    if (relatorio) relatorio.consultas += consultas.length;
+    const buscas = await Promise.allSettled(consultas.map((query) => this.buscarComCache({
       query,
       userLocation: { latitude: this.local.latitude, longitude: this.local.longitude },
       resultKind: "ITEM",
       merchantType: n.vertical as Vertical,
       pageSize: PAGE_SIZE,
       refinements: { onlyOpen: true, ...(restricoesMcp.length ? { itemRestrictions: restricoesMcp } : {}) },
-    })));
+    }, relatorio)));
+    // Falha parcial fica visível (trace e log): uma consulta que caiu parece "sem resultado" e não pode passar em silêncio.
+    buscas.forEach((b, i) => { if (b.status === "rejected") { relatorio?.falhas.push(`${consultas[i]}: ${String(b.reason).slice(0, 90)}`); console.warn(`[mcp] consulta "${consultas[i]}" falhou: ${String(b.reason).slice(0, 120)}`); } });
     const respostas = buscas.flatMap((b) => (b.status === "fulfilled" ? [b.value] : []));
     // Só falha se TODAS falharam: uma consulta que cai não derruba a necessidade.
     if (respostas.length === 0) throw (buscas[0] as PromiseRejectedResult).reason;

@@ -138,9 +138,13 @@ export type EventoFeedback =
   | { tipo: "friccao"; perguntas: number; nivel: Nivel; turnos: number };
 
 // Ferramentas do domínio que o agente pode chamar. Nenhuma compra, aprova ou paga.
+// O que a busca fez no MCP (só para o trace): quantas consultas, quais falharam, quantas vieram do cache e quantas novas tentativas.
+export interface RelatorioBusca { consultas: number; falhas: string[]; cache: number; retries: number; ms: number[] }
+export const novoRelatorio = (): RelatorioBusca => ({ consultas: 0, falhas: [], cache: 0, retries: 0, ms: [] });
+
 export interface DomainPort {
   detalharItem?(opcao: OpcaoPlano): Promise<OpcaoPlano>;
-  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]>;
+  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao, relatorio?: RelatorioBusca): Promise<OpcaoPlano[]>;
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot>;
   ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot>;
   registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void>;
