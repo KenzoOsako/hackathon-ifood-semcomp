@@ -1,3 +1,10 @@
+## Imagens do catálogo — 18/10/2026 (Kenzo)
+
+- Transferência explícita: responsabilidades de Hyago passam a Kenzo; autoria histórica preservada.
+- Branch feat/kenzo-imagens-reais-ifood, base 7918d15. Implementação de mídia em resultados/revisão/sacola; detalhes e auditoria em docs/IMAGENS_REAIS_IFOOD.md.
+- Typecheck/lint/build aprovados; 555 testes passaram, 10 ignorados; lint tem 10 avisos preexistentes.
+- Teste real bloqueado: OAuth local não configurado (login HTTP 503). Voz/mídia real e CDN ainda sem comprovação. Sem PR até cumprir os gates do plano; nenhuma escrita remota ou compra.
+
 # Estado atual — 17/10/2026
 
 ## K-3 — contrato e domínio local do plano composto

@@ -4,6 +4,9 @@ import type { OpcaoPlano, PlanoSnapshot, Sacola, TipoTela } from "@/agent/types"
 import { chaveLoja } from "@/agent/sacola";
 import type { Option, OptionLabel, Reason } from "@/contracts";
 
+import { catalogImage, type CatalogMedia } from "@/ui/lib/catalog-media";
+import { mockMediaFor } from "@/ui/lib/mock-media";
+
 export type PlanoTela = PlanoSnapshot & { sacola?: Sacola };
 export type GuideTela = { tipo: TipoTela; plano: PlanoTela };
 
@@ -28,11 +31,12 @@ const LABEL: Record<string, [OptionLabel, Reason["kind"]]> = {
 const capitalizar = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 // O cartão mostra o preço de uma unidade; a quantidade fica no título do bloco para não parecer total.
-export function paraOption(o: OpcaoPlano): { option: Option; tag: string } {
+export function paraOption(o: OpcaoPlano): { option: Option; tag: string; media: CatalogMedia } {
   const [label, kind] = LABEL[o.rotulo] ?? ["MAIS_BARATA", "curated"];
   const minutos = o.prazo?.match(/^\d+/)?.[0];
   return {
     tag: capitalizar(o.rotulo || "opção"),
+    media: o.origem === "simulado" ? (mockMediaFor(chaveLoja(o)) ?? {}) : { photo: catalogImage(o.imagemUrl), logo: catalogImage(o.logoUrl) },
     option: {
       label,
       candidate: {
