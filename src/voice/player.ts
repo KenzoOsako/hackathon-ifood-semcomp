@@ -19,8 +19,8 @@ export interface PlayerDeps {
 }
 
 export interface PlayerHooks {
-  onTtsResponse?: () => void; // a rota de voz respondeu ao primeiro pedaço do turno
-  onAudioStart?: () => void; // o primeiro áudio do turno começou a tocar
+  onTtsResponse?: (text: string) => void; // a rota de voz respondeu ao pedido de áudio deste texto
+  onAudioStart?: (text: string) => void; // o áudio deste texto começou a tocar
 }
 
 interface Item {
@@ -49,8 +49,6 @@ export class SpeechPlayer {
   private url?: string;
   private cancelPlay?: () => void;
   private lastText?: string;
-  private reportedResponse = false;
-  private reportedAudio = false;
   private idleWaiters: Array<() => void> = [];
   // Frases fixas ("Deixa eu ver as opções.") já sintetizadas: tocam sem esperar a rede.
   private readonly cache = new Map<string, Promise<Blob | null>>();
@@ -64,10 +62,10 @@ export class SpeechPlayer {
     }
   }
 
-  private reportResponse() {
-    if (this.reportedResponse) return;
-    this.reportedResponse = true;
-    this.hooks.onTtsResponse?.();
+  // Avisa CADA resposta da rota de voz e CADA áudio que começa; a sessão decide qual marca conta para a latência
+  // (a frase de espera e a resposta útil passam pelos mesmos ganchos).
+  private reportResponse(text: string) {
+    this.hooks.onTtsResponse?.(text);
   }
 
   private fetchBlob(text: string, previousText: string | undefined, nextText: string | undefined, signal?: AbortSignal, silent = false): Promise<Blob | null> {
@@ -80,7 +78,7 @@ export class SpeechPlayer {
     })
       .then(async (res) => {
         if (!res.ok) return null;
-        if (!silent) this.reportResponse();
+        if (!silent) this.reportResponse(text);
         return await res.blob();
       })
       .catch(() => null);
@@ -104,7 +102,7 @@ export class SpeechPlayer {
     this.ctrl ??= new AbortController();
     const cached = this.cache.get(t);
     const blob = cached
-      ? cached.then((b) => (b ? (this.reportResponse(), b) : this.fetchBlob(t, this.lastText, opts.nextText, this.ctrl?.signal)))
+      ? cached.then((b) => (b ? (this.reportResponse(t), b) : this.fetchBlob(t, this.lastText, opts.nextText, this.ctrl?.signal)))
       : this.fetchBlob(t, this.lastText, opts.nextText, this.ctrl.signal);
     this.queue.push({ text: t, blob });
     this.lastText = t;
@@ -127,7 +125,7 @@ export class SpeechPlayer {
     const item = this.queue.shift()!;
     const blob = await item.blob;
     if (gen !== this.gen) return;
-    if (blob) await this.playBlob(blob, gen);
+    if (blob) await this.playBlob(blob, gen, item.text);
     else await (this.deps.speakFallback ?? browserVoice)(item.text);
     await this.drainQueue(gen);
   }
@@ -149,7 +147,7 @@ export class SpeechPlayer {
     }
   }
 
-  private playBlob(blob: Blob, gen: number): Promise<void> {
+  private playBlob(blob: Blob, gen: number, text: string): Promise<void> {
     return new Promise((resolve) => {
       const url = URL.createObjectURL(blob);
       this.url = url;
@@ -168,10 +166,7 @@ export class SpeechPlayer {
       audio.onended = done;
       audio.onerror = done;
       audio.play().then(() => {
-        if (gen === this.gen && !this.reportedAudio) {
-          this.reportedAudio = true;
-          this.hooks.onAudioStart?.();
-        }
+        if (gen === this.gen) this.hooks.onAudioStart?.(text);
       }, done);
     });
   }
@@ -196,8 +191,6 @@ export class SpeechPlayer {
     this.ctrl = undefined;
     this.audio = undefined;
     this.lastText = undefined;
-    this.reportedResponse = false;
-    this.reportedAudio = false;
   }
 
   private flushWaiters() {

@@ -53,7 +53,18 @@ export function useGuideVoice() {
     return () => { alive = false; };
   }, []);
 
+  // Um turno por vez: começar outro (ou a pessoa interromper) cancela o anterior, e respostas atrasadas dele são descartadas.
+  const turnAbort = useRef<AbortController | null>(null);
+  const abortTurn = useCallback(() => {
+    turnAbort.current?.abort();
+    turnAbort.current = null;
+    setBusy(false);
+  }, []);
+
   const run = useCallback(async (texto: string, origem: "voz" | "texto", sinais: VoiceSignals | undefined, ctl: TurnCtl) => {
+    turnAbort.current?.abort();
+    const ac = new AbortController();
+    turnAbort.current = ac;
     setBusy(true);
     setUnclear(null);
     setLines((l) => [...l, { id: nextId("u"), from: "voce", text: texto }]);
@@ -62,37 +73,43 @@ export function useGuideVoice() {
         onAgentText: (text) => setLines((l) => [...l, { id: nextId("a"), from: "agente", text }]),
         onScreen: (event, payload) => { terms.current = termsFromPlan(payload); setScreen({ event, payload }); },
         onLogin: (url) => setLogin({ url }),
-      }, { after });
+      }, { after, signal: ac.signal });
     } finally {
-      setBusy(false);
+      if (turnAbort.current === ac) { turnAbort.current = null; setBusy(false); }
     }
   }, []);
 
   const voice = useVoice(
     (u, api) => {
       setUtterance(u);
-      void run(u.texto, "voz", u.sinais, { mark: api.mark, enqueue: (t) => api.enqueue(t), done: api.turnDone });
+      void run(u.texto, "voz", u.sinais, { mark: api.mark, enqueue: (t) => api.enqueue(t), done: api.turnDone, end: api.turnEnded });
     },
     {
       getTerms: () => terms.current,
       onUnclear: (t) => setUnclear(t),
+      onListening: abortTurn,
       // Cada turno com áudio termina com um resumo de latência: guarda para o p50/p95.
       onLatency: (s) => { if (s.timeToFirstAudioMs !== undefined) setRounds((r) => [...r, s]); },
     },
   );
 
-  const { mark, enqueue, turnDone, beginTurn } = voice;
+  const { mark, enqueue, turnDone, turnEnded, beginTurn } = voice;
+  // Interromper a fala também cancela o turno em andamento: nada do agente fala depois que a pessoa mandou parar.
+  const voiceStopSpeaking = voice.stopSpeaking;
+  const stopSpeaking = useCallback(() => { abortTurn(); voiceStopSpeaking(); }, [abortTurn, voiceStopSpeaking]);
   const sendText = useCallback((texto: string) => {
     const t = texto.trim();
     if (!t) return;
-    void run(t, "texto", undefined, { mark, enqueue: (x) => enqueue(x), done: turnDone, begin: beginTurn });
-  }, [run, mark, enqueue, turnDone, beginTurn]);
+    voiceStopSpeaking(); // digitar por cima do Guide interrompe a fala, como falar por cima (o `run` cancela o turno anterior)
+    void run(t, "texto", undefined, { mark, enqueue: (x) => enqueue(x), done: turnDone, end: turnEnded, begin: beginTurn });
+  }, [run, voiceStopSpeaking, mark, enqueue, turnDone, turnEnded, beginTurn]);
 
   const stats = useMemo(() => summarizeRounds(rounds, { skipFirst: skipFirstRound }), [rounds, skipFirstRound]);
   const clearRounds = useCallback(() => setRounds([]), []);
 
+  const { state, cancel } = voice;
+
   // Esc: descarta a gravação; se o Guide está falando, interrompe.
-  const { state, cancel, stopSpeaking } = voice;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -113,5 +130,5 @@ export function useGuideVoice() {
   }, [state, stop, stopSpeaking, start]);
   const label = { idle: voice.handsFree ? "Escutando…" : "Falar", listening: voice.handsFree ? "Ouvindo… (toque para encerrar)" : "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
 
-  return { ...voice, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
+  return { ...voice, stopSpeaking, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
 }

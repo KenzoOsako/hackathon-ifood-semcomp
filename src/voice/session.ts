@@ -9,7 +9,7 @@
 import { LIMIARES_CONFIANCA } from "@/agent/frases";
 import { BargeInDetector, EndpointDetector, NoiseFloor, DEFAULT_ENDPOINT, type EndpointOptions } from "./endpoint";
 import { LatencyTrace, type LatencySummary, type Mark } from "./latency";
-import { UNCLEAR_PHRASE } from "./phrases";
+import { FILLER_TEXTS, UNCLEAR_PHRASE } from "./phrases";
 import { computeSignals, type VoiceSignals } from "./signals";
 import { VoiceActivityTracker } from "./vad";
 
@@ -30,6 +30,8 @@ export interface VoiceApi {
   mark: (name: Mark) => void;
   // A resposta terminou SEM fala (erro, só texto): libera o microfone no modo sem as mãos.
   turnDone: () => void;
+  // O fluxo do agente acabou (com ou sem fala). Se ainda há fala tocando, o microfone espera ela terminar.
+  turnEnded: () => void;
 }
 
 export interface MeterLike { read(): number; close(): void; state?(): string }
@@ -120,6 +122,9 @@ export class VoiceSession {
   private finalizing = false;
   private destroyed = false;
   private awaitingReply = false; // entregou a fala e espera o agente responder: o microfone NÃO reabre ainda
+  // O agente ainda não terminou o turno. Separado de `awaitingReply` de propósito: a frase de espera da voz também é
+  // fala, e quando ELA termina o microfone não pode reabrir enquanto o agente ainda está trabalhando.
+  private turnPending = false;
   private cancelReplyTimeout?: () => void;
 
   constructor(private readonly d: SessionDeps, private readonly ev: SessionEvents) {}
@@ -170,13 +175,20 @@ export class VoiceSession {
     this.d.warm?.();
   }
 
-  speakingStarted(): void {
-    this.trace.mark("audio_start", this.d.now());
+  // Início de CADA áudio. "Primeiro som" conta qualquer um (inclui a frase de espera); "primeira palavra" só vale
+  // depois que o agente respondeu (first_chunk), senão a medida confundiria preenchimento com resposta útil.
+  speakingStarted(text = ""): void {
+    const t = this.d.now();
+    this.trace.mark("first_sound", t);
+    if (FILLER_TEXTS.has(text)) return; // frase de espera: é som, mas não é a resposta
+    if (!this.trace.has("first_chunk") || this.trace.has("audio_start")) return;
+    this.trace.mark("audio_start", t);
     this.ev.onLatency?.(this.trace.summary());
   }
 
-  ttsResponded(): void {
-    this.trace.mark("tts_first_byte", this.d.now());
+  // Resposta de TTS: só conta a da resposta útil (depois de first_chunk); a da frase de espera vem em cache e distorceria.
+  ttsResponded(text = ""): void {
+    if (!FILLER_TEXTS.has(text) && this.trace.has("first_chunk")) this.trace.mark("tts_first_byte", this.d.now());
   }
 
   destroy(): void {
@@ -192,11 +204,14 @@ export class VoiceSession {
   private awaitReply() {
     this.clearAwait();
     this.awaitingReply = true;
-    this.cancelReplyTimeout = this.d.after(() => { this.awaitingReply = false; this.cancelReplyTimeout = undefined; }, REPLY_TIMEOUT_MS);
+    this.turnPending = true;
+    // Trava de segurança: se o fim do turno nunca chegar, volta a ouvir.
+    this.cancelReplyTimeout = this.d.after(() => { this.awaitingReply = false; this.turnPending = false; this.cancelReplyTimeout = undefined; }, REPLY_TIMEOUT_MS);
   }
 
   private clearAwait() {
     this.awaitingReply = false;
+    this.turnPending = false;
     this.cancelReplyTimeout?.();
     this.cancelReplyTimeout = undefined;
   }
@@ -204,6 +219,15 @@ export class VoiceSession {
   turnDone(): void {
     this.clearAwait();
     this.cooldownUntil = this.d.now() + 300;
+  }
+
+  // Fim do fluxo do agente. Com fala ainda tocando, quem libera o microfone é o fim dessa fala (syncSpeakingState).
+  turnEnded(): void {
+    this.turnPending = false;
+    if (!this.d.player.speaking) {
+      this.clearAwait();
+      this.cooldownUntil = this.d.now() + 300;
+    }
   }
 
   private setState(s: VoiceState) {
@@ -295,7 +319,8 @@ export class VoiceSession {
       this.wasSpeaking = speaking;
       if (!speaking) {
         this.cooldownUntil = t + COOLDOWN_AFTER_SPEECH_MS;
-        this.clearAwait();
+        // O fim de uma fala não é o fim do turno: com o agente ainda trabalhando (ex.: acabou a frase de espera), segue esperando.
+        if (!this.turnPending) this.clearAwait();
       }
     }
   }
@@ -381,7 +406,7 @@ export class VoiceSession {
       const player = this.d.player;
       this.ev.onUtterance(
         { texto: data.texto, sinais, confianca: data.confianca, injecao: data.injecao, redacoes: data.redacoes },
-        { speak: (t) => player.speak(t), enqueue: (c, n) => player.enqueue(c, { nextText: n }), mark: (m) => this.mark(m), turnDone: () => this.turnDone() },
+        { speak: (t) => { const done = player.speak(t); this.turnEnded(); return done; }, enqueue: (c, n) => player.enqueue(c, { nextText: n }), mark: (m) => this.mark(m), turnDone: () => this.turnDone(), turnEnded: () => this.turnEnded() },
       );
     } catch {
       this.diag = { ...this.diag, sttStatus: "rede" };

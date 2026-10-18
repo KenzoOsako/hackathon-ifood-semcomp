@@ -41,7 +41,11 @@ O formato da resposta do `/api/converse` pode mudar. Se você migrar para NDJSON
 
 ## 3. Por que streaming vale a pena
 Orçamento de latência até a primeira palavra: STT ≤ 600 ms + 1º pedaço do backend ≤ 700 ms + 1º byte do TTS ≤ 450 ms ≤ **1800 ms**. Medido na máquina do Felipe (modo `dev`, após aquecer): STT 0,5 s, TTS 0,3 s, backend de regras 0,03 s, total cerca de 1,2 s.
-**Duas camadas de espera (já implementadas):** (1) a da voz, "Hum, um instante.", toca ~0,1 s depois do reconhecimento se o agente ainda não respondeu (só para fala por voz; se o agente responder em 100 ms, ela nem toca); (2) a do agente (`fraseEspera` → evento `ack`), que toca em seguida. As frases fixas da voz e todas as de `src/agent/frases.ts` ficam em cache: no servidor (`tts-cache.ts`, vale para todos os visitantes e não gasta cota) e no navegador (`player.preload`). Quando o LLM entrar, o turno do orquestrador vai passar de 1 s. Com JSON único, a pessoa espera tudo. Com `ack` na hora e `speech` por frase, ela ouve algo em < 1 s. A voz só precisa que o pedaço seja **uma frase completa** (ela divide frases longas sozinha; ver `src/voice/chunker.ts`).
+**Duas camadas de espera (já implementadas):** (1) a da voz, "Hum, um instante.", toca ~0,1 s depois do reconhecimento se o agente ainda não respondeu (só para fala por voz; se o agente responder em 100 ms, ela nem toca); (2) a do agente (`fraseEspera` → evento `ack`), que toca em seguida. O `ack` do agente só toca se a resposta ainda demora (50 ms de tolerância); com JSON único ele chega junto da resposta e é descartado, porque falar "Deixa eu ver as opções." só atrasaria a resposta útil em ~1,6 s. As frases fixas da voz e todas as de `src/agent/frases.ts` ficam em cache: no servidor (`tts-cache.ts`, vale para todos os visitantes e não gasta cota) e no navegador (`player.preload`). Quando o LLM entrar, o turno do orquestrador vai passar de 1 s. Com JSON único, a pessoa espera tudo. Com `ack` na hora e `speech` por frase, ela ouve algo em < 1 s. A voz só precisa que o pedaço seja **uma frase completa** (ela divide frases longas sozinha; ver `src/voice/chunker.ts`).
+
+**Fim do turno e microfone (modo sem as mãos):** o microfone só reabre quando o turno do agente acaba E a fala termina. `turn.ts` avisa `end` ao fim do fluxo; o fim de uma fala (ex.: a frase de espera) não libera o microfone enquanto o agente ainda trabalha. Falar ou digitar por cima do Guide interrompe a fala e **descarta o que sobrou do turno anterior** (nada atrasado do agente é falado).
+
+**Métricas de latência (sem confundir espera com resposta):** `firstSoundMs` = primeiro som de qualquer tipo (a frase de espera conta; meta 1,2 s); `timeToFirstAudioMs` = primeira palavra ÚTIL, ou seja, a resposta do agente (meta 1,8 s); `backendFirstChunkMs` e `ttsFirstByteMs` só olham a resposta útil. O `ack` do agente e a frase neutra são espera e nunca contam como resposta.
 
 ## 4. Regras para o texto que vai ser falado
 - Sem markdown, listas, `[` `]`, `*`, `#`: a voz remove, mas o texto fica estranho. Escreva como se fala.
@@ -69,7 +73,7 @@ Orçamento de latência até a primeira palavra: STT ≤ 600 ms + 1º pedaço do
 
 ## 6. Como a gente trabalha
 - Cada frente na sua branch; o Kenzo integra. Acumulamos trabalho antes do PR para não sobrecarregá-lo.
-- Antes de subir: `npm run typecheck`, `npm run lint`, `npm test` (326 testes) e `npm run build`.
+- Antes de subir: `npm run typecheck`, `npm run lint`, `npm test` (337 testes) e `npm run build`.
 - Chaves só no `.env` local. Nunca no código nem em doc.
 - Mudou o contrato de eventos, o schema de entrada ou o comportamento de aprovação? Avise no grupo e atualize este arquivo.
 

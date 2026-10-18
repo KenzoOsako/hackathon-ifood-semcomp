@@ -104,14 +104,14 @@ describe("player de fala por pedaços", () => {
     expect(player.speaking).toBe(false);
   });
 
-  it("avisa a primeira resposta da rota e o primeiro áudio, só uma vez por turno", async () => {
+  it("avisa cada resposta da rota e o início de cada áudio (a sessão decide qual marca conta)", async () => {
     player.enqueue("Primeira frase.");
     player.enqueue("Segunda frase.");
     await flush();
     FakeAudio.all[0].finish();
     await flush();
-    expect(hooks.onTtsResponse).toHaveBeenCalledTimes(1);
-    expect(hooks.onAudioStart).toHaveBeenCalledTimes(1);
+    expect(hooks.onTtsResponse).toHaveBeenCalledTimes(2);
+    expect(hooks.onAudioStart).toHaveBeenCalledTimes(2);
   });
 
   it("speak divide o texto em pedaços e resolve quando termina", async () => {

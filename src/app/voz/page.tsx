@@ -5,7 +5,7 @@ import { useState } from "react";
 import { LATENCY_TARGETS, type LatencySummary } from "@/voice/latency";
 import { useGuideVoice, type GuideStats } from "@/voice/use-guide-voice";
 
-const METRICS = ["sttMs", "backendFirstChunkMs", "ttsFirstByteMs", "timeToFirstAudioMs"] as const;
+const METRICS = ["sttMs", "firstSoundMs", "backendFirstChunkMs", "ttsFirstByteMs", "timeToFirstAudioMs"] as const;
 const cell = { padding: "4px 8px", borderBottom: "1px solid #eee" } as const;
 const smallButton = { padding: "6px 12px", borderRadius: 8, border: "1px solid #bbb", background: "#fff", color: "#222", cursor: "pointer" } as const;
 
@@ -20,7 +20,7 @@ export default function VozLab() {
   const [input, setInput] = useState("");
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", minHeight: "100vh", colorScheme: "light" }}>
+    <main style={{ boxSizing: "border-box", width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden", padding: 16, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", colorScheme: "light" }}>
       <h1 style={{ marginBottom: 4 }}>Guide · laboratório de voz</h1>
       <p style={{ marginTop: 0, color: "#555" }}>Clique em <strong>Falar</strong>, diga algo e clique em <strong>Parar</strong>. <strong>Esc</strong> ou <strong>Cancelar</strong> descarta a gravação. Tocar no botão enquanto o Guide fala interrompe a fala. Agente do Hyago.</p>
 
@@ -67,7 +67,7 @@ export default function VozLab() {
 
       <details open style={{ marginTop: 12, color: "#444" }}>
         <summary>Diagnóstico do microfone</summary>
-        <pre style={{ background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto", fontSize: 13 }}>{JSON.stringify({
+        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto", fontSize: 13 }}>{JSON.stringify({
           nivel_agora: g.diag.level?.toFixed(4),
           ruido_de_fundo: g.diag.floor?.toFixed(4),
           limite_de_voz: g.diag.threshold?.toFixed(4),
@@ -83,9 +83,10 @@ export default function VozLab() {
       {g.rounds.length > 0 && (
         <details open style={{ marginTop: 16, color: "#444" }}>
           <summary>Latência por rodada (ms)</summary>
+          <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", margin: "8px 0", fontSize: 13, width: "100%" }}>
             <thead>
-              <tr>{["#", "reconhecimento", "backend (1º pedaço)", "voz (1º byte)", "primeira palavra"].map((h) => <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #ddd" }}>{h}</th>)}</tr>
+              <tr>{["#", "reconhecimento", "1º som (espera conta)", "backend (1º pedaço)", "voz (1º byte)", "1ª palavra útil"].map((h) => <th key={h} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #ddd" }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {g.rounds.map((r, i) => (
@@ -105,6 +106,7 @@ export default function VozLab() {
               </tr>
             </tbody>
           </table>
+          </div>
           <label style={{ display: "inline-flex", gap: 6, alignItems: "center", marginRight: 12 }}>
             <input type="checkbox" checked={g.skipFirstRound} onChange={(e) => g.setSkipFirstRound(e.target.checked)} /> descartar a 1ª rodada (aquecimento)
           </label>
@@ -117,7 +119,7 @@ export default function VozLab() {
       {g.utterance && (
         <details open style={{ marginTop: 16, color: "#444" }}>
           <summary>Última fala (diagnóstico)</summary>
-          <pre style={{ background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto" }}>{JSON.stringify({ texto: g.utterance.texto, confianca: g.utterance.confianca, sinais: g.utterance.sinais, redacoes: g.utterance.redacoes, injecao: g.utterance.injecao }, null, 2)}</pre>
+          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto" }}>{JSON.stringify({ texto: g.utterance.texto, confianca: g.utterance.confianca, sinais: g.utterance.sinais, redacoes: g.utterance.redacoes, injecao: g.utterance.injecao }, null, 2)}</pre>
         </details>
       )}
     </main>
