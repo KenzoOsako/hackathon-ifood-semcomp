@@ -1,7 +1,8 @@
 "use client";
 // LABORATÓRIO DA VOZ (frente de Felipe). Página de teste do ciclo: falar → reconhecer → agente → ouvir.
-// Usa o agente de texto atual (/api/chat). A interface final é da frente de Malveste; esta rota só valida a voz.
+// Usa o agente do Hyago (/api/converse) pelo cliente de eventos (converse-client.ts). A interface final é da frente de Malveste; esta rota só valida a voz.
 import { useCallback, useState } from "react";
+import { converseTurn } from "@/voice/converse-client";
 import { useVoice, type Utterance } from "@/voice/use-voice";
 
 interface Line { from: "voce" | "agente"; text: string }
@@ -14,23 +15,35 @@ export default function VozLab() {
   const [utterance, setUtterance] = useState<Utterance | null>(null);
   const [terms, setTerms] = useState<string[]>([]); // nomes na tela: ajudam o reconhecimento
 
-  interface Ctl { mark: (m: "request_sent" | "first_chunk") => void; speak: (t: string) => unknown; done: () => void; begin?: () => void }
+  interface Ctl { mark: (m: "request_sent" | "first_chunk") => void; enqueue: (t: string) => void; done: () => void; begin?: () => void; origem?: "voz" | "texto"; sinais?: Utterance["sinais"] }
+
+  // Termos da tela (lojas e itens do plano) para o reconhecimento acertar os nomes. O payload vem do backend: defensivo.
+  const termsFromPlan = (plano: unknown): string[] => {
+    const blocos = (plano as { blocos?: Array<{ principal?: { loja?: string; item?: string }; alternativas?: Array<{ loja?: string; item?: string }> }> })?.blocos ?? [];
+    return blocos.flatMap((b) => [b.principal, ...(b.alternativas ?? [])]).flatMap((o) => [o?.loja, o?.item]).filter((t): t is string => !!t);
+  };
 
   const send = useCallback(async (text: string, ctl: Ctl) => {
     setBusy(true);
     setLines((l) => [...l, { from: "voce", text }]);
+    let spoke = false;
+    let firstSeen = false;
     try {
       ctl.begin?.();
       ctl.mark("request_sent");
-      const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
-      const t = (await r.json()) as { reply: string; options?: Array<{ candidate: { merchantName: string; itemName: string } }> };
-      if (t.options) setTerms(t.options.flatMap((o) => [o.candidate.merchantName, o.candidate.itemName]));
-      ctl.mark("first_chunk"); // o backend de hoje devolve tudo de uma vez; no fluxo real, este é o 1º pedaço
-      setLines((l) => [...l, { from: "agente", text: t.reply }]);
-      ctl.speak(t.reply); // divide em pedaços, busca o áudio de todos em paralelo e toca em ordem
-    } catch {
-      ctl.done(); // sem resposta falada: libera o microfone do modo sem as mãos
+      const said: string[] = [];
+      // Eventos na ordem em que o backend os produz (converse-client.ts). Hoje o JSON único vira eventos; com
+      // streaming no backend, a voz começa a falar no primeiro `speech` sem mudar nada aqui.
+      for await (const ev of converseTurn({ texto: text, origem: ctl.origem ?? "texto", sinais: ctl.sinais })) {
+        if (!firstSeen && (ev.type === "ack" || ev.type === "speech" || ev.type === "error")) { firstSeen = true; ctl.mark("first_chunk"); }
+        if (ev.type === "ack") { spoke = true; ctl.enqueue(ev.text); }
+        else if (ev.type === "speech") { spoke = true; said.push(ev.text); ctl.enqueue(ev.text); }
+        else if (ev.type === "error") { spoke = true; said.push(ev.reply); ctl.enqueue(ev.reply); }
+        else if (ev.type === "screen") setTerms(termsFromPlan(ev.payload));
+      }
+      if (said.length) setLines((l) => [...l, { from: "agente", text: said.join(" ") }]);
     } finally {
+      if (!spoke) ctl.done(); // sem resposta falada: libera o microfone do modo sem as mãos
       setBusy(false);
     }
   }, []);
@@ -39,7 +52,7 @@ export default function VozLab() {
   const voice = useVoice(
     (u, api) => {
       setUtterance(u);
-      void send(u.texto, { mark: api.mark, speak: api.speak, done: api.turnDone });
+      void send(u.texto, { mark: api.mark, enqueue: (t) => api.enqueue(t), done: api.turnDone, origem: "voz", sinais: u.sinais });
     },
     { getTerms: () => terms },
   );
@@ -50,7 +63,7 @@ export default function VozLab() {
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", minHeight: "100vh", colorScheme: "light" }}>
       <h1 style={{ marginBottom: 4 }}>Guide · laboratório de voz</h1>
-      <p style={{ marginTop: 0, color: "#555" }}>Clique em <strong>Falar</strong>, diga algo e clique em <strong>Parar</strong>. Tocar no botão enquanto o Guide fala interrompe a fala. Agente de texto simulado.</p>
+      <p style={{ marginTop: 0, color: "#555" }}>Clique em <strong>Falar</strong>, diga algo e clique em <strong>Parar</strong>. Tocar no botão enquanto o Guide fala interrompe a fala. Agente do Hyago (dados simulados).</p>
 
       <section aria-live="polite" style={{ display: "grid", gap: 8, margin: "16px 0" }}>
         {lines.map((l, i) => (
@@ -79,7 +92,7 @@ export default function VozLab() {
 
       {voice.errorMessage && <p role="alert" style={{ color: "#b00020" }}>{voice.errorMessage}</p>}
 
-      <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), { mark: voice.mark, speak: voice.speak, done: voice.turnDone, begin: voice.beginTurn }); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
+      <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), { mark: voice.mark, enqueue: (t) => voice.enqueue(t), done: voice.turnDone, begin: voice.beginTurn }); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ou digite aqui (o texto sempre funciona)" aria-label="Mensagem" disabled={busy} style={{ background: "#fff", color: "#111", flex: 1, padding: 12, borderRadius: 10, border: "1px solid #ccc", fontSize: 16 }} />
         <button disabled={busy} style={{ padding: "0 18px", borderRadius: 10, border: 0, background: "#222", color: "#fff" }}>Enviar</button>
       </form>
