@@ -79,9 +79,9 @@ export function RevisaoView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
         <h2 className="font-display text-2xl font-semibold">Revise o plano</h2>
         <p className="text-sm text-muted-foreground">Versão {plano.versao}. Para mudar algo, é só falar.</p>
         {porLoja(plano).map((l) => (
-          <section key={l.loja} className="mt-3 rounded-2xl border border-border bg-card">
+          <section key={l.lojaId} className="mt-3 rounded-2xl border border-border bg-card">
             <header className="flex items-center gap-2 border-b border-border p-3">
-              <StoreLogo seed={l.loja} shape="square" className="size-8" />
+              <StoreLogo seed={l.lojaId} shape="square" className="size-8" />
               <span className="font-display font-semibold">{l.loja}</span>
             </header>
             <ul className="divide-y divide-border">
@@ -121,9 +121,9 @@ export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
         </div>
         <p className="text-sm text-muted-foreground">Versão {sacola.versao} aprovada. Nada foi enviado ao iFood.</p>
         {sacola.lojas.map((l) => (
-          <section key={l.loja} className="mt-3 rounded-2xl border border-border bg-card">
+          <section key={l.lojaId} className="mt-3 rounded-2xl border border-border bg-card">
             <header className="flex items-center gap-2 border-b border-border p-3">
-              <StoreLogo seed={l.loja} shape="square" className="size-8" />
+              <StoreLogo seed={l.lojaId} shape="square" className="size-8" />
               <span className="font-display font-semibold">{l.loja}</span>
               <span className="ml-auto"><Origem origem={l.origem} /></span>
             </header>

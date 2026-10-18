@@ -67,6 +67,9 @@ export type Cobertura = "exata" | "proxima";
 export interface OpcaoPlano {
   ref: string;
   loja: string;
+  // Identificador estável do estabelecimento (merchantId no MCP). Duas lojas com o mesmo nome são lojas diferentes;
+  // sacola e revisão agrupam por ele. Ausente: agrupa pelo nome.
+  lojaId?: string;
   item: string;
   precoCents: number;
   freteCents?: number;
@@ -178,6 +181,7 @@ export interface LlmPort {
 
 // Sacola simulada do plano aprovado: valores calculados no servidor; nunca é um carrinho remoto nem um pedido.
 export interface SacolaLoja {
+  lojaId: string;
   loja: string;
   itens: { ref: string; item: string; categoria: string; quantidade: number; precoCents: number; subtotalCents: number }[];
   subtotalCents: number;

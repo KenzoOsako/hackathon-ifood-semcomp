@@ -68,7 +68,7 @@ function ordenar(ofertas: Oferta[], criterio: Exclude<Criterio, "outra">): Ofert
 function toOpcao(o: Oferta, criterio: Exclude<Criterio, "outra">): OpcaoPlano {
   const [rotulo, motivo] = ROTULO[criterio];
   const descricao = descricaoDe({ nota: o.nota, prazo: `em ${o.prazo}`.replace("em amanhã", "amanhã").replace("em em ", "em "), freteCents: o.freteCents, pedidoMinimoCents: o.pedidoMinimoCents, precoCents: o.precoCents });
-  return { ref: o.ref, loja: o.loja, item: o.item, precoCents: o.precoCents, freteCents: o.freteCents, prazo: o.prazo, nota: o.nota, rotulo, motivo, origem: "simulado", ...(o.pedidoMinimoCents ? { pedidoMinimoCents: o.pedidoMinimoCents } : {}), ...(descricao ? { descricao } : {}) };
+  return { ref: o.ref, loja: o.loja, lojaId: `fake:${o.loja}`, item: o.item, precoCents: o.precoCents, freteCents: o.freteCents, prazo: o.prazo, nota: o.nota, rotulo, motivo, origem: "simulado", ...(o.pedidoMinimoCents ? { pedidoMinimoCents: o.pedidoMinimoCents } : {}), ...(descricao ? { descricao } : {}) };
 }
 
 export class FakeDomain implements DomainPort {

@@ -1,6 +1,7 @@
 // Ponte entre o que o agente manda para a tela (evento `screen` com o plano) e os componentes do Malveste.
 // Só lê e formata: nenhuma regra de fluxo, ranking ou soma acontece aqui (docs/PLANO_TELA_GUIDE.md).
 import type { OpcaoPlano, PlanoSnapshot, Sacola, TipoTela } from "@/agent/types";
+import { chaveLoja } from "@/agent/sacola";
 import type { Option, OptionLabel, Reason } from "@/contracts";
 
 export type PlanoTela = PlanoSnapshot & { sacola?: Sacola };
@@ -35,7 +36,7 @@ export function paraOption(o: OpcaoPlano): { option: Option; tag: string } {
     option: {
       label,
       candidate: {
-        merchantId: o.loja,
+        merchantId: chaveLoja(o),
         merchantName: o.loja,
         itemId: o.ref,
         itemName: o.item,
@@ -51,12 +52,13 @@ export function paraOption(o: OpcaoPlano): { option: Option; tag: string } {
 
 // Revisão por loja: só agrupa os itens já escolhidos; valores continuam por item, como vieram.
 export function porLoja(plano: PlanoSnapshot) {
-  const lojas = new Map<string, { loja: string; freteCents?: number; itens: { bloco: PlanoSnapshot["blocos"][number] }[] }>();
+  const lojas = new Map<string, { lojaId: string; loja: string; freteCents?: number; itens: { bloco: PlanoSnapshot["blocos"][number] }[] }>();
   for (const b of plano.blocos) {
-    const l = lojas.get(b.principal.loja) ?? { loja: b.principal.loja, itens: [] };
+    const id = chaveLoja(b.principal);
+    const l = lojas.get(id) ?? { lojaId: id, loja: b.principal.loja, itens: [] };
     if (l.freteCents === undefined) l.freteCents = b.principal.freteCents;
     l.itens.push({ bloco: b });
-    lojas.set(l.loja, l);
+    lojas.set(id, l);
   }
   return [...lojas.values()];
 }
