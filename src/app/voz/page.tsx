@@ -14,7 +14,7 @@ export default function VozLab() {
   const [utterance, setUtterance] = useState<Utterance | null>(null);
   const [terms, setTerms] = useState<string[]>([]); // nomes na tela: ajudam o reconhecimento
 
-  interface Ctl { mark: (m: "request_sent" | "first_chunk") => void; speak: (t: string) => unknown; begin?: () => void }
+  interface Ctl { mark: (m: "request_sent" | "first_chunk") => void; speak: (t: string) => unknown; done: () => void; begin?: () => void }
 
   const send = useCallback(async (text: string, ctl: Ctl) => {
     setBusy(true);
@@ -28,6 +28,8 @@ export default function VozLab() {
       ctl.mark("first_chunk"); // o backend de hoje devolve tudo de uma vez; no fluxo real, este é o 1º pedaço
       setLines((l) => [...l, { from: "agente", text: t.reply }]);
       ctl.speak(t.reply); // divide em pedaços, busca o áudio de todos em paralelo e toca em ordem
+    } catch {
+      ctl.done(); // sem resposta falada: libera o microfone do modo sem as mãos
     } finally {
       setBusy(false);
     }
@@ -37,13 +39,13 @@ export default function VozLab() {
   const voice = useVoice(
     (u, api) => {
       setUtterance(u);
-      void send(u.texto, { mark: api.mark, speak: api.speak });
+      void send(u.texto, { mark: api.mark, speak: api.speak, done: api.turnDone });
     },
     { getTerms: () => terms },
   );
 
   const listening = voice.state === "listening";
-  const label = { idle: "Falar", listening: "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
+  const label = { idle: voice.handsFree ? "Escutando…" : "Falar", listening: voice.handsFree ? "Ouvindo… (toque para encerrar)" : "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", minHeight: "100vh", colorScheme: "light" }}>
@@ -58,7 +60,7 @@ export default function VozLab() {
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
         <button
-          onClick={() => (listening ? voice.stop() : void voice.start())}
+          onClick={() => (listening ? voice.stop() : voice.state === "speaking" ? voice.stopSpeaking() : void voice.start())}
           disabled={voice.state === "transcribing" || busy}
           aria-pressed={listening}
           style={{ padding: "14px 22px", borderRadius: 999, border: 0, background: listening ? "#222" : "#ea1d2c", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}
@@ -70,9 +72,14 @@ export default function VozLab() {
         </div>
       </div>
 
+      <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 12px", cursor: "pointer" }}>
+        <input type="checkbox" checked={voice.handsFree} onChange={(e) => void voice.setHandsFree(e.target.checked)} />
+        <span><strong>Modo conversa</strong> (sem as mãos): o Guide escuta, para sozinho quando você cala, responde e escuta de novo. Falar por cima dele interrompe.</span>
+      </label>
+
       {voice.errorMessage && <p role="alert" style={{ color: "#b00020" }}>{voice.errorMessage}</p>}
 
-      <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), { mark: voice.mark, speak: voice.speak, begin: voice.beginTurn }); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
+      <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), { mark: voice.mark, speak: voice.speak, done: voice.turnDone, begin: voice.beginTurn }); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ou digite aqui (o texto sempre funciona)" aria-label="Mensagem" disabled={busy} style={{ background: "#fff", color: "#111", flex: 1, padding: 12, borderRadius: 10, border: "1px solid #ccc", fontSize: 16 }} />
         <button disabled={busy} style={{ padding: "0 18px", borderRadius: 10, border: 0, background: "#222", color: "#fff" }}>Enviar</button>
       </form>

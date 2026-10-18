@@ -9,17 +9,17 @@ A ElevenLabs só leva o áudio (voz → texto, texto → voz). **O motor é o ba
 
 | # | Aspecto | "Perfeito" significa | Como verificar | Estado |
 |---|---|---|---|---|
-| 1 | **Entender o que a pessoa diz** | Nomes de lojas e itens reconhecidos; erro baixo em português do Brasil | Bateria de frases em várias vozes (`scripts/voice-eval.mjs`) + palavras-chave | 🟡 |
-| 2 | **Vocabulário do contexto** | O reconhecimento é ajudado pelo que está na tela (lojas, itens, opções) | Teste com e sem palavras-chave; palavras dinâmicas por sessão | 🟡 |
+| 1 | **Entender o que a pessoa diz** | Nomes de lojas e itens reconhecidos; erro baixo em português do Brasil | Bateria de frases em várias vozes (`scripts/voice-eval.mjs`) + palavras-chave | ✅ (voz sintética) ⚠️ (voz real) |
+| 2 | **Vocabulário do contexto** | O reconhecimento é ajudado pelo que está na tela (lojas, itens, opções) | Teste com e sem palavras-chave (erro 3,3% → 1,9%); palavras da tela enviadas a cada fala | ✅ |
 | 3 | **Falar natural e claro** | Voz brasileira agradável, sem tags faladas, valores por extenso, nomes certos | Escuta humana de amostras + testes de texto falado | ⚠️ |
 | 4 | **Pronúncia** ("Guide", "iFood", nomes de lojas) | Soa certo para ouvido brasileiro | Escuta humana; mapa de pronúncia | ⚠️ |
 | 5 | **Latência (sem pausa chata)** | 1ª palavra do Guide ≤ 1,8 s; backend ≤ 700 ms | `LatencyTrace` em cada turno; medida em `/voz` | 🟡 |
 | 6 | **Fluidez da conversa** | Fala em pedaços, sem silêncio entre eles, entonação contínua | Player com fila e busca antecipada; testes | ✅ (lógica) ⚠️ (ouvido) |
-| 7 | **Interrupção** | Falar por cima corta o Guide na hora e processa a nova fala | Player testado; precisa de microfone real | 🟡 ⚠️ |
-| 8 | **Fim de fala automático** | Para de gravar sozinho após um silêncio; sem cortar a pessoa no meio | Detector de fim de fala com testes; teste humano | 🔴 |
+| 7 | **Interrupção** | Falar por cima corta o Guide na hora e processa a nova fala | Player e sessão testados com peças falsas (voz sustentada interrompe, estalo não); precisa de microfone real | 🟡 ⚠️ |
+| 8 | **Fim de fala automático** | Para de gravar sozinho após um silêncio; sem cortar a pessoa no meio | Detector com testes (fala curta 700 ms, normal 1 s, pausa curta não corta); teste humano para ajustar os tempos | 🟡 ⚠️ |
 | 9 | **Eco** (o Guide se ouvir) | O microfone não confunde a voz do Guide com a da pessoa | Teste humano com caixa de som e com fone | ⚠️ |
 | 10 | **Falhas** | Microfone negado, sem rede, provedor fora, 429, áudio vazio: sempre há um caminho em texto | Testes de rota e de player | ✅ |
-| 11 | **Segurança e abuso** | Ninguém gasta nossos créditos; chave nunca no navegador; dado sensível mascarado | Limite por visitante, limite global, guardas; testes | 🟡 |
+| 11 | **Segurança e abuso** | Ninguém gasta nossos créditos; chave nunca no navegador; dado sensível mascarado | Limite por visitante, limite global, guardas; testes | ✅ (1 processo) |
 | 12 | **Configuração do painel ElevenLabs** | Agente protegido (autenticação, hosts), retenção mínima, voz e idioma certos | Checklist da seção 4 | 🔴 |
 | 13 | **Privacidade** | Sem gravar áudio por padrão; texto sem CPF/cartão; consentimento claro | Guardas + painel + aviso na tela | 🟡 |
 | 14 | **Acessibilidade** | Funciona por teclado e leitor de tela; legendas sempre; texto equivalente | Revisão com a interface final | 🟡 |
@@ -82,3 +82,10 @@ Bateria `scripts/voice-eval.mjs`: **28 frases do produto × 4 vozes brasileiras*
 
 ### Rodada 2 · segurança e abuso
 Limite por visitante (cookie anônimo `guide_voice`, HttpOnly, SameSite=Strict) e global; teto de identidades novas por minuto (limpar o cookie não dá cota nova); limite de caracteres de síntese; `429` com `Retry-After`; a tela cai para texto. **Verificado por testes** (143 no total). **Não coberto:** várias instâncias do servidor (os contadores são por processo) e abuso por IP; antes de publicar, trocar por armazenamento compartilhado e limitar por IP no provedor de hospedagem.
+
+### Rodada 3 · conversa sem as mãos (fim de fala, interrupção, espera da resposta)
+Lógica separada do React em `src/voice/session.ts` (máquina de estados) e `endpoint.ts` (detectores), testada com **microfone, gravador, relógio e player falsos** (20 cenários): fluxo manual; para sozinho no silêncio; fala curta termina mais rápido; pausa curta no meio da frase não corta; estalo não vira fala; voz sustentada por cima do Guide interrompe e marca a interrupção; estalo durante a fala do Guide não interrompe; ninguém fala (3 tentativas e desliga); `429` pausa o modo sem laço; desligar libera o microfone; destruir para tudo.
+
+**Defeito de desenho achado pelos testes e corrigido:** no modo sem as mãos o microfone **reabria assim que a fala era entregue, enquanto o agente ainda pensava**. Agora ele só reabre depois que o Guide termina de falar (mais uma folga de 0,5 s contra eco), quando a resposta termina sem fala (`turnDone`) ou após 15 s sem resposta.
+
+**NÃO verificado (precisa de teste humano em Chrome com microfone):** os tempos de silêncio (700 ms e 1 s) e os níveis de voz (0,02 para fala, 0,06 para interromper) são **pontos de partida**; o eco com caixa de som; o comportamento com ruído de fundo; microfones de fone e de notebook. O código que liga o navegador (`browser-deps.ts`) só foi verificado por tipo, lint e build.

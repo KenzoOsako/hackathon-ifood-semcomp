@@ -43,3 +43,6 @@ Microfone negado, ruído, provedor fora do ar, interrupção, queda para texto (
 
 ## Fluxo em pedaços (contrato com o backend)
 O backend (`/api/converse`, Hyago) responde em **NDJSON**, um evento por linha, conforme `converse-events.ts`: `ack` (reconhecimento imediato, opcional), `speech {seq, text, final?}` (um pedaço para falar), `screen {event, payload}` (para a tela), `done {turnId}` e `error {code, reply}`. A voz toca o primeiro `speech` assim que chega e já busca o áudio dos próximos. Orçamento de latência e regras para o backend: `docs/AGENTE_CONVERSA_E_FLUXO.md` §4.4.
+
+## Modo conversa (sem as mãos)
+Na página `/voz`, ligar **Modo conversa**: o Guide escuta, **para sozinho** quando você cala (700 ms para falas curtas, 1 s para normais), reconhece, espera a resposta e fala, e **escuta de novo**. **Falar por cima** do Guide (voz forte e sustentada por ~350 ms) interrompe a fala. Lógica em `session.ts` e `endpoint.ts`, testada com peças falsas; **os tempos e níveis precisam de ajuste em teste humano**. Limites por visitante em `rate-limit.ts` e palavras-chave em `keyterms.ts`. Plano e provas: `docs/VOZ_PLANO_DE_QUALIDADE.md`.
