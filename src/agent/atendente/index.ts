@@ -12,7 +12,7 @@ import { sanearPlano, limparNome } from "../guardas-fala";
 import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } from "../complementos";
 import { temDadoPessoal } from "../privacidade";
 import { chaveLoja, montarSacola } from "../sacola";
-import { unificarMercado } from "../mercado-unico";
+import { pendenciasDeMinimo, unificarMercado } from "../mercado-unico";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, GrupoOpcoes, Necessidade, OpcaoPlano, PlanoSnapshot } from "../types";
 import type { Sinal } from "@/data/sinais";
 
@@ -318,7 +318,9 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const { plano: unificado, faltas } = await unificarMercado(escolhido, opcoesDe, new Set(base.blocos.filter((b) => refDe(b)).map((b) => b.necessidadeId)),
       buscarNaLoja && ((b, lojaId) => buscarNaLoja(necessidades.find((n) => n.id === b.necessidadeId)!, lojaId, s.ocasiao)));
     for (const f of faltas) for (const o of f.foraDaLoja) { mem.opcoes.set(o.ref, o); mem.doPlano.set(o.ref, norm(f.categoria)); }
-    const plano = sanearPlano(await detalharPlano(unificado, deps.domain.detalharItem?.bind(deps.domain)));
+    // O domínio calcula o pedido mínimo para a 1ª opção de cada busca; com a escolha da pessoa as lojas mudam.
+    const comMinimo = { ...unificado, pendencias: pendenciasDeMinimo(unificado.blocos, unificado.pendencias) };
+    const plano = sanearPlano(await detalharPlano(comMinimo, deps.domain.detalharItem?.bind(deps.domain)));
     if (s.restricoes.length) for (const b of plano.blocos) {
       if (b.principal.complementos?.grupos.length) b.principal.complementos.composicaoNaoVerificada = true;
     }

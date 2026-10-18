@@ -1,3 +1,10 @@
+## Ranking por relevância e pedido mínimo da loja escolhida — 18/10/2026 (Hyago)
+
+- Branch feat/hyago-ranking-relevancia (sobre a do #39). A busca real ordenava por menor custo (`compareEligibleCandidates`), e a tela e o plano mostravam fatia e porção pequena (ex.: bolo R$ 9,95, "caixa de bombom" = biscoito R$ 1,49). Agora segue a ordem de relevância da busca do iFood; mais barata, mais rápida e melhor avaliada continuam como critério pedido e como selo. A 1ª opção que não ganha em nenhum critério recebe o selo "mais relevante" ("primeira na busca do iFood"). O código do Kenzo em `src/reco` não mudou.
+- Pedido mínimo recalculado pelas lojas que ficaram no plano: antes aparecia o mínimo da 1ª opção da busca mesmo com a pessoa escolhendo outra loja.
+- Teste do domínio ajustado com aval do Hyago: a 1ª opção é a mais relevante na busca, não a mais barata. 457 testes, typecheck, lint, build.
+- Real (São Paulo, Av. Paulista via `IFOOD_DEMO_LAT/LNG` no processo): "bolo de chocolate e flores" trouxe Bolo Recheado de Chocolate Médio (Casa de Bolos Augusta, R$ 57) e buquês reais (Manda Mimo, Flor de Sampa). Em São Carlos, domingo de manhã, nenhuma floricultura aberta.
+
 ## Mercado único e pedidos por loja — 18/10/2026 (Hyago)
 
 - Branch feat/hyago-mercado-unico. O iFood fecha um carrinho por loja; antes cada ingrediente ia para o 1º da sua busca (farinha num mercado, leite noutro).

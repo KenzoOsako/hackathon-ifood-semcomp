@@ -47,13 +47,17 @@ describe("McpDomain com respostas reais gravadas", () => {
     expect(opcoes.every((o) => abertas.has(o.loja))).toBe(true);
   });
 
-  it("rótulo e motivo vêm de campo real e a nota é arredondada", async () => {
+  it("a primeira é a mais relevante na busca do iFood (não a mais barata); rótulo de campo real e nota arredondada", async () => {
     const opcoes = await new McpDomain(new ToolsGravadas(), local).buscarNecessidade(pizza, {});
     const principal = opcoes[0];
-    expect(["mais barata", "mais rápida", "melhor avaliada"]).toContain(principal.rotulo);
+    // Ordem da busca do iFood: a 1ª loja aberta da resposta gravada (Combo 2 Pizzas, R$ 79,99) vem antes de pizzas mais baratas.
+    expect(principal.item).toBe(amostras.pizza.results.find((r) => r.merchant.isOpen)!.itemName);
+    expect(principal.precoCents).toBeGreaterThan(Math.min(...opcoes.map((o) => o.precoCents)));
+    expect(["mais relevante", "mais barata", "mais rápida", "melhor avaliada"]).toContain(principal.rotulo);
+    if (principal.rotulo === "mais relevante") expect(principal.motivo).toBe("primeira na busca do iFood");
     for (const o of opcoes) if (o.nota !== undefined) expect(String(o.nota)).toMatch(/^\d(\.\d)?$/);
     const custo = (o: typeof principal) => o.precoCents + (o.freteCents ?? 0);
-    if (principal.rotulo === "mais barata") expect(custo(principal)).toBe(Math.min(...opcoes.map(custo)));
+    for (const o of opcoes) if (o.rotulo === "mais barata") expect(custo(o)).toBe(Math.min(...opcoes.filter((x) => x.freteCents !== undefined).map(custo)));
   });
 
   it("presente só com lojas fechadas vira necessidade não atendida, não opção", async () => {
