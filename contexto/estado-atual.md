@@ -344,3 +344,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Justificativa contextual descarta afirmações de preço, frete, avaliação, disponibilidade e composição; fatos comerciais permanecem nos campos de catálogo.
 - Composição das fixtures novas de bolo/leite/manteiga/farinha/ovos/açúcar declarada para o filtro simulado; não representa certificação de produtos reais.
 - Regressões reproduzidas na revisão agora passam; teste parametrizado cobre frete grátis, avaliação/composição no porquê e restrições lactose/glúten/ovo no mock.
+
+## PDF final dos entregáveis — 18/10/2026
+- Documento consolidado em docs/entregaveis/mimo-entregaveis-completos-final.pdf: 33 páginas, 12 figuras, entregáveis 01–06, painel com dados de demonstração explicitamente simulados e feedback com dores reais sanitizadas.
+- Preserva identificação das revisões: testes históricos 230037e (448 casos/53 arquivos), capturas b5d6c98; fontes selecionadas incorporadas. Revisão visual e estrutural local concluída. Publicação do arquivo via PR, sem alterar o código da aplicação.
+- Checks desta publicação na base b5d6c98: typecheck, lint, 456 testes/54 arquivos e build webpack aprovados. São checks atuais de preparação do PR, distintos dos resultados históricos citados no PDF.
