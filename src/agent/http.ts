@@ -4,6 +4,12 @@ import { ProposalError } from "./proposals";
 export function requireMockRequest(req: Request): void {
   // Não habilitar dados privados/OAuth com sessão anônima do protótipo.
   if ((process.env.MCP_MODE ?? "mock") !== "mock") throw new ProposalError("UNAVAILABLE");
+  requireSameOriginJson(req);
+}
+
+// Origem e corpo JSON da mesma página. No modo real, quem chama também exige o login iFood da sessão
+// (src/mcp/real/oauth.ts); esta função sozinha não autoriza dado privado.
+export function requireSameOriginJson(req: Request): void {
   const origin = req.headers.get("origin");
   const expected = new URL(req.url);
   // Next pode normalizar req.url para localhost. Host é a autoridade recebida

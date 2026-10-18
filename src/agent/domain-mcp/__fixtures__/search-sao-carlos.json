@@ -1,0 +1,764 @@
+{
+ "_fonte": "searchOffers real (resultKind ITEM), USP São Carlos, 17/10/2026 ~22h; só campos de catálogo",
+ "pizza": {
+  "results": [
+   {
+    "itemId": "be00553d-e420-4fe3-989f-cdba7b77e1a2",
+    "itemName": "Combo 2 Pizzas",
+    "unitPrice": 79.99,
+    "promotionalUnitPrice": 79.99,
+    "merchant": {
+     "merchantId": "6cd03779-c865-462d-8e42-c51bfba0dffc",
+     "merchantName": "São Carlos - Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.699999809265137,
+     "ratingCount": 459,
+     "straightLineDistanceKm": 1.09,
+     "minimumOrderAmount": 20,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 125,
+       "min": 115
+      },
+      "fee": 0,
+      "promotionalFee": 0
+     }
+    }
+   },
+   {
+    "itemId": "8fef098a-cb41-456a-9156-892cf95e4d90",
+    "itemName": "Combo Individual - 1 Pizza 22cm + 1 Pizza Doce 22cm.",
+    "unitPrice": 59.8,
+    "promotionalUnitPrice": 44.85,
+    "merchant": {
+     "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+     "merchantName": "Tomate Cru Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 862,
+     "straightLineDistanceKm": 0.41,
+     "minimumOrderAmount": 29.9,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 39,
+       "min": 29
+      },
+      "fee": 6.99,
+      "promotionalFee": 6.99
+     }
+    }
+   },
+   {
+    "itemId": "94716daa-3e59-44d5-96f6-09e8c98635ca",
+    "itemName": "Pizza Grande | 8 Pedaços",
+    "unitPrice": 64.9,
+    "promotionalUnitPrice": 42.19,
+    "merchant": {
+     "merchantId": "4f1dc93e-977c-4b1d-858b-076fe8edd151",
+     "merchantName": "Pizzaria & Lanche - Dino Jurassic City",
+     "isOpen": true,
+     "reviewRating": 4.800000190734863,
+     "ratingCount": 423,
+     "straightLineDistanceKm": 0.3,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 55,
+       "min": 45
+      },
+      "fee": 4,
+      "promotionalFee": 0
+     }
+    }
+   },
+   {
+    "itemId": "d7dc4ae5-46cd-4952-99ab-23d4aeaa6355",
+    "itemName": "35 cm",
+    "unitPrice": 69.9,
+    "promotionalUnitPrice": 69.9,
+    "merchant": {
+     "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+     "merchantName": "Tomate Cru Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 862,
+     "straightLineDistanceKm": 0.41,
+     "minimumOrderAmount": 29.9,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 39,
+       "min": 29
+      },
+      "fee": 6.99,
+      "promotionalFee": 6.99
+     }
+    }
+   },
+   {
+    "itemId": "c64fc3db-349f-462a-bbdf-b8de5f9c7ad1",
+    "itemName": "Combo 2 Pizzas -  1 pizza 35cm + 1 pizza 28cm.",
+    "unitPrice": 97.9,
+    "promotionalUnitPrice": 88.11,
+    "merchant": {
+     "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+     "merchantName": "Tomate Cru Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 862,
+     "straightLineDistanceKm": 0.41,
+     "minimumOrderAmount": 29.9,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 39,
+       "min": 29
+      },
+      "fee": 6.99,
+      "promotionalFee": 6.99
+     }
+    }
+   },
+   {
+    "itemId": "515fb0d0-0b8b-46a6-aca8-faa78624052a",
+    "itemName": "Pizza Grande | 1/2 Quatro Queijos C/ Bacon - 1/2 Calabresa",
+    "unitPrice": 56.9,
+    "promotionalUnitPrice": 36.99,
+    "merchant": {
+     "merchantId": "31131a36-760e-4a12-b724-f1d20096f123",
+     "merchantName": "Pizzaria Achei Pizza",
+     "isOpen": true,
+     "reviewRating": 4.800000190734863,
+     "ratingCount": 225,
+     "straightLineDistanceKm": 0.36,
+     "minimumOrderAmount": 35,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 70,
+       "min": 60
+      },
+      "fee": 0,
+      "promotionalFee": 0
+     }
+    }
+   },
+   {
+    "itemId": "4272be9e-41d4-457a-a984-bae96e5797e5",
+    "itemName": "Combo 2 Pizzas -  1 pizza 35cm + 1 pizza 28cm.",
+    "unitPrice": 99.9,
+    "promotionalUnitPrice": 99.9,
+    "merchant": {
+     "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+     "merchantName": "Tomate Cru Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 862,
+     "straightLineDistanceKm": 0.41,
+     "minimumOrderAmount": 29.9,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 39,
+       "min": 29
+      },
+      "fee": 6.99,
+      "promotionalFee": 6.99
+     }
+    }
+   },
+   {
+    "itemId": "45a7249f-52b5-4d83-ab89-0424f13f88de",
+    "itemName": "Promoção pizza grande",
+    "unitPrice": 78,
+    "promotionalUnitPrice": 58.5,
+    "merchant": {
+     "merchantId": "780e72eb-fc47-4420-9416-59989207ea07",
+     "merchantName": "Don Raffaele Pizze e Ristorante",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 251,
+     "straightLineDistanceKm": 0.95,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 65,
+       "min": 55
+      },
+      "fee": 6,
+      "promotionalFee": 6
+     }
+    }
+   },
+   {
+    "itemId": "d5f6a6ab-6e3f-418e-a324-84caa1f7bdf6",
+    "itemName": "Feito Para Você! 1 pizza 22cm + 1 Tomatinho Doce + 1 Bebida",
+    "unitPrice": 49.9,
+    "promotionalUnitPrice": 39.9,
+    "merchant": {
+     "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+     "merchantName": "Tomate Cru Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 862,
+     "straightLineDistanceKm": 0.41,
+     "minimumOrderAmount": 29.9,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 39,
+       "min": 29
+      },
+      "fee": 6.99,
+      "promotionalFee": 6.99
+     }
+    }
+   },
+   {
+    "itemId": "ef6eb712-45c3-4bb6-916c-d518fb3a7bec",
+    "itemName": "28 cm",
+    "unitPrice": 49.9,
+    "promotionalUnitPrice": 32.44,
+    "merchant": {
+     "merchantId": "f0671abe-24e0-4d85-b419-caf20570a32b",
+     "merchantName": "Tomate Cru Pizzaria",
+     "isOpen": true,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 862,
+     "straightLineDistanceKm": 0.41,
+     "minimumOrderAmount": 29.9,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 39,
+       "min": 29
+      },
+      "fee": 6.99,
+      "promotionalFee": 6.99
+     }
+    }
+   }
+  ]
+ },
+ "pipoca": {
+  "results": [
+   {
+    "itemId": "c94500d8-bc97-483b-8bce-61fe74e45d1c",
+    "itemName": "Pipoca Para Micro-Ondas Manteiga Yoki 100g",
+    "unitPrice": 4.95,
+    "promotionalUnitPrice": 4.95,
+    "merchant": {
+     "merchantId": "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+     "merchantName": "Nissei Mercado - 431",
+     "isOpen": true,
+     "reviewRating": 5,
+     "ratingCount": 40,
+     "straightLineDistanceKm": 0.69,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "FAST_DELIVERY",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 40,
+       "min": 30
+      },
+      "fee": 11.49,
+      "promotionalFee": 4
+     }
+    }
+   },
+   {
+    "itemId": "590d0556-6717-4c6b-851d-a23d5deff68a",
+    "itemName": "Pipoca Para Micro-Ondas Manteiga de Cinema Yoki 100g",
+    "unitPrice": 5.79,
+    "promotionalUnitPrice": 5.79,
+    "merchant": {
+     "merchantId": "fdc30d9c-4a05-4e5a-b1de-421b2df23eb0",
+     "merchantName": "Minuto Pão - XV de Novembro",
+     "isOpen": false,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 692,
+     "straightLineDistanceKm": 0.85,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 74,
+       "min": 54
+      },
+      "fee": 7.49,
+      "promotionalFee": 0
+     }
+    }
+   },
+   {
+    "itemId": "089873c2-d100-4dff-82c2-3cf051080e54",
+    "itemName": "Pipoca Para Micro-Ondas Natural Com Sal Yoki Pacote 50g",
+    "unitPrice": 2.79,
+    "promotionalUnitPrice": 2.79,
+    "merchant": {
+     "merchantId": "60676e1d-4ba4-497f-b5c0-31c261efada4",
+     "merchantName": "Savegnago - Alfredo Mafrei - LJ 35",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 824,
+     "straightLineDistanceKm": 2.4,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 153,
+       "min": 133
+      },
+      "fee": 11.99,
+      "promotionalFee": 11.99
+     }
+    }
+   },
+   {
+    "itemId": "160689bd-1430-484d-92dd-5414aa14f193",
+    "itemName": "Pipoca Para Micro-Ondas Manteiga de Cinema Yoki 100g",
+    "unitPrice": 4.95,
+    "promotionalUnitPrice": 4.95,
+    "merchant": {
+     "merchantId": "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+     "merchantName": "Nissei Mercado - 431",
+     "isOpen": true,
+     "reviewRating": 5,
+     "ratingCount": 40,
+     "straightLineDistanceKm": 0.69,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "FAST_DELIVERY",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 40,
+       "min": 30
+      },
+      "fee": 11.49,
+      "promotionalFee": 4
+     }
+    }
+   },
+   {
+    "itemId": "f552658c-b1dd-47b2-ac1f-39807c12955e",
+    "itemName": "Pipoca Para Micro-Ondas Natural Com Sal Yoki Pacote 100g",
+    "unitPrice": 4.95,
+    "promotionalUnitPrice": 4.95,
+    "merchant": {
+     "merchantId": "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+     "merchantName": "Nissei Mercado - 431",
+     "isOpen": true,
+     "reviewRating": 5,
+     "ratingCount": 40,
+     "straightLineDistanceKm": 0.69,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "FAST_DELIVERY",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 40,
+       "min": 30
+      },
+      "fee": 11.49,
+      "promotionalFee": 4
+     }
+    }
+   },
+   {
+    "itemId": "35614a7a-93b6-4631-b8ee-d988bfce44e8",
+    "itemName": "Pipoca Para Micro-Ondas Sabor Presunto Defumado Yoki 95g Netflix",
+    "unitPrice": 8.95,
+    "promotionalUnitPrice": 8.95,
+    "merchant": {
+     "merchantId": "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+     "merchantName": "Nissei Mercado - 431",
+     "isOpen": true,
+     "reviewRating": 5,
+     "ratingCount": 40,
+     "straightLineDistanceKm": 0.69,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "FAST_DELIVERY",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 40,
+       "min": 30
+      },
+      "fee": 11.49,
+      "promotionalFee": 4
+     }
+    }
+   },
+   {
+    "itemId": "4317323e-3bd7-4ef3-ab41-d4f88b0e4304",
+    "itemName": "Pipoca Para Micro-Ondas Sabor Churrasco com Sal Yoki Pacote Premium 90g",
+    "unitPrice": 8.95,
+    "promotionalUnitPrice": 8.95,
+    "merchant": {
+     "merchantId": "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+     "merchantName": "Nissei Mercado - 431",
+     "isOpen": true,
+     "reviewRating": 5,
+     "ratingCount": 40,
+     "straightLineDistanceKm": 0.69,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "FAST_DELIVERY",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 40,
+       "min": 30
+      },
+      "fee": 11.49,
+      "promotionalFee": 4
+     }
+    }
+   },
+   {
+    "itemId": "70cb5bec-0e1a-45d3-b9df-bcc95d639a47",
+    "itemName": "Pipoca Doce Clac Caramelizada Pacote 100g",
+    "unitPrice": 9.78,
+    "promotionalUnitPrice": 9.78,
+    "merchant": {
+     "merchantId": "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+     "merchantName": "Nissei Mercado - 431",
+     "isOpen": true,
+     "reviewRating": 5,
+     "ratingCount": 40,
+     "straightLineDistanceKm": 0.69,
+     "minimumOrderAmount": 60,
+     "deliveryMethod": {
+      "deliveryMethodId": "FAST_DELIVERY",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 40,
+       "min": 30
+      },
+      "fee": 11.49,
+      "promotionalFee": 4
+     }
+    }
+   },
+   {
+    "itemId": "991d08fa-352c-4829-9189-83fe08b5da6b",
+    "itemName": "Pipoca Para Micro-Ondas Manteiga Yoki 100g",
+    "unitPrice": 5.79,
+    "promotionalUnitPrice": 5.79,
+    "merchant": {
+     "merchantId": "fdc30d9c-4a05-4e5a-b1de-421b2df23eb0",
+     "merchantName": "Minuto Pão - XV de Novembro",
+     "isOpen": false,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 692,
+     "straightLineDistanceKm": 0.85,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 74,
+       "min": 54
+      },
+      "fee": 7.49,
+      "promotionalFee": 0
+     }
+    }
+   },
+   {
+    "itemId": "c7686ee2-db26-4029-b07f-fb45581c8c90",
+    "itemName": "Pipoca Para Micro-Ondas Temperada Yoki Pacote 100g",
+    "unitPrice": 5.79,
+    "promotionalUnitPrice": 5.79,
+    "merchant": {
+     "merchantId": "fdc30d9c-4a05-4e5a-b1de-421b2df23eb0",
+     "merchantName": "Minuto Pão - XV de Novembro",
+     "isOpen": false,
+     "reviewRating": 4.900000095367432,
+     "ratingCount": 692,
+     "straightLineDistanceKm": 0.85,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 74,
+       "min": 54
+      },
+      "fee": 7.49,
+      "promotionalFee": 0
+     }
+    }
+   }
+  ]
+ },
+ "presente": {
+  "results": [
+   {
+    "itemId": "88dac333-5add-4e01-82ff-debcfd805446",
+    "itemName": "Playset Ferrari F1 143 - Pit Pass Com Equipe De Box E Garage - Maisto",
+    "unitPrice": 349.99,
+    "promotionalUnitPrice": 349.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "2163e545-59a4-4a88-b42b-4886a753bb35",
+    "itemName": "Caneca do Cervejeiro",
+    "unitPrice": 104.9,
+    "promotionalUnitPrice": 104.9,
+    "merchant": {
+     "merchantId": "aad8d18b-5f7c-4bd8-8b80-a4f48ccb6af8",
+     "merchantName": "Caprichos da Karen Cestas Personalizadas",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 1,
+     "straightLineDistanceKm": 5.26,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 75,
+       "min": 55
+      },
+      "fee": 11.99,
+      "promotionalFee": 0
+     }
+    }
+   },
+   {
+    "itemId": "3f9f9a86-b8d0-446f-add8-dd454dd31e42",
+    "itemName": "Sacola Para Presente Laminada",
+    "unitPrice": 3.99,
+    "promotionalUnitPrice": 3.79,
+    "merchant": {
+     "merchantId": "d624396e-a8b0-413d-8f53-86d9f38dddb2",
+     "merchantName": "Lojas 1a99 - São Carlos",
+     "isOpen": false,
+     "reviewRating": 0,
+     "straightLineDistanceKm": 1.06,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 54,
+       "min": 34
+      },
+      "fee": 8.99,
+      "promotionalFee": 8.99
+     }
+    }
+   },
+   {
+    "itemId": "b8aa0add-b6ef-4117-8dea-0e1d143bd3a7",
+    "itemName": "Chaveiro Brinquedo  Chaveirinho  Chaveirinho Alarme  Minimi",
+    "unitPrice": 49.91,
+    "promotionalUnitPrice": 49.91,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "cba5f26c-caf7-4a17-8cc7-7c48e949de43",
+    "itemName": "Varinha - Barbie Toyng",
+    "unitPrice": 59.99,
+    "promotionalUnitPrice": 59.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "58f1549a-b539-49c7-b240-d349e95cf659",
+    "itemName": "Pista de Percurso - Hot Wheels - Action - Lanca e Bate Mattel.",
+    "unitPrice": 299.99,
+    "promotionalUnitPrice": 299.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "6ec46a6d-de59-4c88-bcfc-b775a196faef",
+    "itemName": "Pelúcia Interativa Passarinha Polly Pets Alive Candide",
+    "unitPrice": 599.99,
+    "promotionalUnitPrice": 599.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "62a63ad3-9f79-48af-bd2f-937b218bc170",
+    "itemName": "Figura De Acao - Marvel - Spider Man - Action Verse - Miles Morales - Hasbro",
+    "unitPrice": 99.99,
+    "promotionalUnitPrice": 99.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "1b74b34b-7134-4974-887f-a6726fbd96ee",
+    "itemName": "Conjunto Massa De Modelar - Play-Doh - Dentista Do Sorriso - Hasbro",
+    "unitPrice": 149.99,
+    "promotionalUnitPrice": 149.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   },
+   {
+    "itemId": "562725c8-0845-4f35-8821-f9ae9169bfeb",
+    "itemName": "Figura De Acao - Marvel - Spider-Man Brand New Day - Savage Smash - Hulk - Hasbro",
+    "unitPrice": 299.99,
+    "promotionalUnitPrice": 299.99,
+    "merchant": {
+     "merchantId": "ed958cea-2c1d-46ab-b916-13ad886cb5e9",
+     "merchantName": "Ri Happy São Carlos",
+     "isOpen": false,
+     "reviewRating": 5,
+     "ratingCount": 6,
+     "straightLineDistanceKm": 2.58,
+     "minimumOrderAmount": 30,
+     "deliveryMethod": {
+      "deliveryMethodId": "DEFAULT",
+      "deliveryMethodMode": "DELIVERY",
+      "estimatedMinutes": {
+       "max": 63,
+       "min": 43
+      },
+      "fee": 12.99,
+      "promotionalFee": 12.99
+     }
+    }
+   }
+  ]
+ }
+}
