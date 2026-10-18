@@ -130,6 +130,7 @@ export interface DomainPort {
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot>;
   ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot>;
   registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void>;
+  semCatalogo?(): string[];
 }
 
 export type Nivel = "L0" | "L1" | "L2";
@@ -163,6 +164,7 @@ export interface InterpretarInput {
   texto: string;
   hipoteses?: string[];
   pressaDetectada: boolean;
+  semCatalogo?: string[]; // verticais sem catálogo aberto neste local (o planejador evita montar o pedido por elas)
   session: Pick<AgentSession, "estado" | "nivel" | "perguntasFeitas" | "ocasiao" | "necessidades" | "history"> & { opcoesFaladas: string[] };
 }
 

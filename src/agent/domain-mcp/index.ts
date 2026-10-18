@@ -126,6 +126,18 @@ const valor: Record<CriterioComDado, (c: Candidato) => number | undefined> = {
   melhor_avaliada: (c) => (c.nota === undefined ? undefined : -c.nota),
 };
 
+// Frente da lista: tira do topo o que custa menos que um terço da mediana (suspeito de ser parcial) e ordena por nota e custo.
+export function escolhaEquilibrada(lista: Candidato[]): Candidato[] {
+  if (lista.length < 3) return lista;
+  const precos = lista.map((c) => c.precoCents).sort((a, b) => a - b);
+  const mediana = precos[Math.floor(precos.length / 2)];
+  const suspeito = (c: Candidato) => c.precoCents < mediana / 3;
+  const nota = (c: Candidato) => Math.round((c.nota ?? 0) * 10);
+  const custo = (c: Candidato) => c.precoCents + (c.opcao.freteCents ?? 0);
+  const ordenar = (l: Candidato[]) => [...l].sort((a, b) => nota(b) - nota(a) || custo(a) - custo(b));
+  return [...ordenar(lista.filter((c) => !suspeito(c))), ...ordenar(lista.filter(suspeito))];
+}
+
 function ordenarPor(lista: Candidato[], criterio: CriterioComDado): Candidato[] {
   const com = lista.filter((c) => valor[criterio](c) !== undefined);
   return [...com].sort((a, b) => valor[criterio](a)! - valor[criterio](b)! || a.precoCents - b.precoCents);
@@ -145,6 +157,8 @@ function rotular(c: Candidato, lista: Candidato[], preferido?: CriterioComDado):
   return { ...c.opcao, rotulo: "alternativa", motivo: "outra opção aberta e com entrega" };
 }
 
+const VAZIAS = new Map<string, Map<Vertical, number>>();
+
 // Onde procurar quando a vertical escolhida não tem catálogo aqui.
 const ALTERNATIVA: Partial<Record<Vertical, Vertical>> = { GROCERIES: "RESTAURANT", RESTAURANT: "GROCERIES" };
 
@@ -154,7 +168,25 @@ export type PlanosStore = Map<string, PlanoGuardado>;
 export class McpDomain implements DomainPort {
   // Candidatos da última busca por necessidade, para montar e ajustar o plano sem nova chamada.
   private readonly ultimaBusca = new Map<string, Candidato[]>();
-  private readonly verticaisVazias = new Map<Vertical, number>();
+  // Quais verticais não têm catálogo aberto neste local: aprendido uma vez e valendo para todas as sessões do processo.
+  private get verticaisVazias(): Map<Vertical, number> {
+    const chave = `${this.local.latitude.toFixed(2)},${this.local.longitude.toFixed(2)}`;
+    let m = VAZIAS.get(chave); if (!m) { m = new Map(); VAZIAS.set(chave, m); }
+    return m;
+  }
+
+  // Verticais sem catálogo aqui (o planejador não deve montar pedido por elas, ex.: ingredientes sem mercado).
+  semCatalogo(): string[] { return [...this.verticaisVazias].filter(([, n]) => n >= 2).map(([v]) => v); }
+
+  // Sonda em segundo plano, uma vez por local: marca como vazia a vertical que não devolve nada.
+  async sondarCatalogo(): Promise<void> {
+    const sondas: [Vertical, string][] = [["GROCERIES", "leite"], ["SHOPPING", "presente"]];
+    await Promise.allSettled(sondas.map(async ([tipo, query]) => {
+      if (this.verticaisVazias.has(tipo)) return;
+      const r = await this.tools.callTool("searchOffers", { query, userLocation: { latitude: this.local.latitude, longitude: this.local.longitude }, resultKind: "ITEM", merchantType: tipo, pageSize: 5, refinements: { onlyOpen: true } });
+      this.verticaisVazias.set(tipo, extrairItens(r).length === 0 ? 2 : 0);
+    }));
+  }
 
   constructor(
     private readonly tools: McpTools,
@@ -249,9 +281,11 @@ export class McpDomain implements DomainPort {
     }
     // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
     const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
-    // A primeira continua sendo a do ranking do domínio (custo, depois nota e prazo); o rótulo diz em que ela ganha.
-    const opcoes = candidatos.map((c, i) => {
-      const o = rotular(c, candidatos, i === 0 ? "mais_barata" : undefined);
+    // A primeira é a mais recomendável, não a mais barata: preço muito abaixo do padrão da lista costuma ser item parcial
+    // ou de outra coisa (o "mais barato" sozinho é o que faz o agente errar), então fica fora da frente; depois, nota e custo.
+    const ordem2 = escolhaEquilibrada(candidatos);
+    const opcoes = ordem2.map((c, i) => {
+      const o = rotular(c, ordem2, i === 0 ? (c.nota !== undefined ? "melhor_avaliada" : "mais_barata") : undefined);
       // "Mais parecida" não é "mais barata": o rótulo diz a verdade sobre por que esta opção está aqui.
       return cobertura === "proxima" ? { ...o, rotulo: "mais parecida", motivo: `não encontrei "${n.categoria}"; esta é a opção mais parecida`, cobertura } : o;
     });

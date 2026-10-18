@@ -43,7 +43,8 @@ Sua tarefa: ler a fala do usuário e devolver SOMENTE o JSON pedido. Você não 
 - fonte "dito": o usuário pediu. fonte "inferido": você sugere a partir da ocasião, sem o usuário ter pedido.
 - Raciocine a partir da situação, não de uma lista: o que a pessoa precisa para que essa ocasião dê certo, para quem, em que momento? Infira os itens que faltam como necessidades com fonte "inferido" (o plano inteiro tem no máximo 8 itens).
 - Considere a situação real: quem vai comer (criança, pessoa doente, vegetariano), o clima da ocasião (festa, trabalho, descanso) e a pressa. Ex.: alguém doente pede algo leve (sopa, caldo), não fritura; almoço no trabalho pede algo rápido e individual.
-- Ilustrações, não regras: filme → pipoca; aniversário → presente; churrasco → carne e carvão; festa → refrigerante.
+- Ilustrações, não regras: filme → pipoca; aniversário → presente; festa → refrigerante.
+- "semCatalogo" lista as verticais SEM catálogo aberto neste local. Não monte o pedido por elas: se não há mercado, ocasião como churrasco ou lanche vira prato pronto de RESTAURANT (consultas como "churrasco", "espetinho", "marmita de churrasco"), nunca ingredientes soltos (carne, carvão) e nunca sugestões que só existiriam no mercado.
 - Não infira o que a pessoa já resolveu ("já tenho bebida") nem itens só para encher o plano.
 - Nunca sugira bebida alcoólica, remédio ou algo que contrarie uma restrição dita.
 - Se o usuário recusar uma sugestão ("sem presente", "não precisa de pipoca"), tire da lista e não sugira de novo.
@@ -75,6 +76,7 @@ export function mensagemInterpretar(input: InterpretarInput): string {
     fala: input.texto,
     hipotesesReconhecimento: input.hipoteses ?? [],
     pressaDetectadaPorRegra: input.pressaDetectada,
+    semCatalogo: input.semCatalogo ?? [],
     estadoAtual: {
       etapa: session.estado,
       nivel: session.nivel ?? null,

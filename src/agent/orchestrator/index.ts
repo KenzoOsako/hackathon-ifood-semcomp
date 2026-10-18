@@ -131,7 +131,7 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   let turno: TurnoInterpretado;
   try {
     turno = await comTimeout(TIMEOUT_INTERPRETAR_MS, (signal) => deps.llm.interpretar({
-      texto: input.texto, hipoteses: input.hipoteses, pressaDetectada: pressa,
+      texto: input.texto, hipoteses: input.hipoteses, pressaDetectada: pressa, semCatalogo: deps.domain.semCatalogo?.() ?? [],
       session: { estado: s.estado, nivel: s.nivel, perguntasFeitas: s.perguntasFeitas, ocasiao: s.ocasiao, necessidades: s.necessidades, history: s.history, opcoesFaladas: opcoesFaladas(s.plano) },
     }, signal));
   } catch (error) {

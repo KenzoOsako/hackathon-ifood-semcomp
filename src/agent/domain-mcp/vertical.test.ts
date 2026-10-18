@@ -48,3 +48,26 @@ describe("item avulso só aparece sem o item completo", () => {
     expect(o[0].cobertura).toBeUndefined();
   });
 });
+
+import { escolhaEquilibrada } from ".";
+
+describe("a frente da lista não é a mais barata", () => {
+  const c = (ref: string, precoCents: number, nota?: number) => ({ precoCents, nota, opcao: { ref, loja: "L", item: ref, precoCents, rotulo: "", motivo: "", origem: "real" as const } }) as never;
+  it("preço muito abaixo da mediana (suspeito de parcial) vai para trás, mesmo sendo o mais barato", () => {
+    const l = escolhaEquilibrada([c("esfiha", 600, 4.7), c("churrasco-a", 4500, 4.5), c("churrasco-b", 5200, 4.6), c("churrasco-c", 4800, 4.2)]);
+    expect(l.map((x: { opcao: { ref: string } }) => x.opcao.ref)).toEqual(["churrasco-b", "churrasco-a", "churrasco-c", "esfiha"]);
+  });
+  it("lista curta não é reordenada", () => {
+    const l = [c("a", 600, 4.7), c("b", 4500, 4.5)];
+    expect(escolhaEquilibrada(l)).toEqual(l);
+  });
+});
+
+describe("sonda de catálogo", () => {
+  it("vertical que não devolve nada aqui entra em semCatalogo", async () => {
+    const tools: McpTools = { callTool: async (_n, a) => (a.merchantType === "GROCERIES" ? { results: [] } : amostras.pizza) };
+    const d = new McpDomain(tools, { latitude: 1.23, longitude: 4.56, fonte: "fixa" });
+    await d.sondarCatalogo();
+    expect(d.semCatalogo()).toEqual(["GROCERIES"]);
+  });
+});
