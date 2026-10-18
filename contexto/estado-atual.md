@@ -93,3 +93,57 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - `docs/PLANO_AGENTE.md`: marcos M0–M4 alinhados aos gates G2–G5, divisão em dupla (Hyago + parceiro a definir), definição de pronto do core.
 - D-013 (proposta): LangChain.js isolado em `src/agent/llm/`, sem LangGraph. Nenhum código de runtime alterado; dependências ainda não instaladas.
 - Pendente: aceite de D-011/D-012/D-013, parceiro da dupla, provedor/chave de LLM; depende de K-1, K-3, K-5 (Kenzo) e M-1 (Malveste).
+
+## UI: setup do design system — 17/10/2026
+- Branch `feat/malveste-ui-setup`: Tailwind v4, tokens em `globals.css`, componentes base em `src/ui/components`, lucide-react e motion instalados (D-014). Nenhuma tela mudou; `page.tsx` e rotas intactos.
+- Validação: typecheck, lint, testes e build passaram; classes Tailwind e tokens confirmados no CSS servido pelo dev. Verificação visual em 375px e desktop fica para o PR da home, que tem tela nova.
+- Pendente: aviso ao integrador sobre `package.json`/lockfile; dark mode fora do escopo; próximo PR `feat/malveste-ui-home`.
+
+## UI: home fake e moldura de celular — 17/10/2026
+- Branch `feat/malveste-ui-home` (empilhada sobre `feat/malveste-ui-setup`; rebase quando o setup for mesclado). `/` agora é a home estilo iFood, toda estática e com dados genéricos; a única parte funcional é a bolinha (link para `/agente`). Selo "Protótipo · dados simulados" visível.
+- O chat do esqueleto foi movido sem alterações de lógica para `src/app/agente/page.tsx` (só o container de rolagem mudou) e será refeito no PR da tela do agente. `PhoneFrame` no layout: moldura de 390px no desktop, tela cheia abaixo de 640px.
+- Validação: typecheck, lint, 49 testes e build passaram; capturas em Chrome headless a 375px (via iframe, pois a janela headless tem largura mínima) e 1280px conferidas. Texto sobre vermelho usa `--primary` por contraste AA. Teclado: a bolinha é o único foco da home. Falta teste com leitor de tela.
+
+## Agente: decisões de implementação e preocupações — 17/10/2026, ~20h30 (Hyago)
+- Cérebro no backend: orquestrador (Hyago) decide perguntar/buscar/montar/ajustar; domínio (Kenzo) busca no MCP e ranqueia; LLM interpreta e fala, sem aprovar nem comprar.
+- ElevenLabs só ouve e fala (STT + TTS), sem conduzir a conversa. O agente é entregue funcionando por texto; a voz conecta depois no mesmo endpoint. Provedor/modelo de LLM não fixado (configuração).
+- Prompt do spike (src/voice/agent-prompt.md) dividido em interpretar/responder; dados de exemplo viram fixtures do domínio fake; teto de perguntas, anti-repetição e S5 garantidos em código.
+- Preocupações registradas: latência (2 chamadas de LLM + MCP + TTS; medir por etapa desde o M1), erros de reconhecimento, fala inventando número, atraso de K-3/K-5/K-1/M-1, provedor e chave de LLM a confirmar.
+- Detalhes: docs/BRIEFING_AGENTE.md e docs/PLANO_AGENTE.md. Nenhum código de runtime alterado.
+
+## Agente Guide no backend — M0/M1 (17/10/2026, ~21h, Hyago)
+- Implementado em feat/hyago-agente: src/agent/types.ts, orquestrador (src/agent/orchestrator), domínio simulado com os dados do spike (src/agent/domain-fake), LLM via LangChain (src/agent/llm, provedor/modelo por LLM_PROVIDER/LLM_MODEL; sem eles, interpretador por regras), prompts (src/prompts), evals (src/evals) e POST /api/converse com os guardas de http.ts e sessão por cookie.
+- Regras em código: teto de 3 perguntas (1 em L1), nível só rebaixa, pressa força L0, aprovação só com frase explícita e só devolve planoId+versão, restrição rígida por sessão, plano vazio não é encaminhado, fala do LLM com número fora do snapshot cai para template.
+- Verificação: typecheck, lint, 100 testes (12 cenários de eval + testes do orquestrador) e build passaram; jornada do aniversário e caso rápido rodados no app servido. Revisão independente: 16 achados, altos e médios corrigidos com testes.
+- Não verificado: LLM real (sem LLM_PROVIDER configurado nesta máquina); compatibilidade do schema Zod com withStructuredOutput de cada provedor; domínio real (K-3/K-5) e aprovação na tela (K-1/M-1).
+
+## UI: tela do agente — 17/10/2026
+- Branch `feat/malveste-ui-agente` (empilhada sobre `feat/malveste-ui-home`). `/agente` é a tela do assistente: "Qual a sua vibe de hoje?", orbe com cinco estados (idle, listening, thinking, speaking, error) sempre com texto de status, conversa por texto contra `POST /api/chat` (cookie de sessão, sem `sessionId`), transcrição recolhível, erro com "Tentar de novo" e sugestões fixas de atalho.
+- Microfone desabilitado ("voz em breve"): o encaixe é `voiceState` e `onMicClick` em `AgentScreen`, para a frente de voz ligar. Ao receber `options` mostra só um aviso com botão desabilitado; a tela de opções é o próximo PR.
+- Validação: typecheck, lint, 49 testes e build passaram. Fluxo conferido em 375px via Chrome DevTools Protocol (bolinha → agente → sugestão → resposta do mock → transcrição): console limpo, sem rolagem horizontal. Falta teste com leitor de tela e verificação dos estados listening/speaking, que dependem da voz.
+
+## UI: opções, proposta e aprovação — 17/10/2026
+- Branch `feat/malveste-ui-opcoes` (empilhada sobre `feat/malveste-ui-agente`). Rotas novas: `/agente/opcoes` (até 3 cartões, cada um com rótulo, motivos de `reasons`, preço, frete e ETA estimado), `/agente/proposta` (itens, frete, taxas, total ou "pendente", pendências e três ações separadas: Aprovar, Mudar o pedido, Cancelar) e `/agente/previa` (dados fixos para revisar o visual dos estados). A conversa é compartilhada por `AgentProvider`; o estado devolvido pelo servidor decide a tela.
+- Aprovar envia `{proposalId, version, interactionId, channel: "button"}` para `/api/confirm` com a versão exibida; cancelar e escolher usam `/api/chat` ("cancelar", "1".."3"). A UI não soma nada: ausência de frete/taxas vira pendência, e o botão fica bloqueado com pendências ou proposta expirada.
+- Lacunas de contrato para o Kenzo: a proposta pública não traz nome do item, nome da loja nem endereço (a UI usa a opção escolhida para os nomes e não mostra endereço); as opções legadas não trazem origem real/simulado (`DATA_ORIGIN` fica fixo em mock); a aprovação real segue inalcançável até o K-1 (hoje toda proposta nasce com total desconhecido). Comparar opções lado a lado e rejeitar uma opção específica não foram feitos: só há "Refinar a busca".
+- Visual: Bricolage Grotesque para títulos, rótulos e preços (via next/font, sem dependência nova); Geist no texto. Validação: typecheck, lint, 49 testes e build passaram; jornada conferida em 375px por CDP (home → agente → opções → proposta bloqueada; prévia aprovável, aprovada, expirada, com pendências), console limpo, sem rolagem horizontal. Falta leitor de tela e foco por teclado verificado.
+
+## UI: palco do orbe e fundo da tela do agente — 17/10/2026
+- Na branch `feat/malveste-ui-opcoes`: `OrbStage` (halo, dois anéis, pontos em órbita e ondas) ao redor do orbe e fundo `agent-bg` (brilho rosado + grade de pontos que some nas bordas), tudo em CSS com as cores dos tokens. O estado (`data-state`) só muda o ritmo: órbita acelera ao pensar, ondas ao ouvir/falar, tudo em cinza no erro. Movimento respeita `prefers-reduced-motion`.
+- Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px (idle, listening, speaking, error) e desktop, console limpo, sem rolagem horizontal.
+
+## UI: ondas no lugar da órbita — 17/10/2026
+- O palco do orbe trocou os pontos em órbita por duas formas líquidas que ondulam (border-radius animado) e três ondas que se expandem a partir do orbe. Ritmo por estado: ondas mais rápidas ao ouvir e ao responder, formas mais agitadas ao pensar, tudo parado e cinza no erro. Só CSS; respeita `prefers-reduced-motion`. Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
+
+## UI: orbe orgânico e fundo quente — 17/10/2026
+- A pedido do dono da UI, a tela do agente segue a essência de uma imagem de referência: orbe como massa orgânica com gradiente de malha (vermelho, coral, âmbar, vinho) que muda de forma, quatro contornos ondulados como curvas de nível e ondas que se expandem por estado, sobre fundo creme/pêssego. Novos tokens decorativos `--orb-*`, `--warm` e `--peach` em `globals.css`; a bolinha da home usa o mesmo orbe. Só CSS, `prefers-reduced-motion` respeitado. Não feitos: barra inferior com microfone central e chips com ícones.
+- Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
+
+## Módulos de dados, elegibilidade e ranking com evidências — 17/10/2026
+- Worktree isolado `work/gemini-dados`, branch `feat/kenzo-gemini-dados`, atualizada sobre `origin/main` (`fad6231`, que já integra PRs #11/`03d94bf` em `src/mcp/costs.ts`, #12/`d741885` em `src/domain/handoff.ts` e #13 em `src/ui/`). Implementações existentes de custos e resumo manual preservadas integralmente.
+- `src/mcp/normalize-candidate.ts` e `src/mcp/normalize-candidate.test.ts`: normalização pura para formato interno (não representa schema oficial do iFood, sem chamadas de rede), reutilizando `@/contracts` e `src/mcp/costs.ts`, validando entradas em runtime e preservando ausências (avaliação, prazo, distância, disponibilidade, composição, histórico e taxas) e origem (`real`/`mock`).
+- `src/reco/eligibility.ts` e `src/reco/eligibility.test.ts`: filtros rígidos pré-ranking contra `Constraints` (exclusão por alergia incompatível e por composição ausente/incompleta sem inferir ingredientes pelo nome do prato; teto rígido avaliado sobre o total com encargos necessários; bloqueio de total desconhecido em teto rígido; preferência flexível sem relaxar limite rígido; motivos estruturados de exclusão e pendência).
+- `src/reco/rank-eligible.ts` e `src/reco/rank-eligible.test.ts`: ranking determinístico sobre os candidatos elegíveis (até 3 opções sem preenchimento artificial, defesa contra reaparecimento de excluídos, desempate estável, geração de `Recommendation` validada por `RecommendationSchema` com `origins`, `evidence`, `reasons` e `uncertainties`; histórico recente ausente não gera alegação de "nunca pediu" e frequência não vira "favorito declarado").
+- Validação local no worktree: `npm run typecheck`, `npm run lint`, `npm test` (14 arquivos, 112 testes) e `npm run build` passaram. Módulos prontos para integração pelo agente/rotas; nenhuma rota, contrato compartilhado, Trello, decisão V2 ou operação externa/MCP real foi alterada ou declarada concluída.
+
+
