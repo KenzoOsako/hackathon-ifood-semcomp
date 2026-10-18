@@ -163,6 +163,11 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - `src/reco/rank-eligible.ts` e `src/reco/rank-eligible.test.ts`: ranking determinístico sobre os candidatos elegíveis (até 3 opções sem preenchimento artificial, defesa contra reaparecimento de excluídos, desempate estável, geração de `Recommendation` validada por `RecommendationSchema` com `origins`, `evidence`, `reasons` e `uncertainties`; histórico recente ausente não gera alegação de "nunca pediu" e frequência não vira "favorito declarado").
 - Validação local no worktree: `npm run typecheck`, `npm run lint`, `npm test` (14 arquivos, 112 testes) e `npm run build` passaram. Módulos prontos para integração pelo agente/rotas; nenhuma rota, contrato compartilhado, Trello, decisão V2 ou operação externa/MCP real foi alterada ou declarada concluída.
 
+## MCP real comprovado com o agente — 17/10/2026, ~22h (Hyago)
+- OAuth PKCE (id.ifood.com.br) com cliente pré-registrado e usuário de teste funcionou; token de 2 h com refresh. tools/list expôs 8 tools filtradas por escopo; listAddresses vazio no usuário de teste; searchOffers real retornou itens em RESTAURANT, GROCERIES e SHOPPING perto da USP São Carlos; getMerchant e getItem OK.
+- Latência medida: conectar ~2,2 s e 1,5–2,3 s por tool. Detalhes e implicações em docs/PLANO_AGENTE.md (Estado e próximos passos).
+- Feedback registrado: F-002 a F-004 em contexto/feedback-mcp.md. Credenciais do .env eram iguais às que estiveram no histórico do .env.example; o secret foi atualizado localmente. Rotacionar o que estiver no histórico.
+- Próximo: McpDomain em src/agent/domain-mcp e cliente MCP + OAuth no app. O Kenzo autorizou o Hyago a implementar as duas peças, inclusive na zona dele (src/mcp, /api/auth, http.ts), com revisão dele.
 
 
 ## UI: orbe compartilhado (PR A) — 17/10/2026
@@ -175,3 +180,9 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Estados: carregando (esqueletos), vazio ("Não achei nada nesse limite. Quer subir o orçamento?", com chips que só preenchem o campo), erro (alerta com tentar de novo na legenda), 1 opção (já expandida). O estado vazio ainda não é acionado pelo servidor (sem sinal no contrato); só a prévia o exibe. Prévia `/agente/previa` com dez cenários.
 - Decisões tomadas por mim a pedido do dono da UI: #D91A29 no texto sobre vermelho (AA) e #EA1D2C só em borda/orbe; títulos em peso 500; legenda do agente com o texto completo e rolagem interna quando longo; props `Readonly` e `useMemo` no contexto (padrões do Sonar já usados na main).
 - Validação: typecheck, lint, 144 testes e build passaram; cenários da prévia e jornada real a 375px conferidos, console limpo, sem rolagem horizontal.
+## Agente com MCP real no app — 17/10/2026, ~23h30 (Hyago)
+- `src/agent/domain-mcp/`: `McpDomain` implementa o `DomainPort` com `searchOffers` + normalização, elegibilidade e ranking do Kenzo; rótulos (mais barata = preço + frete, mais rápida, mais bem avaliada) só de campos reais; ajustes reordenam o cache sem nova chamada. 7 testes com respostas reais gravadas (`__fixtures__/search-sao-carlos.json`), incluindo a jornada do aniversário pelo orquestrador.
+- `src/mcp/real/`: OAuth PKCE (token só em memória, refresh único 5 min antes, login preso ao mesmo visitante) e cliente MCP por sujeito (D-016). Rotas `/api/auth/{login,concluir,status}` e `/callback`.
+- `/api/converse` com `MCP_MODE=real` usa o domínio real; sem login iFood devolve 401 `IFOOD_LOGIN` com `loginUrl`.
+- **Prova ao vivo:** login com o usuário de teste, jornada do aniversário pelo `/api/converse`: `mcp=real`, busca real em 2,1 s, plano `origem: real` com loja real de São Carlos; pipoca e presente sem loja aberta à noite (dado real).
+- **Não feito:** LLM real não testado (rodou em modo regras); UI ainda usa `/api/chat`, não `/api/converse`; checar presente/pipoca no horário da demo.

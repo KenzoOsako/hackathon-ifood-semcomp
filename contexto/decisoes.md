@@ -71,3 +71,9 @@
 - **Tokens:** em `src/app/globals.css`. Só o tema claro é entregue e verificado; dark mode fica fora (decisão do dono da UI). O vermelho de marca `#EA1D2C` dá 4,46:1 com branco, abaixo do AA; texto sobre vermelho usa `--primary` `#D91A29` (5,08:1) e `--brand` fica para áreas grandes. Selo `simulated` obrigatório em dado não real.
 - **Consequência:** `package.json`, lockfile e `postcss.config.mjs` mudam; coordenar com o integrador para não haver edição concorrente do lockfile. Motion só entra em tela no PR do fluxo.
 
+## D-016 — SDK oficial do MCP no cliente iFood real (17/10/2026 ~23h, Hyago, autorizado pelo Kenzo)
+- **Contexto:** o agente precisa chamar o MCP real do iFood (Streamable HTTP + OAuth 2.1 PKCE) com sessão por visitante.
+- **Decisão:** `@modelcontextprotocol/sdk` (1.32.x), só `Client` + `StreamableHTTPClientTransport`, com `fetch` próprio que injeta o Bearer. OAuth feito em código próprio (`src/mcp/real/oauth.ts`): cliente pré-registrado, `client_secret_post`, token só em memória no servidor.
+- **Alternativa rejeitada:** JSON-RPC à mão sobre `fetch` (menos dependência, mas handshake, sessão e SSE manuais).
+- **Consequência:** dependência nova no `package.json`/lockfile. Modo real exige `MCP_MODE=real` e o app na porta do redirect cadastrado (`8080`).
+
