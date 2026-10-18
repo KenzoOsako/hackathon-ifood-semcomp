@@ -35,7 +35,7 @@ type Props = {
 
 // Mostra o snapshot da proposta como veio do servidor. Aprovar, editar e cancelar são ações separadas
 // e a UI nunca soma custos: ausência de frete/taxas aparece como pendência, não como zero.
-export function ProposalView({ proposal, option, itemNames, busy, error, embedded = false, approvedReply, onApprove, onCancel, onEditOrder, onRetry }: Props) {
+export function ProposalView({ proposal, option, itemNames, busy, error, embedded = false, approvedReply, onApprove, onCancel, onEditOrder, onRetry }: Readonly<Props>) {
   const now = useNow(15_000);
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
 
@@ -54,8 +54,8 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
             <Link href="/"><ArrowLeft /></Link>
           </Button>
         )}
-        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold outline-none">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
-        {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
+        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-medium outline-none">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
+        {DATA_ORIGIN === "mock" && !embedded && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -69,7 +69,7 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
           )}
         </div>
 
-        {option && <p className="mt-3 font-display text-2xl font-bold leading-tight">{option.candidate.merchantName}</p>}
+        {option && <p className="mt-3 font-display text-2xl font-medium leading-tight">{option.candidate.merchantName}</p>}
 
         <ul className="mt-3 divide-y divide-border rounded-2xl border border-border">
           {proposal.items.map((item) => {
@@ -91,7 +91,7 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
           <dt className="text-muted-foreground">Taxas</dt>
           <dd>{cost.fees ? fromCents(cost.fees.cents) : <span className="text-warning-foreground">Não informadas</span>}</dd>
           <dt className="border-t border-border pt-2 font-semibold">Total</dt>
-          <dd className="border-t border-border pt-2 font-display text-xl font-bold">
+          <dd className="border-t border-border pt-2 font-display text-xl font-medium">
             {cost.total ? fromCents(cost.total.cents) : <span className="text-base text-warning-foreground">Pendente</span>}
           </dd>
         </dl>

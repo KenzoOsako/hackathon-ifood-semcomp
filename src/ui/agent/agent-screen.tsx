@@ -6,7 +6,7 @@ export type { VoiceState };
 type AgentScreenProps = { voiceState?: VoiceState; onMicClick?: () => void };
 
 // Liga a tela ao estado da conversa. A voz (Felipe) entra pelas props voiceState e onMicClick.
-export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
+export function AgentScreen({ voiceState, onMicClick }: Readonly<AgentScreenProps>) {
   const a = useAgent();
   return (
     <AgentView

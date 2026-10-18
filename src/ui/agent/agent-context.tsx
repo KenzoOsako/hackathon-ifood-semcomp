@@ -1,10 +1,10 @@
 "use client";
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AgentTurn, Option } from "@/contracts";
 
 export type Msg = { id: number; from: "voce" | "agente"; text: string };
 // O que a área de resultados mostra. `null` = só o assistente (início ou busca sem resultado).
-export type View = "options" | "proposal" | "continue" | null;
+export type View = "options" | "empty" | "proposal" | "continue" | null;
 
 // O servidor ainda só devolve dados do mock. Quando o contrato informar a origem de cada
 // dado, este valor passa a vir dele; até lá, todo dado exibido é rotulado como simulado.
@@ -39,7 +39,7 @@ export function useAgent() {
 // Estado da conversa de /agente. O servidor guarda a sessão por cookie; aqui só guardamos o que a tela
 // precisa mostrar. A conversa é linear e numa tela só: quem decide o que aparece na área de resultados
 // é o estado devolvido pelo servidor, nunca a UI. Recarregar a página reinicia a conversa.
-export function AgentProvider({ children }: { children: ReactNode }) {
+export function AgentProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [turn, setTurn] = useState<AgentTurn | null>(null);
   const [view, setView] = useState<View>(null);
@@ -130,9 +130,9 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setError(null);
   }, []);
 
-  return (
-    <AgentContext.Provider value={{ msgs, turn, view, options, selected, query, busy, error, send, select, approve, cancel, retry, showOptions, newSearch }}>
-      {children}
-    </AgentContext.Provider>
+  const value = useMemo(
+    () => ({ msgs, turn, view, options, selected, query, busy, error, send, select, approve, cancel, retry, showOptions, newSearch }),
+    [msgs, turn, view, options, selected, query, busy, error, send, select, approve, cancel, retry, showOptions, newSearch],
   );
+  return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
 }

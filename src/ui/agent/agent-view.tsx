@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, Search, Send } from "lucide-react";
@@ -13,7 +13,7 @@ import { cn } from "@/ui/lib/utils";
 import { DATA_ORIGIN, type Msg, type View } from "./agent-context";
 import { ContinueView } from "./continue-view";
 import { ProposalView } from "./proposal-view";
-import { ResultRow } from "./result-row";
+import { ResultCard, ResultCardSkeleton } from "./result-card";
 
 // Estados vindos da voz (Felipe). Enquanto não houver voz, a UI só usa idle/thinking/error.
 export type VoiceState = "idle" | "listening" | "speaking" | "error";
@@ -28,8 +28,8 @@ const STATE_LABEL: Record<OrbState, string> = {
 
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
 const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
-// Abas só de cenário, como na home: imitam a busca do iFood e não fazem nada.
-const TABS = ["Todo o iFood", "Restaurantes", "Mercados", "Farmácias"];
+// Sem resultado, estas frases só preenchem o campo; quem decide enviar é a pessoa.
+const EMPTY_HINTS = ["Quero gastar até R$ 60", "Pode ser outra comida"];
 
 export type AgentViewProps = {
   view: View;
@@ -53,12 +53,16 @@ export type AgentViewProps = {
 };
 
 // Tela única e linear: a área de cima mostra o que o agente encontrou (lista, proposta ou continuidade)
-// e o painel de baixo é a conversa, com o orbe. Nada aqui chama a API; quem liga os eventos é quem usa a view.
-export function AgentView(p: AgentViewProps) {
+// e a faixa de baixo é a conversa, com o orbe. Nada aqui chama a API; quem liga os eventos é quem usa a view.
+export function AgentView(p: Readonly<AgentViewProps>) {
   const reduceMotion = useReducedMotion();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
   const [showLog, setShowLog] = useState(false);
-  const hasView = p.view !== null;
+  const [expanded, setExpanded] = useState(0);
+  // Primeira busca em andamento: abre a área de resultados com esqueletos.
+  const searching = p.busy && p.view === null && p.query !== "";
+  const hasView = p.view !== null || searching;
 
   let orbState: OrbState = p.voiceState ?? "idle";
   if (p.error) orbState = "error";
@@ -66,6 +70,15 @@ export function AgentView(p: AgentViewProps) {
   const lastReply = [...p.msgs].reverse().find((m) => m.from === "agente")?.text;
   // Parado, mostra a última resposta do agente (no modo texto ela é a "fala"); nos demais estados, o estado.
   const spoken = orbState === "idle" || orbState === "speaking" ? (lastReply ?? STATE_LABEL.idle) : STATE_LABEL[orbState];
+
+  function adjust() {
+    inputRef.current?.focus();
+  }
+  function fillInput(text: string) {
+    setInput(text);
+    inputRef.current?.focus();
+  }
+
   const caption = (
     <div className={cn("w-full px-6 text-center", hasView ? "max-h-24 overflow-y-auto pt-2 text-sm" : "pb-1 text-base")}>
       <p role="status" aria-live="polite" className="whitespace-pre-wrap leading-snug text-[color:var(--agent-voice)]">{spoken}</p>
@@ -83,44 +96,66 @@ export function AgentView(p: AgentViewProps) {
 
   return (
     <div className="agent-bg flex min-h-0 flex-1 flex-col">
+      <header className="flex items-center gap-2 px-3 py-2">
+        <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
+        <span className="font-display text-lg font-medium">FoodPilot</span>
+        {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
+      </header>
+
       <section
         aria-label="Resultados"
+        aria-busy={searching}
         className={cn("flex min-h-0 flex-col overflow-hidden transition-[flex-grow,opacity] duration-500", hasView ? "grow opacity-100" : "grow-0 basis-0 opacity-0")}
       >
-        {p.view === "options" && (
+        {(p.view === "options" || p.view === "empty" || searching) && (
           <>
-            <header className="px-3 pb-2 pt-3">
-              <div className="flex items-center gap-2">
-                <Button asChild variant="outline" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
-                <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border border-border px-4 text-base">
-                  <Search className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{p.query}</span>
+            <div className="flex items-center justify-between gap-2 px-4 pb-2">
+              <span className="flex min-w-0 items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-sm shadow-sm">
+                <Search className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="truncate">{p.query}</span>
+              </span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {p.view === "options" ? `${p.options.length} ${p.options.length === 1 ? "opção" : "opções"} · total na revisão` : ""}
+              </span>
+            </div>
+            {/* O fim da lista esmaece para indicar que há mais; o espaço extra deixa o último cartão sair da máscara. */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+              {searching && (
+                <div className="grid gap-2.5"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
+              )}
+              {!searching && p.view === "options" && (
+                <ul className="grid gap-2.5">
+                  {p.options.map((option, i) => (
+                    <motion.li
+                      key={option.candidate.itemId}
+                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: i * 0.06 }}
+                    >
+                      <ResultCard
+                        option={option}
+                        first={i === 0}
+                        expanded={expanded === i}
+                        disabled={p.busy}
+                        onToggle={() => setExpanded(expanded === i ? -1 : i)}
+                        onSelect={() => p.onSelect(i)}
+                        onAdjust={adjust}
+                      />
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
+              {!searching && p.view === "empty" && (
+                <div className="grid justify-items-center gap-3 py-8 text-center">
+                  <p className="font-display text-lg font-medium">Não achei nada nesse limite.</p>
+                  <p className="text-sm text-muted-foreground">Quer subir o orçamento?</p>
+                  <ul className="flex flex-wrap justify-center gap-2">
+                    {EMPTY_HINTS.map((h) => (
+                      <li key={h}><Button variant="outline" size="sm" onClick={() => fillInput(h)}>{h}</Button></li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-              <div aria-hidden="true" className="mt-3 flex gap-1 overflow-x-auto text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {TABS.map((tab) => (
-                  <span key={tab} className={cn("shrink-0 rounded-full px-3 py-1.5", tab === "Restaurantes" ? "border border-border font-semibold shadow-sm" : "text-muted-foreground")}>{tab}</span>
-                ))}
-              </div>
-            </header>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4">
-              <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-                {DATA_ORIGIN === "mock" && <Badge variant="simulated">Simulado</Badge>}
-                <span>O total com frete e taxas só aparece na revisão, quando estiver confirmado.</span>
-              </div>
-              <ul className="divide-y divide-border">
-                {p.options.map((option, i) => (
-                  <motion.li
-                    key={option.candidate.itemId}
-                    initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: i * 0.08 }}
-                  >
-                    <ResultRow option={option} disabled={p.busy} onSelect={() => p.onSelect(i)} />
-                  </motion.li>
-                ))}
-              </ul>
-              <p className="py-3 text-center text-sm text-muted-foreground">Quer mudar algo? Continue a conversa aqui embaixo.</p>
+              )}
             </div>
           </>
         )}
@@ -134,14 +169,6 @@ export function AgentView(p: AgentViewProps) {
       </section>
 
       <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0" : "grow")}>
-        {!hasView && (
-          <header className="flex items-center gap-2 px-3 py-2">
-            <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
-            <span className="font-display text-lg font-medium">FoodPilot</span>
-            <Badge variant="simulated" className="ml-auto">Simulado</Badge>
-          </header>
-        )}
-
         <div className={cn("flex min-h-0 flex-col items-center", hasView ? "" : "flex-1 justify-center overflow-y-auto text-center")}>
           {!hasView && <h1 className="px-4 font-display text-balance text-3xl font-medium leading-tight">Qual a sua vibe de hoje?</h1>}
           {hasView && caption}
@@ -191,7 +218,7 @@ export function AgentView(p: AgentViewProps) {
               aria-label={p.onMicClick ? "Falar" : "Falar (voz em breve)"} title={p.onMicClick ? undefined : "Voz em breve"}>
               <Mic />
             </Button>
-            <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Refine ou peça outra coisa…" aria-label="Mensagem" maxLength={4000} />
+            <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Refine ou peça outra coisa…" aria-label="Mensagem" maxLength={4000} />
             <Button type="submit" size="icon" disabled={p.busy || !input.trim()} aria-label="Enviar"><Send /></Button>
           </form>
         </footer>

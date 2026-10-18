@@ -60,16 +60,25 @@ const STORE: Option = {
   reasons: [{ kind: "times_ordered", value: 5, text: "você já pediu aqui 5 vezes" }],
 };
 
-type Scenario = "inicio" | "opcoes" | "aprovavel" | "pendente" | "expirada" | "aprovada";
+type Scenario = "inicio" | "carregando" | "opcoes" | "uma" | "zero" | "erro" | "aprovavel" | "pendente" | "expirada" | "aprovada";
 const SCENARIOS: { id: Scenario; label: string }[] = [
   { id: "inicio", label: "Início" },
+  { id: "carregando", label: "Carregando" },
   { id: "opcoes", label: "3 lojas" },
+  { id: "uma", label: "1 opção" },
+  { id: "zero", label: "0 opções" },
+  { id: "erro", label: "Erro" },
   { id: "aprovavel", label: "Proposta" },
   { id: "pendente", label: "Pendências" },
   { id: "expirada", label: "Expirada" },
   { id: "aprovada", label: "Aprovada" },
 ];
-const VIEW = { inicio: null, opcoes: "options", aprovavel: "proposal", pendente: "proposal", expirada: "proposal", aprovada: "continue" } as const;
+const VIEW = {
+  inicio: null, carregando: null, opcoes: "options", uma: "options", zero: "empty", erro: "options",
+  aprovavel: "proposal", pendente: "proposal", expirada: "proposal", aprovada: "continue",
+} as const;
+type ProposalScenario = "aprovavel" | "pendente" | "expirada" | "aprovada";
+const isProposal = (s: Scenario): s is ProposalScenario => ["aprovavel", "pendente", "expirada", "aprovada"].includes(s);
 
 export function PreviewScreen() {
   const [scenario, setScenario] = useState<Scenario>("inicio");
@@ -77,14 +86,15 @@ export function PreviewScreen() {
   if (now === null) return null;
   const soon = new Date(now + 5 * 60_000).toISOString();
 
-  const PROPOSALS: Record<Exclude<Scenario, "inicio" | "opcoes">, PublicProposal> = {
+  const PROPOSALS: Record<ProposalScenario, PublicProposal> = {
     aprovavel: { ...BASE, expiresAt: soon },
     pendente: { ...BASE, expiresAt: soon, cost: { items: BASE.cost.items, status: "unknown" }, unresolved: ["Taxas e total não confirmados", "Frete desconhecido"] },
     expirada: { ...BASE, expiresAt: "2000-01-01T00:00:00.000Z" },
     aprovada: { ...BASE, state: "approved", expiresAt: soon },
   };
-  const proposal = scenario === "inicio" || scenario === "opcoes" ? undefined : PROPOSALS[scenario];
-  const msgs = scenario === "inicio" ? [] : [{ id: 0, from: "agente" as const, text: "Encontrei 3 opções perto de você. Toque em uma para revisar." }];
+  const proposal = isProposal(scenario) ? PROPOSALS[scenario] : undefined;
+  const options = scenario === "uma" ? OPTIONS.slice(0, 1) : OPTIONS;
+  const msgs = scenario === "inicio" ? [] : [{ id: 0, from: "agente" as const, text: scenario === "zero" ? "Não achei nada nesse limite. Quer subir o orçamento?" : "Encontrei 3 opções perto de você. Toque em uma para revisar." }];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -97,20 +107,20 @@ export function PreviewScreen() {
       </div>
       <AgentView
         view={VIEW[scenario]}
-        options={OPTIONS}
+        options={options}
         proposal={proposal}
         selected={STORE}
         itemNames={ITEM_NAMES}
         msgs={msgs}
-        query="Algo diferente hoje"
-        busy={false}
-        error={null}
+        query={scenario === "inicio" ? "" : "Pizza até R$ 45"}
+        busy={scenario === "carregando"}
+        error={scenario === "erro" ? "Sem conexão com o servidor. Confira sua internet e tente de novo." : null}
         onSend={() => setScenario("opcoes")}
         onSelect={() => setScenario("aprovavel")}
         onApprove={() => setScenario("aprovada")}
         onCancel={() => setScenario("inicio")}
         onEditOrder={() => setScenario("opcoes")}
-        onRetry={() => {}}
+        onRetry={() => setScenario("opcoes")}
         onNewSearch={() => setScenario("inicio")}
       />
     </div>

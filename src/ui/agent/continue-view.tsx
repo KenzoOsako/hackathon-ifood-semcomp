@@ -32,7 +32,7 @@ export function buildSummary(proposal: PublicProposal, option: Option | null, it
 
 type Props = { proposal: PublicProposal; option: Option | null; itemNames?: Record<string, string>; embedded?: boolean; onNewSearch: () => void };
 
-export function ContinueView({ proposal, option, itemNames, onNewSearch }: Props) {
+export function ContinueView({ proposal, option, itemNames, embedded = false, onNewSearch }: Readonly<Props>) {
   const headingRef = useFocusOnMount<HTMLHeadingElement>();
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
   const summary = buildSummary(proposal, option, itemNames);
@@ -50,15 +50,15 @@ export function ContinueView({ proposal, option, itemNames, onNewSearch }: Props
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold outline-none">Continue no iFood</h1>
-        {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
+        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-medium outline-none">Continue no iFood</h1>
+        {DATA_ORIGIN === "mock" && !embedded && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <div className="flex items-start gap-3">
           <CircleCheck className="mt-1 size-6 shrink-0 text-success-foreground" aria-hidden="true" />
           <div>
-            <p className="font-display text-2xl font-bold leading-tight">Proposta aprovada</p>
+            <p className="font-display text-2xl font-medium leading-tight">Proposta aprovada</p>
             <p className="mt-1 text-sm text-muted-foreground">Nenhum pedido foi enviado. A compra é finalizada por você no iFood.</p>
           </div>
         </div>
