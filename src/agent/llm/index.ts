@@ -10,5 +10,7 @@ export async function criarLlm(env: NodeJS.ProcessEnv = process.env): Promise<Ll
   const modelo = env.LLM_MODEL;
   if (!provedor || !modelo) return new RuleBasedLlm();
   if (!PROVEDORES.has(provedor)) throw new Error("LLM_PROVIDER inválido");
-  return new LangChainLlm(await criarModelo(provedor, modelo), provedor, modelo);
+  // LLM_MODEL_RESERVA (mesmo provedor): assume na hora se o principal falhar (ex.: 503 de alta demanda).
+  const reserva = env.LLM_MODEL_RESERVA && env.LLM_MODEL_RESERVA !== modelo ? await criarModelo(provedor, env.LLM_MODEL_RESERVA) : undefined;
+  return new LangChainLlm(await criarModelo(provedor, modelo), provedor, modelo, reserva);
 }

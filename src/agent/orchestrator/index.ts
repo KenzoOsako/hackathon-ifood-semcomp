@@ -15,6 +15,7 @@ import type { AgentReply, AgentSession, ConverseInput, DomainPort, EventoFeedbac
 export const MAX_PERGUNTAS = 3;
 const MAX_PERGUNTAS_L1 = 1;
 const MAX_CONFIRMACOES_SEGUIDAS = 2;
+const SAUDACAO = /^(oi+|ola+|opa|salve|e ai|bom dia|boa tarde|boa noite)( (oi+|ola+|bom dia|boa tarde|boa noite|tudo bem|tudo bom|guide))*$/;
 const TIMEOUT_INTERPRETAR_MS = 8000;
 const TIMEOUT_RESPONDER_MS = 8000;
 const HISTORICO = 12;
@@ -127,6 +128,13 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   if (pendente && NEGA.test(puro)) return fechar(s, input, deps, { resposta: FRASES.confirmacaoNegada }, tempos, t0);
   if (pendente && AFIRMA.test(puro)) return despachar(s, input, deps, pendente.turno, pendente.texto, pendente.pressa, tempos, t0);
   if (pendente && AFIRMA_INICIO.test(puro)) aplicarEstado(s, pendente.turno);
+
+  // Cumprimento puro não precisa de modelo: responde na hora (era 3 a 4 s de LLM para dizer "oi").
+  if (!pendente && SAUDACAO.test(puro)) {
+    s.ultimaIntencao = "conversa";
+    if (s.estado === "S0") s.estado = "S1";
+    return fechar(s, input, deps, { resposta: FRASES.oQueFaco }, tempos, t0);
+  }
 
   let turno: TurnoInterpretado;
   try {

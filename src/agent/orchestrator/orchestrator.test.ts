@@ -23,6 +23,17 @@ const turno = (llm: LlmPort, domain = new FakeDomain()) => {
   return { s, domain, fale: (texto: string) => executarTurno(s, { texto, origem: "texto" }, { llm, domain }) };
 };
 
+describe("cumprimento puro responde sem chamar o modelo", () => {
+  it.each(["oi", "Olá, boa tarde", "bom dia", "oi tudo bem?", "opa"])("%s", async (t) => {
+    const r = await turno(new ScriptedLlm([])).fale(t);
+    expect(r.resposta).toBe(FRASES.oQueFaco);
+  });
+  it("cumprimento com pedido junto continua indo ao modelo", async () => {
+    const r = await turno(new ScriptedLlm([{ nivel: "L0", necessidades: [pizza] }])).fale("oi, quero pizza");
+    expect(r.resposta).not.toBe(FRASES.oQueFaco);
+  });
+});
+
 describe("orquestrador", () => {
   it("nunca passa de três perguntas mesmo que o LLM insista", async () => {
     const pergunta = { intencao: "pedido" as const, nivel: "L2" as const, necessidades: [pizza], pergunta: "Quantas pessoas?" };
@@ -114,7 +125,7 @@ describe("orquestrador", () => {
   });
 
   it("falha do LLM vira frase curta sem inventar plano", async () => {
-    const r = await turno(new ScriptedLlm([])).fale("oi");
+    const r = await turno(new ScriptedLlm([])).fale("quero uma coisa");
     expect(r.resposta).toBe(FRASES.naoEntendi);
     expect(r.tela).toBeUndefined();
   });
@@ -199,10 +210,9 @@ describe("orquestrador", () => {
 
   it("saudação no início não trava o nível; L1 tem no máximo uma pergunta", async () => {
     const { s, fale } = turno(new ScriptedLlm([
-      { intencao: "conversa" },
       { nivel: "L2", necessidades: [pizza], pergunta: "Quantas pessoas?" },
     ]));
-    await fale("oi");
+    expect((await fale("oi")).resposta).toBe(FRASES.oQueFaco); // cumprimento puro: sem LLM (o roteiro nem é consumido)
     expect((await fale("aniversário com pizza")).estado).toBe("S2");
     expect(s.nivel).toBe("L2");
 
