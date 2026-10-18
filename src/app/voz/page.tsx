@@ -13,14 +13,19 @@ export default function VozLab() {
 
   const [utterance, setUtterance] = useState<Utterance | null>(null);
 
-  const send = useCallback(async (text: string, speakReply?: (t: string) => unknown) => {
+  interface Ctl { mark: (m: "request_sent" | "first_chunk") => void; speak: (t: string) => unknown; begin?: () => void }
+
+  const send = useCallback(async (text: string, ctl: Ctl) => {
     setBusy(true);
     setLines((l) => [...l, { from: "voce", text }]);
     try {
+      ctl.begin?.();
+      ctl.mark("request_sent");
       const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
       const t = (await r.json()) as { reply: string };
+      ctl.mark("first_chunk"); // o backend de hoje devolve tudo de uma vez; no fluxo real, este é o 1º pedaço
       setLines((l) => [...l, { from: "agente", text: t.reply }]);
-      speakReply?.(t.reply);
+      ctl.speak(t.reply); // divide em pedaços, busca o áudio de todos em paralelo e toca em ordem
     } finally {
       setBusy(false);
     }
@@ -29,7 +34,7 @@ export default function VozLab() {
   // Fala reconhecida: guarda o diagnóstico, envia ao agente e responde falando.
   const voice = useVoice((u, api) => {
     setUtterance(u);
-    void send(u.texto, api.speak);
+    void send(u.texto, { mark: api.mark, speak: api.speak });
   });
 
   const listening = voice.state === "listening";
@@ -62,10 +67,18 @@ export default function VozLab() {
 
       {voice.errorMessage && <p role="alert" style={{ color: "#b00020" }}>{voice.errorMessage}</p>}
 
-      <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), voice.speak); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
+      <form onSubmit={(e) => { e.preventDefault(); if (input.trim()) { void send(input.trim(), { mark: voice.mark, speak: voice.speak, begin: voice.beginTurn }); setInput(""); } }} style={{ display: "flex", gap: 8 }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ou digite aqui (o texto sempre funciona)" aria-label="Mensagem" disabled={busy} style={{ background: "#fff", color: "#111", flex: 1, padding: 12, borderRadius: 10, border: "1px solid #ccc", fontSize: 16 }} />
         <button disabled={busy} style={{ padding: "0 18px", borderRadius: 10, border: 0, background: "#222", color: "#fff" }}>Enviar</button>
       </form>
+
+      {voice.latency && (
+        <details open style={{ marginTop: 16, color: "#444" }}>
+          <summary>Latência do último turno (ms)</summary>
+          <pre style={{ background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto" }}>{JSON.stringify(voice.latency, null, 2)}</pre>
+          <small>Metas: reconhecimento 600 · primeiro pedaço do backend 700 · primeiro byte de voz 450 · até a primeira palavra 1800.</small>
+        </details>
+      )}
 
       {utterance && (
         <details open style={{ marginTop: 16, color: "#444" }}>

@@ -1,6 +1,6 @@
 # src/voice — Conversação e Voz
 
-**Dono:** Felipe. **Status:** funcional em lote. Pronto e testado: texto falado, guardas, sinais, gasto, síntese (`/api/voice/tts`), **reconhecimento em lote (`/api/voice/stt`)**, **hook do microfone** (`use-voice.ts`), **player com interrupção** (`player.ts`), detecção de voz (`vad.ts`) e a página de teste `/voz`. Falta: ligar ao `/api/converse` do Hyago (hoje a página usa o agente de texto atual), reconhecimento em tempo real e palavras-chave. **Não verificado:** microfone real (o navegador do painel bloqueia o acesso); precisa de teste em Chrome com microfone.
+**Dono:** Felipe. **Status:** funcional em lote e **em pedaços**. Pronto e testado: texto falado, guardas, sinais, gasto, síntese (`/api/voice/tts`, com texto vizinho para a entonação), pré-aquecimento (`/api/voice/warm`), reconhecimento em lote (`/api/voice/stt`), hook do microfone (`use-voice.ts`), **player com fila, busca antecipada e interrupção** (`player.ts`), **divisão em pedaços** (`chunker.ts`), **contrato do fluxo NDJSON** (`converse-events.ts`), **medida de latência** (`latency.ts`) e a página `/voz`. Falta: ligar ao `/api/converse` do Hyago (hoje a página usa o agente de texto, que devolve tudo de uma vez), reconhecimento em tempo real e palavras-chave. **Não verificado:** microfone real (o navegador do painel bloqueia o acesso); precisa de teste em Chrome com microfone.
 
 **Responsabilidade:** o usuário fala e ouve o FoodPilot, com baixa latência e sem atrito.
 
@@ -40,3 +40,6 @@ Microfone negado, ruído, provedor fora do ar, interrupção, queda para texto (
 - `POST /api/voice/tts` `{ text }` → `audio/mpeg`. 503 se a voz estiver indisponível (a tela segue em texto).
 - `POST /api/voice/stt` (corpo = áudio de uma fala) → `{ texto, confianca, duracaoS, redacoes, injecao }`. O texto já vem **sem dados sensíveis** e `injecao` sinaliza tentativa de manipular o agente.
 - Ambas: origem same-origin, corpo limitado, erros sanitizados e **sem depender de `MCP_MODE`**.
+
+## Fluxo em pedaços (contrato com o backend)
+O backend (`/api/converse`, Hyago) responde em **NDJSON**, um evento por linha, conforme `converse-events.ts`: `ack` (reconhecimento imediato, opcional), `speech {seq, text, final?}` (um pedaço para falar), `screen {event, payload}` (para a tela), `done {turnId}` e `error {code, reply}`. A voz toca o primeiro `speech` assim que chega e já busca o áudio dos próximos. Orçamento de latência e regras para o backend: `docs/AGENTE_CONVERSA_E_FLUXO.md` §4.4.

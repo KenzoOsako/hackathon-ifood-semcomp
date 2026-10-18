@@ -2,6 +2,7 @@
 // Hook do microfone (clicar para falar, clicar para parar). Grava UMA fala, manda ao /api/voice/stt e
 // devolve texto + sinais. Quem decide o que fazer com o texto é o fluxo (Hyago); aqui não há regra de negócio.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LatencyTrace, type LatencySummary, type Mark } from "./latency";
 import { SpeechPlayer } from "./player";
 import { computeSignals, type VoiceSignals } from "./signals";
 import { pickMimeType, rms, VoiceActivityTracker } from "./vad";
@@ -27,7 +28,9 @@ const MESSAGES: Record<VoiceErrorCode, string> = {
 };
 
 export interface VoiceApi {
-  speak: (text: string) => unknown;
+  speak: (text: string) => Promise<void> | undefined; // divide em pedaços e fala
+  enqueue: (chunk: string, nextText?: string) => void; // um pedaço pronto (fluxo do backend)
+  mark: (name: Mark) => void; // marco de latência (request_sent, first_chunk)
 }
 
 // O callback recebe a fala reconhecida e uma API para responder falando (evita ref circular na tela).
@@ -36,6 +39,8 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
   const [error, setError] = useState<VoiceErrorCode | null>(null);
   const [level, setLevel] = useState(0);
   const [speaking, setSpeaking] = useState(false);
+  const [latency, setLatency] = useState<LatencySummary | null>(null);
+  const trace = useRef(new LatencyTrace());
   const player = useRef<SpeechPlayer | null>(null);
   const rec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -46,15 +51,32 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
   useEffect(() => { onUtt.current = onUtterance; }, [onUtterance]);
 
   useEffect(() => {
-    player.current = new SpeechPlayer(setSpeaking);
+    player.current = new SpeechPlayer(setSpeaking, {
+      onTtsResponse: () => trace.current.mark("tts_first_byte"),
+      onAudioStart: () => { trace.current.mark("audio_start"); setLatency(trace.current.summary()); },
+    });
     return () => { player.current?.stop(); cleanupFns.current.forEach((f) => f()); };
   }, []);
 
   const fail = useCallback((code: VoiceErrorCode) => { setError(code); setState("error"); }, []);
 
+  // Novo turno: zera a medida de latência e aquece a conexão com a voz (a primeira chamada fria custa ~1 s a mais).
+  const beginTurn = useCallback(() => {
+    trace.current = new LatencyTrace();
+    setLatency(null);
+    void fetch("/api/voice/warm", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => undefined);
+  }, []);
+
+  const api = (): VoiceApi => ({
+    speak: (t) => player.current?.speak(t),
+    enqueue: (c, n) => player.current?.enqueue(c, { nextText: n }),
+    mark: (m) => trace.current.mark(m),
+  });
+
   const start = useCallback(async () => {
     if (state === "listening" || state === "transcribing") return;
     setError(null);
+    beginTurn();
     if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices?.getUserMedia) return fail("unsupported");
     // INTERRUPÇÃO: se o agente está falando, corta a fala e registra que houve interrupção.
     meta.current.interrupted = player.current?.stop() ?? false;
@@ -97,9 +119,10 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
         if (res.status === 503) return fail("stt_unavailable");
         if (!res.ok) return fail("stt_failed");
         const data = (await res.json()) as { texto: string; confianca?: number; injecao: boolean; redacoes: string[] };
+        trace.current.mark("stt_done");
         const sinais = computeSignals({ transcript: data.texto, micOpenedAt: meta.current.micOpenedAt, firstWordAt: tracker.firstWordAt, lastWordAt: tracker.lastWordAt, interrupted: meta.current.interrupted });
         setState("idle");
-        onUtt.current({ texto: data.texto, sinais, confianca: data.confianca, injecao: data.injecao, redacoes: data.redacoes }, { speak: (t) => player.current?.speak(t) });
+        onUtt.current({ texto: data.texto, sinais, confianca: data.confianca, injecao: data.injecao, redacoes: data.redacoes }, api());
       } catch {
         fail("stt_failed");
       }
@@ -108,11 +131,18 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
     meta.current.micOpenedAt = performance.now();
     recorder.start();
     setState("listening");
-  }, [state, fail]);
+  }, [state, fail, beginTurn]);
 
-  const stop = useCallback(() => { if (rec.current?.state === "recording") rec.current.stop(); }, []);
+  const stop = useCallback(() => {
+    if (rec.current?.state === "recording") {
+      trace.current.mark("mic_stop");
+      rec.current.stop();
+    }
+  }, []);
   const speak = useCallback((text: string) => player.current?.speak(text), []);
+  const enqueue = useCallback((chunk: string, nextText?: string) => player.current?.enqueue(chunk, { nextText }), []);
+  const mark = useCallback((name: Mark) => trace.current.mark(name), []);
   const stopSpeaking = useCallback(() => player.current?.stop(), []);
 
-  return { state: speaking && state === "idle" ? "speaking" : state, error, errorMessage: error ? MESSAGES[error] : null, level, start, stop, speak, stopSpeaking };
+  return { state: speaking && state === "idle" ? "speaking" : state, error, errorMessage: error ? MESSAGES[error] : null, level, latency, start, stop, speak, enqueue, mark, beginTurn, stopSpeaking };
 }

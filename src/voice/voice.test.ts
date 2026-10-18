@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __resetTtsForTests, assertTtsBudget, recordTts } from "./budget";
+import { __resetTtsForTests, assertTtsBudget, recordTts, ttsUsed } from "./budget";
 import { detectApprovalIntent, looksLikeInjection, redactSensitive, stripSpokenNoise } from "./guard";
 import { computeSignals, textSignals, VoiceSignalsSchema } from "./signals";
 import { limitSpeech, normalizeForSpeech, toSpeech } from "./speech-text";
 import { POST as tts } from "@/app/api/voice/tts/route";
+import { POST as warm } from "@/app/api/voice/warm/route";
 
 describe("texto falado", () => {
   it("valores e unidades por extenso", () => {
@@ -133,5 +134,42 @@ describe("rota /api/voice/tts", () => {
     expect(r.status).toBe(503);
     expect((await r.json()).code).toBe("VOICE_BUDGET");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("rota /api/voice/tts: texto vizinho e aquecimento", () => {
+  const origin = "http://localhost:3000";
+  const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+    new Request(`${origin}/api/voice/${path}`, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
+  beforeEach(() => { __resetTtsForTests(); vi.stubEnv("TTS_CHAR_BUDGET", "1000"); vi.stubEnv("ELEVENLABS_API_KEY", "sk_teste"); vi.stubEnv("ELEVENLABS_VOICE_ID", "voz123"); });
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+  it("envia o texto vizinho, já normalizado, ao provedor", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Uint8Array([1]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await tts(post("tts", { text: "A mais em conta.", previousText: "Achei [happy] 3 opções.", nextText: "Total R$ 39,90." }));
+    expect(r.status).toBe(200);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.previous_text).toBe("Achei 3 opções.");
+    expect(body.next_text).toBe("Total 39 reais e 90 centavos.");
+  });
+  it("sem texto vizinho, o provedor não recebe os campos", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Uint8Array([1]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await tts(post("tts", { text: "Oi" }));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect("previous_text" in body).toBe(false);
+    expect("next_text" in body).toBe(false);
+  });
+  it("campo desconhecido continua sendo recusado", async () => {
+    expect((await tts(post("tts", { text: "Oi", voice: "outra" }))).status).toBe(400);
+  });
+  it("aquecimento responde 204, recusa origem inválida e não gasta o limite", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("[]", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const ok = await warm(post("warm", {}));
+    expect(ok.status).toBe(204);
+    expect((await warm(post("warm", {}, { Origin: "http://evil.example" }))).status).toBe(403);
+    expect(ttsUsed()).toBe(0);
   });
 });
