@@ -78,6 +78,15 @@
   --font-display: var(--font-bricolage), var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Dentro da moldura do celular a rolagem continua (toque, roda e teclado), mas sem as barras nativas
+   do desktop, que quebram a ilusão de app. */
+.phone-frame * {
+  scrollbar-width: none;
+}
+.phone-frame *::-webkit-scrollbar {
+  display: none;
+}
+
 /* Fundo das telas do agente: creme-pêssego em degradê vertical com pontinhos a cada 14px. */
 .agent-bg {
   position: relative;
