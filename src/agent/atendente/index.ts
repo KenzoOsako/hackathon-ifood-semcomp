@@ -55,6 +55,14 @@ export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conv
 - Nada de bebida alcoólica, remédio ou conselho médico. Fora de refeição, mercado e presente: recuse com educação e ofereça ajuda.
 - Nunca peça nem repita CPF, cartão, senha, telefone, e-mail ou endereço.`;
 
+// TRACE: uma linha de log por turno com cada decisão (guarda, chamadas ao LLM, ferramentas, tempos). Só observa; não muda o comportamento.
+// ATENDENTE_TRACE=full inclui também a fala do usuário, o que o modelo respondeu e o que cada ferramenta devolveu.
+type PassoTrace = {
+  passo: number; llmMs: number; tokens?: { entrada?: number; saida?: number };
+  ferramentas: { nome: string; args: unknown; ms: number; saida?: string }[]; texto?: string;
+};
+const traceCompleto = () => process.env.ATENDENTE_TRACE === "full";
+
 export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; domain: DomainPort; nome?: string; now?: () => number }
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
@@ -135,11 +143,13 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   s.turnos += 1;
   let tela: AgentReply["tela"];
   let aprovacao: AgentReply["aprovacao"];
+  const trace: { guarda?: string; passos: PassoTrace[]; erro?: string; saneada?: boolean } = { passos: [] };
 
   const fim = (resposta: string): AgentReply => {
     s.history.push({ role: "user", text: input.texto }, { role: "agent", text: resposta });
     if (s.history.length > 40) s.history.splice(0, s.history.length - 40);
     tempos.totalMs = Math.round(now() - t0);
+    console.info(`[trace] ${JSON.stringify({ turno: s.turnos, estado: s.estado, totalMs: tempos.totalMs, llmMs: trace.passos.reduce((a, p) => a + p.llmMs, 0), dominioMs: tempos.dominioMs ?? 0, chamadasLLM: trace.passos.length, ...trace, ...(traceCompleto() ? { usuario: input.texto, resposta } : {}) })}`);
     return { estado: s.estado, nivel: "L1", resposta, ...(tela ? { tela } : {}), ...(aprovacao ? { aprovacao } : {}), origem: s.plano?.origem ?? "simulado", llm: `atendente:${deps.nomeModelo}`, tempos };
   };
 
@@ -167,6 +177,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     }
   }
   if (APROVACAO_EXPLICITA.test(texto)) {
+    trace.guarda = "aprovacao_explicita";
     if (!s.plano) return fim(FRASES.semPlano);
     const citada = texto.match(VERSAO_CITADA)?.[1];
     if (!citada) return fim("Para aprovar, confira a tela e informe a versão do plano.");
@@ -179,6 +190,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     return fim(FRASES.aprovacaoEnviada);
   }
   if (s.plano && FECHAR.test(texto)) {
+    trace.guarda = "fechar";
     if (impedimentosPlano(s.plano).length) { tela = { tipo: "plano_atualizado", plano: s.plano }; return fim("Complete e salve os complementos obrigatórios antes de revisar."); }
     s.estado = "S5"; s.encaminhado = true;
     tela = { tipo: "aguardando_aprovacao", plano: s.plano };
@@ -203,9 +215,13 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   const grupos: GrupoOpcoes[] = [];
   try {
     for (let passo = 0; passo <= MAX_PASSOS; passo++) {
+      const tl = now();
       const ai = await comTimeout(modelo.invoke(msgs), TIMEOUT_MS) as AIMessage;
       msgs.push(ai);
       const chamadas = ai.tool_calls ?? [];
+      const textoAi = typeof ai.content === "string" ? ai.content : ai.content.map((p) => ("text" in p ? p.text : "")).join("");
+      const ptrace: PassoTrace = { passo, llmMs: Math.round(now() - tl), tokens: { entrada: ai.usage_metadata?.input_tokens, saida: ai.usage_metadata?.output_tokens }, ferramentas: [], ...(traceCompleto() ? { texto: textoAi } : {}) };
+      trace.passos.push(ptrace);
       if (!chamadas.length || passo === MAX_PASSOS) {
         resposta = typeof ai.content === "string" ? ai.content : ai.content.map((p) => ("text" in p ? p.text : "")).join("");
         break;
@@ -214,6 +230,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
         const td = now();
         const saida = await executarFerramenta(c.name, c.args, s, mem, deps).catch((e): Saida => ({ texto: `ERRO na ferramenta: ${String(e).slice(0, 160)}` }));
         tempos.dominioMs = (tempos.dominioMs ?? 0) + Math.round(now() - td);
+        ptrace.ferramentas.push({ nome: c.name, args: c.args, ms: Math.round(now() - td), ...(traceCompleto() ? { saida: saida.texto } : {}) });
         if (saida.grupo) {
           grupos.push(saida.grupo);
           if (!tela || tela.tipo === "mostrar_opcoes") tela = { tipo: "mostrar_opcoes", plano: { ...(s.plano ?? planoVazio()), opcoes: grupos.slice(-GRUPOS_NA_TELA) } };
@@ -224,12 +241,14 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     }
   } catch (error) {
     console.warn(`[atendente] falhou: ${String(error).slice(0, 200)}`);
+    trace.erro = String(error).slice(0, 200);
     resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : FRASES.naoEntendi;
   }
   tempos.interpretarMs = Math.round(now() - t0) - (tempos.dominioMs ?? 0);
 
   resposta = resposta.replace(/[*#[\]_`]/g, "").replace(/\s+/g, " ").trim();
   if (!resposta || PROIBIDO.test(resposta) || temDadoPessoal(resposta)) {
+    trace.saneada = true; // a fala do modelo foi trocada por frase fixa (vazia, proibida ou dado pessoal)
     resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : "Me conta um pouco mais do que você quer, que eu te ajudo a escolher.";
   }
   if (!s.plano) s.estado = "S1";
