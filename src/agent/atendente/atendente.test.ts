@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { FakeDomain } from "../domain-fake";
 import { FRASES } from "../frases";
 import { novaSessao } from "../sessao";
-import { executarAtendente, reiniciarAtendente } from ".";
+import { executarAtendente, falhaDeProvedor, reiniciarAtendente } from ".";
 
 type Chamada = { name: string; args: Record<string, unknown> };
 // Modelo roteirizado: cada invoke devolve a próxima resposta (com ou sem chamadas de ferramenta) e conta as chamadas.
@@ -106,6 +106,33 @@ describe("atendente", () => {
       expect(r.resposta).toBe(FRASES.naoEntendi);
       expect(estado.chamadas).toBe(0);
     });
+  });
+
+  it("alergia dita DEPOIS da busca: o plano busca de novo com a restrição, não reaproveita a lista sem filtro", async () => {
+    const s = novaSessao(`s-${Math.random()}`);
+    reiniciarAtendente(s.subjectRef);
+    const domain = new FakeDomain();
+    const restricoesVistas: string[][] = [];
+    const original = domain.buscarNecessidade.bind(domain);
+    domain.buscarNecessidade = (n, o) => { restricoesVistas.push([...n.restricoes]); return original(n, o); };
+    const { modelo } = roteiro([
+      [{ name: "buscar_no_ifood", args: pizza }],
+      "Tem a margherita da Nonna. Quer?",
+      [{ name: "mostrar_plano", args: { itens: [{ ...pizza, ref: "nonna-margherita", restricoes: ["lactose"] }] } }],
+      "Montei. É isso?",
+    ]);
+    const deps = { modelo, nomeModelo: "roteiro", domain };
+    await executarAtendente(s, { texto: "quero pizza", origem: "texto" }, deps);               // busca sem restrição
+    await executarAtendente(s, { texto: "quero essa, mas sou intolerante", origem: "texto" }, deps); // a restrição chega depois
+    expect(restricoesVistas).toHaveLength(2);          // a busca da ferramenta e a do plano
+    expect(restricoesVistas[0]).toEqual([]);           // a 1ª foi feita sem restrição
+    expect(restricoesVistas[1]).toEqual(["lactose"]);  // a do plano já filtra
+  });
+
+  it("reconhece falha de provedor sem confundir número qualquer com código HTTP", () => {
+    expect(falhaDeProvedor(new Error("[503 Service Unavailable]"))).toBe(true);
+    expect(falhaDeProvedor(new Error("RateLimitQuotaExhaustedError 429"))).toBe(true);
+    expect(falhaDeProvedor(new Error("saída inválida: campo com 15003 caracteres"))).toBe(false);
   });
 
   it("buscas pedidas juntas rodam juntas, e a tela e a conversa seguem a ordem pedida, não a de chegada", async () => {

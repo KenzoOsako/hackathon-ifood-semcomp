@@ -69,7 +69,7 @@ export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; mode
 
 // Falha do PROVEDOR (cota, sobrecarga, rede, tempo), diferente de resposta ruim do modelo: vale tentar o modelo reserva e,
 // se nada funcionar, dizer a verdade ("instabilidade") em vez de "não entendi".
-export const falhaDeProvedor = (e: unknown) => /429|quota|rate.?limit|resource.?exhausted|overload|unavailable|50[0-4]|TIMEOUT|ECONN|ETIMEDOUT|ENOTFOUND|fetch failed|network/i.test(String(e));
+export const falhaDeProvedor = (e: unknown) => /429|quota|rate.?limit|resource.?exhausted|overload|unavailable|(^|[^0-9])50[0-4]([^0-9]|$)|TIMEOUT|ECONN|ETIMEDOUT|ENOTFOUND|fetch failed|network/i.test(String(e));
 // Modelo que acabou de falhar por provedor fica de lado por um tempo: o próximo turno vai direto ao reserva, sem pagar a falha de novo.
 const PAUSA_MODELO_MS = 60_000;
 const gm = globalThis as unknown as { __guideModeloFora?: Map<string, number> };
@@ -77,7 +77,7 @@ const modeloFora = (gm.__guideModeloFora ??= new Map<string, number>());
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
 // grupoDe: cada opção aponta para a lista da busca em que apareceu (as que a pessoa viu juntas na tela).
-type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[]; em?: number }>; resumoBuscas: string[] };
+type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[]; em?: number; restricoes?: string[] }>; resumoBuscas: string[] };
 const g = globalThis as unknown as { __guideAtendente?: Map<string, Memoria> };
 const memorias = (g.__guideAtendente ??= new Map());
 function memoriaDe(subjectRef: string): Memoria {
@@ -160,7 +160,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     s.history.push({ role: "user", text: input.texto }, { role: "agent", text: resposta });
     if (s.history.length > 40) s.history.splice(0, s.history.length - 40);
     tempos.totalMs = Math.round(now() - t0);
-    console.info(`[trace] ${JSON.stringify({ turno: s.turnos, estado: s.estado, totalMs: tempos.totalMs, llmMs: trace.passos.reduce((a, p) => a + p.llmMs, 0), dominioMs: tempos.dominioMs ?? 0, chamadasLLM: trace.passos.length, ...trace, ...(traceCompleto() ? { usuario: input.texto, resposta } : {}) })}`);
+    if (process.env.ATENDENTE_TRACE) console.info(`[trace] ${JSON.stringify({ turno: s.turnos, estado: s.estado, totalMs: tempos.totalMs, llmMs: trace.passos.reduce((a, p) => a + p.llmMs, 0), dominioMs: tempos.dominioMs ?? 0, chamadasLLM: trace.passos.length, ...trace, ...(traceCompleto() ? { usuario: input.texto, resposta } : {}) })}`);
     return { estado: s.estado, nivel: "L1", resposta, ...(tela ? { tela } : {}), ...(aprovacao ? { aprovacao } : {}), origem: s.plano?.origem ?? "simulado", llm: `atendente:${usado}`, tempos };
   };
 
@@ -318,12 +318,13 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const a = buscarSchema.parse(args);
     if (ALCOOL.test(a.categoria)) return { texto: "Não busco bebida alcoólica. Ofereça outra coisa." };
     const rel = novoRelatorio();
-    const doDominio = await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao, rel);
+    const necessidade = necessidadeDe(a, s);
+    const doDominio = await deps.domain.buscarNecessidade(necessidade, s.ocasiao, rel);
     const ordenadas = ordenar(doDominio, a.ordenar);
     const opcoes = ordenadas.slice(0, OPCOES_POR_BUSCA);
     // Diagnóstico: o domínio já cortou para os melhores do SEU ranking; o critério do modelo só reordena esses.
     const diag = { devolvidasPeloDominio: doDominio.length, mostradasAoModelo: opcoes.length, ordenar: a.ordenar ?? "relevancia", topoDominio: doDominio[0]?.ref, topoDoModelo: ordenadas[0]?.ref, notasVistas: opcoes.map((o) => o.nota) };
-    const grupo = { categoria: a.categoria, itens: opcoes, em: Date.now() };
+    const grupo = { categoria: a.categoria, itens: opcoes, em: Date.now(), restricoes: necessidade.restricoes };
     for (const o of opcoes) { mem.opcoes.set(o.ref, o); mem.grupoDe.set(o.ref, grupo); }
     const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora.`;
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
@@ -347,7 +348,9 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
       const ref = a.itens[k]?.ref;
       const grupo = ref ? mem.grupoDe.get(ref) : undefined;
       const visto = ref ? mem.opcoes.get(ref) : undefined;
-      if (grupo && visto && grupo.em !== undefined && Date.now() - grupo.em < VALIDADE_BUSCA_MS) { semBusca++; return { necessidade: n, opcoes: [visto, ...grupo.itens.filter((o) => o.ref !== visto.ref)] }; }
+      // Só reaproveita se a busca foi feita com AS MESMAS restrições de hoje: uma alergia dita depois da busca exige filtrar de novo.
+      const mesmasRestricoes = grupo?.restricoes !== undefined && [...grupo.restricoes].sort().join("|") === [...n.restricoes].sort().join("|");
+      if (grupo && visto && mesmasRestricoes && grupo.em !== undefined && Date.now() - grupo.em < VALIDADE_BUSCA_MS) { semBusca++; return { necessidade: n, opcoes: [visto, ...grupo.itens.filter((o) => o.ref !== visto.ref)] }; }
       const rel = novoRelatorio(); rels.push(rel);
       return { necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao, rel) };
     }));
