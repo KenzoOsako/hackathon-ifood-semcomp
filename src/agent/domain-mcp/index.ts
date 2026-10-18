@@ -11,8 +11,7 @@ import { soOsEspecificos } from "../especificidade";
 import { descricaoDe } from "../descricao";
 import { urlDoIfood } from "../guardas-fala";
 import { MAX_CONSULTAS } from "../limites";
-import { vereditoLexico } from "../relevancia";
-import type { BlocoPlano, ContextoBusca, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
+import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
 
 // Porta mínima para o cliente MCP: o domínio não conhece transporte nem token.
 export interface McpTools { callTool(name: string, args: Record<string, unknown>): Promise<unknown> }
@@ -20,7 +19,6 @@ export interface Localizacao { latitude: number; longitude: number; fonte: "ende
 
 const MAX_CANDIDATOS = 10;
 // Candidatos que entram na avaliação de relevância (antes de cortar pelo ranking de preço, que sozinho põe lixo barato na frente).
-const MAX_POOL = 40;
 const PAGE_SIZE = 15;
 const RESTRICOES_MCP: Record<string, string> = { lactose: "LAC_FREE", gluten: "GLUTEN_FREE", acucar: "SUGAR_FREE" };
 
@@ -159,7 +157,7 @@ export class McpDomain implements DomainPort {
     private readonly eventos: (subjectRef: string, e: EventoFeedback) => void = () => undefined,
   ) {}
 
-  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao, ctx?: ContextoBusca): Promise<OpcaoPlano[]> {
+  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);
     // O catálogo busca ITEM por termo: o planejador devolve 1 a 3 termos concretos (sinônimos reais), em paralelo.
     const consultas = consultasDe(n);
@@ -190,8 +188,7 @@ export class McpDomain implements DomainPort {
     const ordenados = filtro.eligible
       .filter((e) => e.candidate.available !== false)
       .sort((a: CandidateEligibilityResult, b: CandidateEligibilityResult) => compareEligibleCandidates(a, b));
-    // Sem juiz, vale o corte de sempre. Com juiz, o pool é maior: o ranking por preço sozinho põe o item errado e barato na frente.
-    const elegiveis = ordenados.slice(0, ctx?.relevancia ? MAX_POOL : MAX_CANDIDATOS);
+        const elegiveis = ordenados.slice(0, MAX_CANDIDATOS);
     const pool: Candidato[] = elegiveis.map((e) => {
       const c = porId.get(e.candidate.itemId)!;
       const prazo = c.base.prazoMin;
@@ -206,22 +203,9 @@ export class McpDomain implements DomainPort {
         },
       };
     });
-    // Relevância (mecanismo geral, sem lista de casos): só entra o que SERVE ao pedido. Sem nenhum, o mais parecido
-    // entra marcado como "proxima" (o Guide avisa); sugestão do próprio Guide nunca vira "mais parecida".
-    let todos = pool;
-    let cobertura: "exata" | "proxima" = "exata";
-    if (ctx?.relevancia && pool.length > 0) {
-      // Os de texto mais próximo do pedido vão primeiro: o juiz avalia poucos itens e o ranking por preço não os esconde.
-      const ordem = (c: Candidato) => ({ serve: 0, proximo: 1, nao_serve: 2 })[vereditoLexico(n, c.opcao.item)];
-      const paraJuiz = pool.map((c, i) => ({ c, i })).sort((a, b) => ordem(a.c) - ordem(b.c) || a.i - b.i).map((x) => x.c);
-      const veredito = await ctx.relevancia.julgar(n, paraJuiz.map((c) => ({ ref: c.opcao.ref, item: c.opcao.item, loja: c.opcao.loja })));
-      const serve = pool.filter((c) => veredito.get(c.opcao.ref) === "serve");
-      const proximo = pool.filter((c) => veredito.get(c.opcao.ref) === "proximo");
-      if (serve.length > 0) todos = serve;
-      else if (proximo.length > 0 && n.fonte !== "inferido") { todos = proximo; cobertura = "proxima"; }
-      else todos = [];
-      todos = todos.slice(0, MAX_CANDIDATOS);
-    }
+    // Quem julga se a opção serve ao pedido é o atendente, que vê o resultado da busca e escolhe.
+    const todos = pool;
+    const cobertura = "exata" as "exata" | "proxima";
     // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
     const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
     // A primeira continua sendo a do ranking do domínio (custo, depois nota e prazo); o rótulo diz em que ela ganha.

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import type { CandidatoJulgado, Necessidade, RelevancePort, Veredito } from "../types";
+import { describe, expect, it } from "vitest";
+import type { Necessidade } from "../types";
 import { McpDomain, consultasDe, type McpTools } from ".";
 
 // Catálogo falso: o que cada CONSULTA devolve. Item com loja aberta, entrega e nota, para passar pelos filtros do Kenzo.
@@ -23,8 +23,6 @@ class Catalogo implements McpTools {
 const local = { latitude: -22.0069, longitude: -47.8946, fonte: "fixa" as const };
 const nec = (categoria: string, extra: Partial<Necessidade> = {}): Necessidade => ({ id: "n1", vertical: "GROCERIES", categoria, restricoes: [], ...extra });
 
-// Juiz falso: veredito por NOME do item.
-const juiz = (v: Record<string, Veredito>): RelevancePort => ({ julgar: async (_n, cs: CandidatoJulgado[]) => new Map(cs.map((c) => [c.ref, v[c.item] ?? "nao_serve"])) });
 
 describe("consultasDe", () => {
   it("usa as consultas do planejador, depois a categoria, sem repetir, no máximo 3", () => {
@@ -48,65 +46,6 @@ describe("busca por várias consultas", () => {
     expect((await new McpDomain(ok, local).buscarNecessidade(nec("x", { consultas: ["picanha", "costela"] }), {})).length).toBe(1);
     const tudo = new Catalogo({ a: new Error("fora"), b: new Error("fora") });
     await expect(new McpDomain(tudo, local).buscarNecessidade(nec("a", { consultas: ["b"] }), {})).rejects.toThrow("fora");
-  });
-});
-
-describe("relevância na busca (mecanismo geral)", () => {
-  const catalogo = () => new Catalogo({ churrasco: [item("1", "Pudim", 500, "Doces"), item("2", "X-Burger", 1500, "Lanches"), item("3", "Picanha 1kg", 6000, "Açougue")] });
-
-  it("sem juiz o comportamento é o de antes: o mais barato vence, sem filtrar", async () => {
-    const o = await new McpDomain(catalogo(), local).buscarNecessidade(nec("churrasco"), {});
-    expect(o.map((x) => x.item)).toContain("Pudim");
-    expect(o.every((x) => x.cobertura === undefined)).toBe(true);
-  });
-
-  it("com juiz, só o que SERVE entra: o item barato e errado não vence o certo e mais caro", async () => {
-    const o = await new McpDomain(catalogo(), local).buscarNecessidade(nec("churrasco"), {}, { relevancia: juiz({ "Picanha 1kg": "serve", "X-Burger": "proximo" }) });
-    expect(o.map((x) => x.item)).toEqual(["Picanha 1kg"]);
-    expect(o[0].cobertura).toBeUndefined(); // exata
-  });
-
-  it("sem nada que sirva, o mais parecido entra marcado e rotulado como tal (nunca como 'mais barata')", async () => {
-    const o = await new McpDomain(catalogo(), local).buscarNecessidade(nec("churrasco"), {}, { relevancia: juiz({ "X-Burger": "proximo" }) });
-    expect(o).toHaveLength(1);
-    expect(o[0]).toMatchObject({ item: "X-Burger", cobertura: "proxima", rotulo: "mais parecida" });
-    expect(o[0].motivo).toContain("não encontrei \"churrasco\"");
-  });
-
-  it("nada serve e nada é parecido: lista vazia (o Guide diz que não achou)", async () => {
-    expect(await new McpDomain(catalogo(), local).buscarNecessidade(nec("churrasco"), {}, { relevancia: juiz({}) })).toEqual([]);
-  });
-
-  it("sugestão do próprio Guide nunca vira 'mais parecida'", async () => {
-    const o = await new McpDomain(catalogo(), local).buscarNecessidade(nec("churrasco", { fonte: "inferido" }), {}, { relevancia: juiz({ "X-Burger": "proximo" }) });
-    expect(o).toEqual([]);
-  });
-
-  it("o plano carrega a cobertura no bloco e a falta em naoAtendidas", async () => {
-    const d = new McpDomain(catalogo(), local);
-    const parecido = nec("churrasco");
-    const opcoes = await d.buscarNecessidade(parecido, {}, { relevancia: juiz({ "X-Burger": "proximo" }) });
-    const plano = await d.montarPlano({ subjectRef: "s", ocasiao: {}, itens: [{ necessidade: parecido, opcoes }] });
-    expect(plano.blocos[0].cobertura).toBe("proxima");
-    const vazio = nec("carvão", { id: "n2" });
-    const sem = await d.buscarNecessidade(vazio, {}, { relevancia: juiz({}) });
-    const plano2 = await d.montarPlano({ subjectRef: "s", ocasiao: {}, itens: [{ necessidade: vazio, opcoes: sem }] });
-    expect(plano2.naoAtendidas.map((n) => n.categoria)).toEqual(["carvão"]);
-  });
-
-  it("o juiz avalia primeiro os itens de texto mais próximo do pedido", async () => {
-    const julgar = vi.fn(async (_n: Necessidade, cs: CandidatoJulgado[]) => new Map(cs.map((c) => [c.ref, "serve" as Veredito])));
-    await new McpDomain(new Catalogo({ leite: [item("1", "Pudim", 300), item("2", "Biscoito", 400), item("3", "Leite integral 1L", 600)] }), local).buscarNecessidade(nec("leite"), {}, { relevancia: { julgar } });
-    expect(julgar.mock.calls[0][1][0].item).toBe("Leite integral 1L");
-  });
-
-  it("pool maior: o item certo, longe do topo do ranking por preço, ainda é encontrado", async () => {
-    const baratos = Array.from({ length: 30 }, (_, i) => item(`b${i}`, `Bala ${i}`, 100 + i, "Doceria"));
-    const catalogo2 = new Catalogo({ leite: [...baratos, item("x", "Leite integral 1L", 900, "Mercado")] });
-    const com = await new McpDomain(catalogo2, local).buscarNecessidade(nec("leite"), {}, { relevancia: juiz({ "Leite integral 1L": "serve" }) });
-    expect(com.map((o) => o.item)).toEqual(["Leite integral 1L"]);
-    const sem = await new McpDomain(catalogo2, local).buscarNecessidade(nec("leite"), {});
-    expect(sem.map((o) => o.item)).not.toContain("Leite integral 1L"); // antes: só os 10 mais baratos entravam
   });
 });
 

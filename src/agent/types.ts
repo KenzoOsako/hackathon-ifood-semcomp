@@ -115,17 +115,9 @@ export type EventoFeedback =
   | { tipo: "necessidade_nao_atendida"; categoria: string; causa: string }
   | { tipo: "friccao"; perguntas: number; nivel: Nivel; turnos: number };
 
-// Relevância: o que a busca devolveu serve para o que foi pedido? (src/agent/relevancia.ts)
-export type Veredito = "serve" | "proximo" | "nao_serve";
-export interface CandidatoJulgado { ref: string; item: string; loja?: string }
-export interface RelevancePort {
-  julgar(n: Necessidade, candidatos: CandidatoJulgado[]): Promise<Map<string, Veredito>>;
-}
-export interface ContextoBusca { relevancia?: RelevancePort }
-
 // Ferramentas do domínio que o agente pode chamar. Nenhuma compra, aprova ou paga.
 export interface DomainPort {
-  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao, ctx?: ContextoBusca): Promise<OpcaoPlano[]>;
+  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]>;
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot>;
   ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot>;
   registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void>;
@@ -156,27 +148,6 @@ export interface AgentSession {
   guardas?: string[];      // guardas que dispararam NESTE turno (telemetria); limpo ao fechar o turno    // o Guide já chamou a pessoa pelo nome no encaminhamento (uma vez por sessão)
   // Turno entendido com confiança média do STT: espera "sim" antes de buscar, ajustar ou aprovar.
   confirmacaoPendente?: { turno: TurnoInterpretado; texto: string; pressa: boolean };
-}
-
-export interface InterpretarInput {
-  texto: string;
-  hipoteses?: string[];
-  pressaDetectada: boolean;
-  session: Pick<AgentSession, "estado" | "nivel" | "perguntasFeitas" | "ocasiao" | "necessidades" | "history"> & { opcoesFaladas: string[] };
-}
-
-export interface ResponderInput {
-  plano: PlanoSnapshot;
-  mudou?: string;      // categoria ajustada, para falar só a diferença
-  assumido: string[];
-}
-
-export interface LlmPort {
-  readonly nome: string;
-  interpretar(input: InterpretarInput, signal?: AbortSignal): Promise<TurnoInterpretado>;
-  responder(input: ResponderInput, signal?: AbortSignal): Promise<string>;
-  // Juiz de relevância (opcional: sem ele vale só a camada léxica). Devolve ref → veredito.
-  julgar?(input: { necessidade: Necessidade; candidatos: CandidatoJulgado[] }, signal?: AbortSignal): Promise<Record<string, Veredito>>;
 }
 
 // Sacola simulada do plano aprovado: valores calculados no servidor; nunca é um carrinho remoto nem um pedido.
