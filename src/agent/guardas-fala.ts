@@ -1,4 +1,4 @@
-// GUARDAS DA FALA: tudo que o Guide fala (e mostra) passa por aqui. Mecanismo geral, sem lista de casos:
+// GUARDAS DA FALA: tudo que o Mimo fala (e mostra) passa por aqui. Mecanismo geral, sem lista de casos:
 //  1) SANEAR NA FRONTEIRA: nome de categoria, loja e item vem do modelo e do catálogo, que não são confiáveis. Antes de
 //     entrar no plano (e, portanto, na fala e na tela) é limpo: sem marcação, link, emoji, endereço, telefone nem instrução.
 //  2) FALA VINCULADA AO PLANO: a fala do LLM só vale se for falável, sem ação de compra, sem número ou nome fora do plano
@@ -11,10 +11,10 @@ import type { OpcaoPlano, PlanoSnapshot, TurnoInterpretado } from "./types";
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-// A fala não pode afirmar o que o Guide não faz (ele monta um plano; quem aprova é o usuário) nem vazar dado sensível.
+// A fala não pode afirmar o que o Mimo não faz (ele monta um plano; quem aprova é o usuário) nem vazar dado sensível.
 export const PROIBIDO = /\b(adicionei|adicionado|adicionada|coloquei|comprei|reservei|finalizei|fechei o pedido)\b|carrinho|pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|concluida|concluída)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
 
-// Texto que tenta dar ordem ao Guide (vindo do modelo, do catálogo ou do usuário) não pode ser falado nem exibido.
+// Texto que tenta dar ordem ao Mimo (vindo do modelo, do catálogo ou do usuário) não pode ser falado nem exibido.
 const INSTRUCAO = /ignor(e|ar|em) (tod[oa]s )?(as )?(instru|regras)|esque[cç]a tudo|voc[eê] agora [ée]|system\s*:|aprovo o plano|<\/?instru/i;
 
 const MARCACAO = /<[^>]*>|[<>[\]{}*_#`\\|~^]/g;
@@ -73,7 +73,7 @@ export function sanearPlano(p: PlanoSnapshot): PlanoSnapshot {
   };
 }
 
-const PERMITIDOS = new Set(["ifood", "guide", "casa", "trabalho"]);
+const PERMITIDOS = new Set(["ifood", "mimo", "casa", "trabalho"]);
 const textoDoPlano = (p: PlanoSnapshot) => norm(p.blocos.flatMap((b) => [b.categoria, ...[b.principal, ...b.alternativas].flatMap((o) => [o.loja, o.item])]).join(" "));
 
 // Nome próprio na fala (inicial maiúscula fora do começo de frase) que não está no plano: nome inventado.

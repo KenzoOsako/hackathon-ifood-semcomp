@@ -65,7 +65,7 @@ describe("resumo manual para continuidade no iFood (K-4)", () => {
     expect(summary.text).toContain("Total: R$ 101,20 (confirmado na proposta)");
     expect(summary.text).toContain("Pendências: nenhuma.");
     expect(summary.text).toContain(
-      "Nenhuma compra, reserva ou criação de carrinho remoto foi realizada pelo FoodPilot.",
+      "Nenhuma compra, reserva ou criação de carrinho remoto foi realizada pelo Mimo.",
     );
   });
 

@@ -35,8 +35,8 @@ export default function VozLab() {
 
   return (
     <main style={{ boxSizing: "border-box", width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden", padding: 16, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", colorScheme: "light" }}>
-      <h1 style={{ marginBottom: 4 }}>Guide · laboratório de voz</h1>
-      <p style={{ marginTop: 0, color: "#555" }}>Clique em <strong>Falar</strong>, diga algo e clique em <strong>Parar</strong>. <strong>Esc</strong> ou <strong>Cancelar</strong> descarta a gravação. Tocar no botão enquanto o Guide fala interrompe a fala. Agente do Hyago.</p>
+      <h1 style={{ marginBottom: 4 }}>Mimo · laboratório de voz</h1>
+      <p style={{ marginTop: 0, color: "#555" }}>Clique em <strong>Falar</strong>, diga algo e clique em <strong>Parar</strong>. <strong>Esc</strong> ou <strong>Cancelar</strong> descarta a gravação. Tocar no botão enquanto o Mimo fala interrompe a fala. Agente do Hyago.</p>
 
       {(() => {
         const meta = [...g.turns].reverse().find((t) => t.meta)?.meta;
@@ -84,7 +84,7 @@ export default function VozLab() {
 
       <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 12px", cursor: "pointer" }}>
         <input type="checkbox" checked={g.handsFree} onChange={(e) => void g.setHandsFree(e.target.checked)} />
-        <span><strong>Modo conversa</strong> (sem as mãos): o Guide escuta, para sozinho quando você cala, responde e escuta de novo. Falar por cima dele interrompe.</span>
+        <span><strong>Modo conversa</strong> (sem as mãos): o Mimo escuta, para sozinho quando você cala, responde e escuta de novo. Falar por cima dele interrompe.</span>
       </label>
 
       {g.errorMessage && <p role="alert" style={{ color: "#b00020" }}>{g.errorMessage}</p>}
