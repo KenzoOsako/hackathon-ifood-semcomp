@@ -144,6 +144,12 @@ function rotular(c: Candidato, lista: Candidato[], preferido?: CriterioComDado):
   return { ...c.opcao, rotulo: "alternativa", motivo: "outra opção aberta e com entrega" };
 }
 
+// Opção pública de volta a candidato (preço, prazo e nota já normalizados na busca que a gerou).
+export function candidatoDe(o: OpcaoPlano): Candidato {
+  const prazoMin = o.prazo ? Number(o.prazo.match(/\d+/)?.[0]) || undefined : undefined;
+  return { opcao: o, precoCents: o.precoCents, prazoMin, nota: o.nota, minimoCents: o.pedidoMinimoCents };
+}
+
 interface PlanoGuardado { subjectRef: string; snapshot: PlanoSnapshot; ocasiao: Ocasiao; necessidades: Necessidade[]; candidatos: Map<string, Candidato[]> }
 export type PlanosStore = Map<string, PlanoGuardado>;
 
@@ -158,12 +164,19 @@ export class McpDomain implements DomainPort {
     private readonly eventos: (subjectRef: string, e: EventoFeedback) => void = () => undefined,
   ) {}
 
+  // Toda ida ao MCP passa por aqui só para medir o tempo (log); não muda o que é enviado nem o resultado.
+  private async chamar(nome: string, args: Record<string, unknown>): Promise<unknown> {
+    const t = performance.now();
+    try { return await this.tools.callTool(nome, args); }
+    finally { console.info(`[mcp] ${nome} ${Math.round(performance.now() - t)}ms${typeof args.query === "string" ? ` q="${args.query}"` : ""}`); }
+  }
+
   async detalharItem(opcao: OpcaoPlano): Promise<OpcaoPlano> {
     // IDs são os da opção elegível no plano, nunca um nome ou ID inventado pelo modelo.
     const [merchantId, itemId, extra] = opcao.ref.split(":");
     try {
       if (extra || !itemId || merchantId !== opcao.lojaId) throw new Error("ITEM_INVALIDO");
-      const raw = await this.tools.callTool("getItem", { merchantId, itemId, userLocation: { latitude: this.local.latitude, longitude: this.local.longitude } });
+      const raw = await this.chamar("getItem", { merchantId, itemId, userLocation: { latitude: this.local.latitude, longitude: this.local.longitude } });
       const detalhe = raw as { merchantId?: unknown; unitPrice?: unknown; promotionalUnitPrice?: unknown; available?: unknown };
       if (!detalhe || detalhe.merchantId !== merchantId || detalhe.available === false || typeof detalhe.unitPrice !== "number") throw new Error("DETALHE_INVALIDO");
       const base = brlToMoney(detalhe.unitPrice).cents;
@@ -179,7 +192,7 @@ export class McpDomain implements DomainPort {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);
     // O catálogo busca ITEM por termo: o planejador devolve 1 a 3 termos concretos (sinônimos reais), em paralelo.
     const consultas = consultasDe(n);
-    const buscas = await Promise.allSettled(consultas.map((query) => this.tools.callTool("searchOffers", {
+    const buscas = await Promise.allSettled(consultas.map((query) => this.chamar("searchOffers", {
       query,
       userLocation: { latitude: this.local.latitude, longitude: this.local.longitude },
       resultKind: "ITEM",
@@ -237,7 +250,8 @@ export class McpDomain implements DomainPort {
   }
 
   async montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot> {
-    const candidatos = new Map(input.itens.map((it) => [it.necessidade.id, this.ultimaBusca.get(it.necessidade.id) ?? []]));
+    // Necessidade sem busca própria (o atendente já tinha as opções de uma busca anterior): usa as opções recebidas, sem nova ida ao MCP.
+    const candidatos = new Map(input.itens.map((it) => [it.necessidade.id, this.ultimaBusca.get(it.necessidade.id) ?? it.opcoes.map(candidatoDe)]));
     const snapshot = construir(randomUUID(), 1, input.ocasiao, input.itens.map((it) => ({ necessidade: it.necessidade, lista: candidatos.get(it.necessidade.id) ?? [] })));
     this.planos.set(snapshot.planoId, { subjectRef: input.subjectRef, snapshot, ocasiao: input.ocasiao, necessidades: input.itens.map((i) => i.necessidade), candidatos });
     if (this.planos.size > 5000) this.planos.delete(this.planos.keys().next().value!);

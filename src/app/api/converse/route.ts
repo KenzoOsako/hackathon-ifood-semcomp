@@ -33,10 +33,13 @@ export async function POST(req: Request) {
     const domain: DomainPort = real ? await dominioRealDo(subjectRef) : fake;
     // O modelo é criado a cada turno (barato): nada de objeto antigo em cache segurando prompt ou configuração velhos.
     const modelo = await criarModelo(provedor as Provedor, nomeModelo);
+    // Reserva opcional (mesmo provedor): assume quando o titular falha por cota, sobrecarga ou tempo.
+    const nomeReserva = process.env.LLM_MODEL_RESERVA;
+    const modeloReserva = nomeReserva && nomeReserva !== nomeModelo ? await criarModelo(provedor as Provedor, nomeReserva) : undefined;
     const reply = await visitorSessions.run(resolved.visitor, async (conversation) => {
       if (input.reiniciar) reiniciarAtendente(conversation.subjectRef);
       const s = (input.reiniciar ? reiniciarSessao : sessaoDo)(conversation.subjectRef);
-      return executarAtendente(s, input, { modelo, nomeModelo, domain, nome: nomeConhecido(subjectRef) });
+      return executarAtendente(s, input, { modelo, nomeModelo, ...(modeloReserva ? { modeloReserva, nomeReserva } : {}), domain, nome: nomeConhecido(subjectRef) });
     });
     console.info(`[converse] mcp=${real ? "real" : "mock"} llm=${reply.llm} estado=${reply.estado} modelo=${reply.tempos.interpretarMs}ms dominio=${reply.tempos.dominioMs ?? "-"}ms total=${reply.tempos.totalMs}ms`);
     return jsonResponse(reply, 200, cookie);

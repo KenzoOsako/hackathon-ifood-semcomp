@@ -8,7 +8,7 @@ import { tool } from "@langchain/core/tools";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { z } from "zod";
 import { FRASES, LIMIARES_CONFIANCA } from "../frases";
-import { sanearPlano, limparNome } from "../guardas-fala";
+import { falaDoPlanoValida, sanearPlano, limparNome } from "../guardas-fala";
 import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } from "../complementos";
 import { temDadoPessoal } from "../privacidade";
 import { montarSacola } from "../sacola";
@@ -18,6 +18,7 @@ const MAX_PASSOS = 4;          // rodadas de ferramenta por turno (buscar, busca
 const TIMEOUT_MS = 12_000;     // por chamada ao modelo
 const HISTORICO = 16;          // mensagens da conversa que o modelo vê
 const OPCOES_POR_BUSCA = 6;
+const VALIDADE_BUSCA_MS = 5 * 60_000; // opção vista há mais que isso (preço, loja aberta) é buscada de novo ao montar o plano
 const OPCOES_NA_TELA = 3;     // por busca: a tela é de voz, não um catálogo
 const GRUPOS_NA_TELA = 3;
 
@@ -58,16 +59,25 @@ export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conv
 // TRACE: uma linha de log por turno com cada decisão (guarda, chamadas ao LLM, ferramentas, tempos). Só observa; não muda o comportamento.
 // ATENDENTE_TRACE=full inclui também a fala do usuário, o que o modelo respondeu e o que cada ferramenta devolveu.
 type PassoTrace = {
-  passo: number; llmMs: number; tokens?: { entrada?: number; saida?: number };
-  ferramentas: { nome: string; args: unknown; ms: number; saida?: string }[]; texto?: string;
+  passo: number; llmMs: number; finishReason?: unknown;
+  tokens?: { entrada?: number; saida?: number; pensamento?: number };
+  ferramentas: { nome: string; args: unknown; ms: number; diag?: unknown; saida?: string }[]; texto?: string;
 };
 const traceCompleto = () => process.env.ATENDENTE_TRACE === "full";
 
-export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; domain: DomainPort; nome?: string; now?: () => number }
+export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; modeloReserva?: BaseChatModel; nomeReserva?: string; domain: DomainPort; nome?: string; now?: () => number }
+
+// Falha do PROVEDOR (cota, sobrecarga, rede, tempo), diferente de resposta ruim do modelo: vale tentar o modelo reserva e,
+// se nada funcionar, dizer a verdade ("instabilidade") em vez de "não entendi".
+export const falhaDeProvedor = (e: unknown) => /429|quota|rate.?limit|resource.?exhausted|overload|unavailable|50[0-4]|TIMEOUT|ECONN|ETIMEDOUT|ENOTFOUND|fetch failed|network/i.test(String(e));
+// Modelo que acabou de falhar por provedor fica de lado por um tempo: o próximo turno vai direto ao reserva, sem pagar a falha de novo.
+const PAUSA_MODELO_MS = 60_000;
+const gm = globalThis as unknown as { __guideModeloFora?: Map<string, number> };
+const modeloFora = (gm.__guideModeloFora ??= new Map<string, number>());
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
 // grupoDe: cada opção aponta para a lista da busca em que apareceu (as que a pessoa viu juntas na tela).
-type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[] }>; resumoBuscas: string[] };
+type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[]; em?: number }>; resumoBuscas: string[] };
 const g = globalThis as unknown as { __guideAtendente?: Map<string, Memoria> };
 const memorias = (g.__guideAtendente ??= new Map());
 function memoriaDe(subjectRef: string): Memoria {
@@ -143,14 +153,15 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   s.turnos += 1;
   let tela: AgentReply["tela"];
   let aprovacao: AgentReply["aprovacao"];
-  const trace: { guarda?: string; passos: PassoTrace[]; erro?: string; saneada?: boolean } = { passos: [] };
+  const trace: { guarda?: string; passos: PassoTrace[]; erro?: string; saneada?: boolean; reserva?: string; provedor?: boolean; falaVsPlano?: { ok: boolean; motivo?: string } } = { passos: [] };
 
+  let usado = deps.nomeModelo; // modelo que de fato respondeu (o reserva, se o titular falhou)
   const fim = (resposta: string): AgentReply => {
     s.history.push({ role: "user", text: input.texto }, { role: "agent", text: resposta });
     if (s.history.length > 40) s.history.splice(0, s.history.length - 40);
     tempos.totalMs = Math.round(now() - t0);
     console.info(`[trace] ${JSON.stringify({ turno: s.turnos, estado: s.estado, totalMs: tempos.totalMs, llmMs: trace.passos.reduce((a, p) => a + p.llmMs, 0), dominioMs: tempos.dominioMs ?? 0, chamadasLLM: trace.passos.length, ...trace, ...(traceCompleto() ? { usuario: input.texto, resposta } : {}) })}`);
-    return { estado: s.estado, nivel: "L1", resposta, ...(tela ? { tela } : {}), ...(aprovacao ? { aprovacao } : {}), origem: s.plano?.origem ?? "simulado", llm: `atendente:${deps.nomeModelo}`, tempos };
+    return { estado: s.estado, nivel: "L1", resposta, ...(tela ? { tela } : {}), ...(aprovacao ? { aprovacao } : {}), origem: s.plano?.origem ?? "simulado", llm: `atendente:${usado}`, tempos };
   };
 
   // Guardas determinísticas (antes do modelo): aprovação e revisão não dependem de interpretação.
@@ -209,18 +220,32 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     ...s.history.slice(-HISTORICO).map((m) => (m.role === "user" ? new HumanMessage(m.text) : new AIMessage(m.text))),
     new HumanMessage(input.texto),
   ];
-  const modelo = deps.modelo.bindTools!(ferramentas);
+  const titular = deps.modelo.bindTools!(ferramentas);
+  const reserva = deps.modeloReserva?.bindTools!(ferramentas);
+  const chamarModelo = async (): Promise<AIMessage> => {
+    const titularFora = (modeloFora.get(deps.nomeModelo) ?? 0) > Date.now();
+    if (reserva && titularFora) { usado = deps.nomeReserva ?? "reserva"; return await comTimeout(reserva.invoke(msgs), TIMEOUT_MS) as AIMessage; }
+    try { usado = deps.nomeModelo; return await comTimeout(titular.invoke(msgs), TIMEOUT_MS) as AIMessage; }
+    catch (e) {
+      if (!reserva || !falhaDeProvedor(e)) throw e;
+      modeloFora.set(deps.nomeModelo, Date.now() + PAUSA_MODELO_MS);
+      trace.reserva = `${deps.nomeReserva ?? "reserva"} (titular falhou: ${String(e).slice(0, 80)})`;
+      console.warn(`[atendente] titular ${deps.nomeModelo} falhou (${String(e).slice(0, 120)}); usando ${deps.nomeReserva}`);
+      usado = deps.nomeReserva ?? "reserva";
+      return await comTimeout(reserva.invoke(msgs), TIMEOUT_MS) as AIMessage;
+    }
+  };
 
   let resposta = "";
   const grupos: GrupoOpcoes[] = [];
   try {
     for (let passo = 0; passo <= MAX_PASSOS; passo++) {
       const tl = now();
-      const ai = await comTimeout(modelo.invoke(msgs), TIMEOUT_MS) as AIMessage;
+      const ai = await chamarModelo();
       msgs.push(ai);
       const chamadas = ai.tool_calls ?? [];
       const textoAi = typeof ai.content === "string" ? ai.content : ai.content.map((p) => ("text" in p ? p.text : "")).join("");
-      const ptrace: PassoTrace = { passo, llmMs: Math.round(now() - tl), tokens: { entrada: ai.usage_metadata?.input_tokens, saida: ai.usage_metadata?.output_tokens }, ferramentas: [], ...(traceCompleto() ? { texto: textoAi } : {}) };
+      const ptrace: PassoTrace = { passo, llmMs: Math.round(now() - tl), finishReason: ai.response_metadata?.finishReason ?? ai.response_metadata?.finish_reason, tokens: { entrada: ai.usage_metadata?.input_tokens, saida: ai.usage_metadata?.output_tokens, pensamento: ai.usage_metadata?.output_token_details?.reasoning }, ferramentas: [], ...(traceCompleto() ? { texto: textoAi } : {}) };
       trace.passos.push(ptrace);
       if (!chamadas.length || passo === MAX_PASSOS) {
         resposta = typeof ai.content === "string" ? ai.content : ai.content.map((p) => ("text" in p ? p.text : "")).join("");
@@ -230,7 +255,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
         const td = now();
         const saida = await executarFerramenta(c.name, c.args, s, mem, deps).catch((e): Saida => ({ texto: `ERRO na ferramenta: ${String(e).slice(0, 160)}` }));
         tempos.dominioMs = (tempos.dominioMs ?? 0) + Math.round(now() - td);
-        ptrace.ferramentas.push({ nome: c.name, args: c.args, ms: Math.round(now() - td), ...(traceCompleto() ? { saida: saida.texto } : {}) });
+        ptrace.ferramentas.push({ nome: c.name, args: c.args, ms: Math.round(now() - td), ...(saida.diag ? { diag: saida.diag } : {}), ...(traceCompleto() ? { saida: saida.texto } : {}) });
         if (saida.grupo) {
           grupos.push(saida.grupo);
           if (!tela || tela.tipo === "mostrar_opcoes") tela = { tipo: "mostrar_opcoes", plano: { ...(s.plano ?? planoVazio()), opcoes: grupos.slice(-GRUPOS_NA_TELA) } };
@@ -242,11 +267,14 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   } catch (error) {
     console.warn(`[atendente] falhou: ${String(error).slice(0, 200)}`);
     trace.erro = String(error).slice(0, 200);
-    resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : FRASES.naoEntendi;
+    trace.provedor = falhaDeProvedor(error);
+    resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : trace.provedor ? FRASES.indisponivel : FRASES.naoEntendi;
   }
   tempos.interpretarMs = Math.round(now() - t0) - (tempos.dominioMs ?? 0);
 
   resposta = resposta.replace(/[*#[\]_`]/g, "").replace(/\s+/g, " ").trim();
+  // Só registra (não bloqueia): a fala sobre o plano montado neste turno bate com os fatos do plano?
+  if (tela && s.plano && tela.tipo !== "mostrar_opcoes") trace.falaVsPlano = falaDoPlanoValida(resposta, s.plano);
   if (!resposta || PROIBIDO.test(resposta) || temDadoPessoal(resposta)) {
     trace.saneada = true; // a fala do modelo foi trocada por frase fixa (vazia, proibida ou dado pessoal)
     resposta = tela ? "Montei o plano na tela. É isso, ou quer mudar algo antes de fechar?" : "Me conta um pouco mais do que você quer, que eu te ajudo a escolher.";
@@ -255,7 +283,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   return fim(resposta);
 }
 
-type Saida = { texto: string; tela?: AgentReply["tela"]; grupo?: GrupoOpcoes };
+type Saida = { texto: string; tela?: AgentReply["tela"]; grupo?: GrupoOpcoes; diag?: unknown };
 
 async function executarFerramenta(nome: string, args: unknown, s: AgentSession, mem: Memoria, deps: AtendenteDeps): Promise<Saida> {
   if (nome === "configurar_complementos") {
@@ -270,14 +298,18 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
   if (nome === "buscar_no_ifood") {
     const a = buscarSchema.parse(args);
     if (ALCOOL.test(a.categoria)) return { texto: "Não busco bebida alcoólica. Ofereça outra coisa." };
-    const opcoes = ordenar(await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao), a.ordenar).slice(0, OPCOES_POR_BUSCA);
-    const grupo = { categoria: a.categoria, itens: opcoes };
+    const doDominio = await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao);
+    const ordenadas = ordenar(doDominio, a.ordenar);
+    const opcoes = ordenadas.slice(0, OPCOES_POR_BUSCA);
+    // Diagnóstico: o domínio já cortou para os melhores do SEU ranking; o critério do modelo só reordena esses.
+    const diag = { devolvidasPeloDominio: doDominio.length, mostradasAoModelo: opcoes.length, ordenar: a.ordenar ?? "relevancia", topoDominio: doDominio[0]?.ref, topoDoModelo: ordenadas[0]?.ref, notasVistas: opcoes.map((o) => o.nota) };
+    const grupo = { categoria: a.categoria, itens: opcoes, em: Date.now() };
     for (const o of opcoes) { mem.opcoes.set(o.ref, o); mem.grupoDe.set(o.ref, grupo); }
     const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora.`;
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
     if (mem.resumoBuscas.length > 8) mem.resumoBuscas.shift();
     console.info(`[atendente] buscar categoria="${a.categoria}" ordenar=${a.ordenar ?? "relevancia"} opcoes=${opcoes.length}`);
-    return { texto, ...(opcoes.length ? { grupo: { categoria: a.categoria, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
+    return { texto, diag, ...(opcoes.length ? { grupo: { categoria: a.categoria, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
   }
   if (nome === "mostrar_plano") {
     const a = mostrarSchema.parse(args);
@@ -286,8 +318,17 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     // Acumula antes de buscar para todas as necessidades receberem as mesmas restrições rígidas.
     acumularRestricoes(s, a.itens.flatMap(i => i.restricoes ?? []));
     const necessidades = a.itens.map(i => necessidadeDe(i, s));
-    // O domínio real monta o plano a partir da busca de cada necessidade; por isso busca de novo aqui.
-    const itens = await Promise.all(necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) })));
+    // O domínio real monta o plano a partir da busca de cada necessidade. Se a pessoa/modelo escolheu uma opção que uma busca
+    // recente já trouxe, usa essa busca em vez de ir ao iFood de novo (~2 s sem nada novo; o detalharPlano abaixo ainda
+    // confere preço e disponibilidade da escolhida no iFood).
+    let semBusca = 0;
+    const itens = await Promise.all(necessidades.map(async (n, k) => {
+      const ref = a.itens[k]?.ref;
+      const grupo = ref ? mem.grupoDe.get(ref) : undefined;
+      const visto = ref ? mem.opcoes.get(ref) : undefined;
+      if (grupo && visto && grupo.em !== undefined && Date.now() - grupo.em < VALIDADE_BUSCA_MS) { semBusca++; return { necessidade: n, opcoes: [visto, ...grupo.itens.filter((o) => o.ref !== visto.ref)] }; }
+      return { necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) };
+    }));
     const base = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
     // Nomes de loja e item vêm do catálogo: limpos antes de ir à tela e à fala.
     const escolhido: PlanoSnapshot = { ...base, versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem, s.restricoes.length > 0)) };
@@ -300,10 +341,12 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     s.plano = plano; s.necessidades = necessidades; s.estado = atualizado ? "S4" : "S3"; s.encaminhado = false;
     s.ultimaVersaoPlano = plano.versao;
     console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=${plano.blocos.length} naoAtendidas=${plano.naoAtendidas.length} versao=${plano.versao}`);
+    const diag = a.itens.map((i, k) => { const b = plano.blocos.find((x) => x.necessidadeId === necessidades[k]?.id); return { categoria: i.categoria, buscaEvitada: semBusca > 0, refMandado: i.ref ?? null, refVisto: i.ref ? mem.opcoes.has(i.ref) : null, principalDoPlano: b?.principal.ref ?? null, principalIgualAoRef: i.ref ? b?.principal.ref === i.ref : null }; });
     const resumo = plano.blocos.map((b) => `${descreverBloco(b)}; complementos: ${resumoComplementos(b.principal).join(", ") || "a configurar se houver"}`).join("; ");
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");
     return {
       texto: `Plano versão ${plano.versao} na tela: ${resumo || "nenhum item encontrado"}.${faltas ? ` Sem opção agora para: ${faltas}.` : ""}`,
+      diag,
       ...(plano.blocos.length ? { tela: { tipo: atualizado ? "plano_atualizado" as const : "mostrar_plano" as const, plano } } : {}),
     };
   }

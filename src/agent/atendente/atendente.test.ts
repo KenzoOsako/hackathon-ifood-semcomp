@@ -67,6 +67,47 @@ describe("atendente", () => {
     expect((await fale("quero pizza")).tela?.tipo).toBe("mostrar_plano");
   });
 
+  it("opção escolhida de uma busca recente monta o plano sem buscar de novo no iFood", async () => {
+    const s = novaSessao(`s-${Math.random()}`);
+    reiniciarAtendente(s.subjectRef);
+    const domain = new FakeDomain();
+    let buscas = 0;
+    const original = domain.buscarNecessidade.bind(domain);
+    domain.buscarNecessidade = (...args) => { buscas += 1; return original(...args); };
+    const { modelo } = roteiro([
+      [{ name: "buscar_no_ifood", args: pizza }],
+      [{ name: "mostrar_plano", args: { itens: [{ ...pizza, ref: "nonna-margherita" }] } }],
+      "Montei com a margherita da Pizzaria Nonna. É isso?",
+    ]);
+    const r = await executarAtendente(s, { texto: "quero pizza", origem: "texto" }, { modelo, nomeModelo: "roteiro", domain });
+    expect(buscas).toBe(1); // só a busca da ferramenta; o plano não repete
+    expect(r.tela?.plano.blocos[0].principal.ref).toBe("nonna-margherita");
+  });
+
+  describe("falha do provedor", () => {
+    const falha = (msg: string) => ({ bindTools: () => ({ invoke: async () => { throw new Error(msg); } }) }) as unknown as BaseChatModel;
+    const sessao = () => { const s = novaSessao(`s-${Math.random()}`); reiniciarAtendente(s.subjectRef); return s; };
+
+    it("cota esgotada no titular: o reserva responde e a resposta diz qual modelo falou", async () => {
+      const { modelo: reserva } = roteiro(["Oi! O que você quer pedir hoje?"]);
+      const r = await executarAtendente(sessao(), { texto: "oi", origem: "texto" }, { modelo: falha("[429 Too Many Requests] quota"), nomeModelo: "titular-cota", modeloReserva: reserva, nomeReserva: "reserva", domain: new FakeDomain() });
+      expect(r.resposta).toMatch(/O que você quer/);
+      expect(r.llm).toBe("atendente:reserva");
+    });
+
+    it("titular e reserva fora: diz que há instabilidade, não que não entendeu", async () => {
+      const r = await executarAtendente(sessao(), { texto: "oi", origem: "texto" }, { modelo: falha("429 quota"), nomeModelo: "titular-fora", modeloReserva: falha("503 unavailable"), nomeReserva: "reserva-fora", domain: new FakeDomain() });
+      expect(r.resposta).toBe(FRASES.indisponivel);
+    });
+
+    it("erro que não é do provedor segue como 'não entendi' e não troca de modelo", async () => {
+      const { modelo: reserva, estado } = roteiro(["não deveria falar"]);
+      const r = await executarAtendente(sessao(), { texto: "oi", origem: "texto" }, { modelo: falha("saída inválida do modelo"), nomeModelo: "titular-ruim", modeloReserva: reserva, nomeReserva: "reserva", domain: new FakeDomain() });
+      expect(r.resposta).toBe(FRASES.naoEntendi);
+      expect(estado.chamadas).toBe(0);
+    });
+  });
+
   it("'fechou' com plano leva à revisão sem chamar o modelo", async () => {
     const { estado, fale } = conversa([[{ name: "mostrar_plano", args: { itens: [pizza] } }], "Montei. É isso?"]);
     await fale("quero pizza");

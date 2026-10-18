@@ -13,6 +13,7 @@ export const FRASES = {
   oQueFaco: "Eu ajudo com refeição, mercado e presentes, e monto um plano para você aprovar. O que você quer resolver?",
   foraEscopo: "Isso eu não consigo ajudar. Posso ajudar com refeição, mercado ou presente?",
   naoEntendi: "Não consegui entender agora. Pode repetir de outro jeito?",
+  indisponivel: "Estou com instabilidade agora. Pode tentar de novo em alguns segundos?",
   erroFerramenta: "Não consegui buscar as opções agora. Quer tentar de novo?",
   repetir: "Pode repetir só o nome?",
   semDadoCriterio: "Não tenho essa informação para comparar essas opções ainda. Quer ajustar de outro jeito?",
