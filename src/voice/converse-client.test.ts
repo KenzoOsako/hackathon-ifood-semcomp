@@ -83,3 +83,20 @@ describe("login do iFood", () => {
     expect(ConverseEventSchema.safeParse({ ...base, loginUrl: "https://evil.example" }).success).toBe(false);
   });
 });
+
+
+describe("metadados do agente (observabilidade)", () => {
+  it("entrega modelo, estado, nível e tempos pelo gancho, sem mudar os eventos", async () => {
+    const got: unknown[] = [];
+    const fetchImpl = (async () => jsonRes({ estado: "S3", nivel: "L0", resposta: "Montei o plano.", origem: "simulado", llm: "google:gemini-3.5-flash-lite", tempos: { interpretarMs: 1100, totalMs: 1600 } })) as typeof fetch;
+    const ev = await collect(converseTurn(input, { fetchImpl, newTurnId: () => "t1", onMeta: (m) => got.push(m) }));
+    expect(got).toEqual([{ llm: "google:gemini-3.5-flash-lite", estado: "S3", nivel: "L0", origem: "simulado", tempos: { interpretarMs: 1100, totalMs: 1600 } }]);
+    expect(ev.map((e) => e.type)).toEqual(["speech", "done"]);
+  });
+  it("resposta sem metadados completos não chama o gancho; falha do backend também não", async () => {
+    const got: unknown[] = [];
+    await collect(converseTurn(input, { fetchImpl: (async () => jsonRes({ resposta: "oi", estado: "S1" })) as typeof fetch, onMeta: (m) => got.push(m) }));
+    await collect(converseTurn(input, { fetchImpl: (async () => jsonRes({ state: "FALHA", code: "X", reply: "r" }, 503)) as typeof fetch, onMeta: (m) => got.push(m) }));
+    expect(got).toEqual([]);
+  });
+});
