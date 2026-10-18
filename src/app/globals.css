@@ -29,6 +29,12 @@
   --simulated: #fff4d6;
   --simulated-foreground: #8a4b00;
   --radius: 1rem;
+  /* Cores só do orbe e do fundo do agente (decorativas, nunca texto). */
+  --orb-coral: #ff7a59;
+  --orb-amber: #ffa94d;
+  --orb-wine: #9b1c3c;
+  --warm: #fcf7ef;
+  --peach: #ffe3d4;
 }
 
 @theme inline {
@@ -64,50 +70,65 @@
   --font-display: var(--font-bricolage), var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* Orbe do assistente: gradiente com brilho, sem imagem. */
+/* Orbe do assistente: massa orgânica com gradiente de malha (vermelho, coral, âmbar e vinho) que
+   muda de forma devagar. Sem imagem. A camada ::before gira para dar a sensação de cor em movimento. */
 .orb {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  isolation: isolate;
   background:
-    radial-gradient(circle at 30% 28%, rgb(255 255 255 / 0.85) 0 8%, transparent 32%),
-    radial-gradient(circle at 50% 55%, var(--brand) 0 45%, var(--primary) 100%);
-  box-shadow: inset 0 -6px 14px rgb(0 0 0 / 0.18);
+    radial-gradient(circle at 28% 30%, var(--orb-coral) 0%, transparent 55%),
+    radial-gradient(circle at 74% 30%, var(--orb-amber) 0%, transparent 50%),
+    radial-gradient(circle at 36% 78%, var(--orb-wine) 0%, transparent 55%),
+    radial-gradient(circle at 78% 78%, var(--primary) 0%, transparent 60%),
+    var(--brand);
+  border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
+  animation: blob-morph 8s ease-in-out infinite alternate;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--brand) 30%, transparent);
+}
+.orb::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, var(--orb-coral), var(--orb-amber), var(--orb-wine), var(--primary), var(--orb-coral));
+  opacity: 0.45;
+  filter: blur(18px);
+  animation: blob-spin 14s linear infinite;
 }
 .orb-pulse {
-  animation: orb-pulse 2.4s ease-in-out infinite;
+  animation: blob-morph 8s ease-in-out infinite alternate, orb-pulse 2.4s ease-in-out infinite;
 }
 @keyframes orb-pulse {
   0%,
   100% {
-    box-shadow: inset 0 -6px 14px rgb(0 0 0 / 0.18), 0 0 0 0 rgb(234 29 44 / 0.45);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 0 0 color-mix(in srgb, var(--brand) 45%, transparent);
   }
   50% {
-    box-shadow: inset 0 -6px 14px rgb(0 0 0 / 0.18), 0 0 0 12px rgb(234 29 44 / 0);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--brand) 30%, transparent), 0 0 0 12px transparent;
   }
 }
 
-/* Fundo da tela do agente: um brilho rosado atrás do orbe e uma grade de pontos que some nas bordas.
-   Fica em um wrapper fixo (não rola com o conteúdo) e usa só as cores dos tokens. */
+/* Fundo da tela do agente: tons quentes de creme e pêssego com um brilho atrás do orbe e uma grade
+   de pontos que some nas bordas. Fica em um wrapper fixo (não rola com o conteúdo). */
 .agent-bg {
   position: relative;
   isolation: isolate;
-  background: radial-gradient(
-    120% 70% at 50% 30%,
-    var(--accent) 0%,
-    color-mix(in srgb, var(--accent) 35%, var(--background)) 45%,
-    var(--background) 78%
-  );
+  background: radial-gradient(110% 60% at 50% 30%, var(--peach) 0%, color-mix(in srgb, var(--peach) 40%, var(--warm)) 45%, var(--warm) 80%);
 }
 .agent-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image: radial-gradient(color-mix(in srgb, var(--primary) 14%, transparent) 1px, transparent 1.3px);
+  background-image: radial-gradient(color-mix(in srgb, var(--primary) 16%, transparent) 1px, transparent 1.3px);
   background-size: 20px 20px;
   -webkit-mask-image: radial-gradient(70% 45% at 50% 30%, #000 0%, transparent 100%);
   mask-image: radial-gradient(70% 45% at 50% 30%, #000 0%, transparent 100%);
 }
 
-/* Palco do orbe: halo, uma forma líquida que ondula e ondas que se expandem a partir dele.
+/* Palco do orbe: halo, contornos ondulados (como curvas de nível) e ondas que se expandem.
    O estado (data-state) muda só o ritmo; no erro tudo para e fica cinza. */
 .orb-stage {
   position: relative;
@@ -117,43 +138,40 @@
 }
 .orb-stage > * {
   position: absolute;
-  border-radius: 9999px;
+  border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
 }
 .orb-halo {
   inset: 14%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--brand) 26%, transparent), transparent 68%);
-  filter: blur(8px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--orb-coral) 40%, transparent), transparent 68%);
+  filter: blur(10px);
   animation: halo-breathe 4.5s ease-in-out infinite;
 }
-.orb-blob {
-  inset: 17%;
-  background: color-mix(in srgb, var(--brand) 12%, transparent);
-  animation: blob-morph 9s ease-in-out infinite alternate, blob-spin 24s linear infinite;
+.orb-contour {
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  animation: blob-morph 11s ease-in-out infinite alternate;
 }
-.orb-blob + .orb-blob {
-  inset: 12%;
-  background: color-mix(in srgb, var(--brand) 7%, transparent);
-  animation-duration: 12s, 36s;
-  animation-direction: alternate-reverse, reverse;
-}
+.orb-contour:nth-of-type(2) { inset: 18%; background: color-mix(in srgb, var(--orb-coral) 14%, transparent); animation-duration: 9s; }
+.orb-contour:nth-of-type(3) { inset: 12%; border-color: color-mix(in srgb, var(--primary) 16%, transparent); animation-duration: 12s; animation-direction: alternate-reverse; }
+.orb-contour:nth-of-type(4) { inset: 6%; border-color: color-mix(in srgb, var(--primary) 11%, transparent); animation-duration: 15s; }
+.orb-contour:nth-of-type(5) { inset: 0; border-color: color-mix(in srgb, var(--primary) 7%, transparent); animation-duration: 18s; animation-direction: alternate-reverse; }
 .orb-wave {
   inset: 22%;
-  border: 1.5px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--primary) 30%, transparent);
   opacity: 0;
-  animation: orb-wave 6s ease-out infinite;
+  animation: orb-wave 6s ease-out infinite, blob-morph 7s ease-in-out infinite alternate;
 }
-.orb-wave:nth-of-type(2) { animation-delay: 2s; }
-.orb-wave:nth-of-type(3) { animation-delay: 4s; }
-.orb-stage[data-state="listening"] .orb-wave { animation-duration: 2.4s; }
-.orb-stage[data-state="listening"] .orb-wave:nth-of-type(2) { animation-delay: 0.8s; }
-.orb-stage[data-state="listening"] .orb-wave:nth-of-type(3) { animation-delay: 1.6s; }
-.orb-stage[data-state="speaking"] .orb-wave { animation-duration: 1.5s; }
-.orb-stage[data-state="speaking"] .orb-wave:nth-of-type(2) { animation-delay: 0.5s; }
-.orb-stage[data-state="speaking"] .orb-wave:nth-of-type(3) { animation-delay: 1s; }
-.orb-stage[data-state="thinking"] .orb-blob { animation-duration: 2.5s, 8s; }
-.orb-stage[data-state="thinking"] .orb-blob + .orb-blob { animation-duration: 3.2s, 11s; }
+.orb-wave:nth-of-type(7) { animation-delay: 2s, 0s; }
+.orb-wave:nth-of-type(8) { animation-delay: 4s, 0s; }
+.orb-stage[data-state="listening"] .orb-wave { animation-duration: 2.4s, 5s; }
+.orb-stage[data-state="listening"] .orb-wave:nth-of-type(7) { animation-delay: 0.8s, 0s; }
+.orb-stage[data-state="listening"] .orb-wave:nth-of-type(8) { animation-delay: 1.6s, 0s; }
+.orb-stage[data-state="speaking"] .orb-wave { animation-duration: 1.5s, 4s; }
+.orb-stage[data-state="speaking"] .orb-wave:nth-of-type(7) { animation-delay: 0.5s, 0s; }
+.orb-stage[data-state="speaking"] .orb-wave:nth-of-type(8) { animation-delay: 1s, 0s; }
+.orb-stage[data-state="thinking"] .orb-contour { animation-duration: 3s; }
+.orb-stage[data-state="thinking"] .orb::before { animation-duration: 3s; }
 .orb-stage[data-state="error"] .orb-halo,
-.orb-stage[data-state="error"] .orb-blob { animation: none; filter: grayscale(1); opacity: 0.35; }
+.orb-stage[data-state="error"] .orb-contour { animation: none; filter: grayscale(1); opacity: 0.45; }
 .orb-stage[data-state="error"] .orb-wave { animation: none; opacity: 0.35; transform: scale(1.1); border-color: color-mix(in srgb, var(--foreground) 25%, transparent); }
 
 @keyframes halo-breathe {

@@ -115,3 +115,7 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 
 ## UI: ondas no lugar da órbita — 17/10/2026
 - O palco do orbe trocou os pontos em órbita por duas formas líquidas que ondulam (border-radius animado) e três ondas que se expandem a partir do orbe. Ritmo por estado: ondas mais rápidas ao ouvir e ao responder, formas mais agitadas ao pensar, tudo parado e cinza no erro. Só CSS; respeita `prefers-reduced-motion`. Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
+
+## UI: orbe orgânico e fundo quente — 17/10/2026
+- A pedido do dono da UI, a tela do agente segue a essência de uma imagem de referência: orbe como massa orgânica com gradiente de malha (vermelho, coral, âmbar, vinho) que muda de forma, quatro contornos ondulados como curvas de nível e ondas que se expandem por estado, sobre fundo creme/pêssego. Novos tokens decorativos `--orb-*`, `--warm` e `--peach` em `globals.css`; a bolinha da home usa o mesmo orbe. Só CSS, `prefers-reduced-motion` respeitado. Não feitos: barra inferior com microfone central e chips com ícones.
+- Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
