@@ -3,7 +3,7 @@ import { failureResponse, jsonBody, jsonResponse, requireMockRequest, requireSam
 import { FakeDomain } from "@/agent/domain-fake";
 import { dominioRealDo } from "@/agent/domain-mcp/por-sujeito";
 import { criarLlm } from "@/agent/llm";
-import { executarTurno, sessaoDo } from "@/agent/orchestrator";
+import { executarTurno, reiniciarSessao, sessaoDo } from "@/agent/orchestrator";
 import { ConverseInputSchema, type DomainPort, type LlmPort } from "@/agent/types";
 import { conectado } from "@/mcp/real/oauth";
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (real && !conectado(subjectRef)) return jsonResponse(LOGIN, 401, cookie);
     const domain: DomainPort = real ? await dominioRealDo(subjectRef) : fake;
     const deps = { llm: await llm(), domain };
-    const reply = await visitorSessions.run(resolved.visitor, (conversation) => executarTurno(sessaoDo(conversation.subjectRef), input, deps));
+    const reply = await visitorSessions.run(resolved.visitor, (conversation) => executarTurno((input.reiniciar ? reiniciarSessao : sessaoDo)(conversation.subjectRef), input, deps));
     console.info(`[converse] mcp=${real ? "real" : "mock"} llm=${reply.llm} estado=${reply.estado} interpretar=${reply.tempos.interpretarMs}ms dominio=${reply.tempos.dominioMs ?? "-"}ms responder=${reply.tempos.responderMs ?? "-"}ms total=${reply.tempos.totalMs}ms`);
     return jsonResponse(reply, 200, cookie);
   } catch (error) { return failureResponse(error, cookie); }

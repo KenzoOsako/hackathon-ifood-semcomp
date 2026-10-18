@@ -58,6 +58,8 @@ Ordem pensada para medir antes de mexer e deixar o mais arriscado (LLM) por últ
 | H6 | **Inferência rotulada** | `Necessidade.fonte` = `dito`/`inferido`; no máximo 2 inferidas; a fala chama de "sugestão"; recusada não volta na sessão; aceita vira `dito`; nunca contraria restrição dita. C6 passa com Gemini em 3 de 3 rodadas; evals reais sem regressão nos outros cenários | ~1h30 |
 | — | **Fechamento** | `typecheck`, `lint`, `test`, `build` verdes; evals reais rodadas em ritmo; `estado-atual.md` com os números; PR aberto | ~20 min |
 
+**Status 18/10 ~03h (branch `feat/hyago-agente-fase1`):** H2 a H6 implementados e testados offline (308 testes). Decisão do Hyago: sugestões **sem cota própria** (o teto é o do plano, 5 itens); sugestão não gasta pergunta. Falta: evals com Gemini (em ritmo) e a medição com iFood real (precisa de login).
+
 **Sucesso da Fase 1 como um todo:** o agente decide sozinho quando perguntar, confirmar, sugerir ou ir direto, com teste provando cada regra, e temos a linha de base de tempo do backend para comparar na Fase 2.
 **Cota do Gemini (decisão do Hyago): ficar dentro do limite gratuito.** H3, H4 e H5 são regras em código testadas offline, sem Gemini. H2 e H6 rodam em ritmo de no máximo ~8 chamadas por minuto (cada turno faz 2), com pausa entre turnos no script; uma jornada de 4 turnos leva ~1 min.
 **Depende de:** login iFood no servidor da medição (H2).

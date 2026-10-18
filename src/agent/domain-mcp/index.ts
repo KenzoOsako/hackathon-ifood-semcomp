@@ -219,7 +219,7 @@ function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { n
       continue;
     }
     const quantidade = quantidadePara(n, ocasiao);
-    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade, principal: principal.opcao, alternativas: resto.slice(0, 2).map((c) => c.opcao) });
+    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade, principal: principal.opcao, alternativas: resto.slice(0, 2).map((c) => c.opcao), ...(n.fonte === "inferido" ? { sugestao: true } : {}) });
     if (principal.minimoCents && principal.precoCents * quantidade < principal.minimoCents) {
       pendencias.push(`${principal.opcao.loja} tem pedido mínimo de ${reais(principal.minimoCents)}`);
     }

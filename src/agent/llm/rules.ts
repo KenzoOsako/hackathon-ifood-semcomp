@@ -12,14 +12,16 @@ function categoriaPizza(t: string): string {
   return "pizza";
 }
 
-const CATALOGO: { re: RegExp; vertical: Necessidade["vertical"]; categoria: (t: string) => string }[] = [
+// `dito`: quando a fala nomeia o item. Se só a ocasião casar (filme, aniversário), o item entra como sugestão.
+const CATALOGO: { re: RegExp; dito?: RegExp; vertical: Necessidade["vertical"]; categoria: (t: string) => string }[] = [
   { re: /pizza/, vertical: "RESTAURANT", categoria: categoriaPizza },
   { re: /hamburguer|burger|lanche|smash/, vertical: "RESTAURANT", categoria: () => "hamburguer" },
-  { re: /pipoca|filme/, vertical: "GROCERIES", categoria: () => "pipoca" },
+  { re: /pipoca|filme/, dito: /pipoca/, vertical: "GROCERIES", categoria: () => "pipoca" },
   { re: /refrigerante|refri\b/, vertical: "GROCERIES", categoria: () => "refrigerante" },
   { re: /copo/, vertical: "GROCERIES", categoria: () => "copos" },
-  { re: /presente|aniversario/, vertical: "SHOPPING", categoria: () => "presente" },
+  { re: /presente|aniversario/, dito: /presente/, vertical: "SHOPPING", categoria: () => "presente" },
 ];
+const RE_RECUSA = /(?:sem|nao precisa(?: de)?|nao quero|tira(?: o| a)?)\s+(?:o |a |de )?(pipoca|presente|refrigerante|copos?|pizza|hamburguer)/g;
 
 export const PRESSA = /tanto faz|qualquer (um|uma)|pede logo|pode escolher|escolhe (voce|vc|ai)|so faz|faz isso logo|rapidinho|to com pressa|sem pergunta/;
 const RE_FORA_ESCOPO = /cerveja|vinho|vodka|alcool|remedio|dipirona|medic|farmacia/;
@@ -93,13 +95,17 @@ function atualizarOcasiao(t: string, respondendo: boolean, ocasiao: Ocasiao): Oc
   return ocasiao;
 }
 
-function atualizarNecessidades(t: string, necessidades: Necessidade[]): { necessidades: Necessidade[]; valorExtraido?: string } {
+function atualizarNecessidades(t: string, lista: Necessidade[]): { necessidades: Necessidade[]; valorExtraido?: string } {
+  const recusadas = new Set([...t.matchAll(RE_RECUSA)].map((m) => m[1].replace(/s$/, "")));
+  const necessidades = lista.filter((n) => !recusadas.has(norm(n.categoria).split(" ")[0].replace(/s$/, "")));
   for (const c of CATALOGO) {
     if (!c.re.test(t)) continue;
     const categoria = c.categoria(t);
+    if (recusadas.has(categoria.split(" ")[0].replace(/s$/, ""))) continue;
+    const dito = !c.dito || c.dito.test(t);
     const existente = necessidades.find((n) => n.vertical === c.vertical && norm(n.categoria).split(" ")[0] === categoria.split(" ")[0]);
-    if (existente) existente.categoria = categoria;
-    else necessidades.push({ id: `n${necessidades.length + 1}`, vertical: c.vertical, categoria, restricoes: [] });
+    if (existente) { existente.categoria = categoria; if (dito) existente.fonte = "dito"; }
+    else necessidades.push({ id: proximoId(necessidades), vertical: c.vertical, categoria, restricoes: [], ...(dito ? {} : { fonte: "inferido" as const }) });
   }
   const valorExtraido = RE_ORCAMENTO.exec(t)?.[1];
   const presente = necessidades.find((n) => n.vertical === "SHOPPING");
@@ -108,6 +114,12 @@ function atualizarNecessidades(t: string, necessidades: Necessidade[]): { necess
   }
   adicionarRestricoes(t, necessidades);
   return { necessidades, valorExtraido };
+}
+
+// Depois de uma recusa a lista encolhe; o id novo não pode repetir um que ainda existe.
+function proximoId(necessidades: Necessidade[]): string {
+  const usados = necessidades.map((n) => Number(/^n(\d+)$/.exec(n.id)?.[1] ?? 0));
+  return `n${Math.max(0, ...usados) + 1}`;
 }
 
 function adicionarRestricoes(t: string, necessidades: Necessidade[]) {
@@ -160,7 +172,8 @@ function decidirComNovidade(
   if (temRestaurante && !ocasiao.pessoas && nivel === "L2") {
     return { ...base, ocasiao, necessidades, intencao, nivel, pergunta: "Quantas pessoas, mais ou menos? Ou posso escolher por você." };
   }
-  const presente = necessidades.find((n) => n.vertical === "SHOPPING");
+  // Sugestão não gasta pergunta: o valor de um presente sugerido é assumido, não perguntado.
+  const presente = necessidades.find((n) => n.vertical === "SHOPPING" && n.fonte !== "inferido");
   if (presente && !presente.orcamento && nivel === "L2") {
     return { ...base, ocasiao, necessidades, intencao, nivel, pergunta: "Quer um valor para o presente, ou escolho até cem reais?" };
   }

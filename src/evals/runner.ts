@@ -24,6 +24,9 @@ function checarPlanoEFala(r: AgentReply, e: Esperado, falhas: string[]) {
   if (e.minBlocos !== undefined && (r.tela?.plano.blocos.length ?? 0) < e.minBlocos) {
     falhas.push(`blocos < ${e.minBlocos}`);
   }
+  if (e.temSugestao !== undefined && Boolean(r.tela?.plano.blocos.some((b) => b.sugestao)) !== e.temSugestao) {
+    falhas.push(e.temSugestao ? "sem sugestão no plano" : "sugestão inesperada");
+  }
   if (e.aprovacao !== undefined && Boolean(r.aprovacao) !== e.aprovacao) {
     falhas.push(e.aprovacao ? "sem evento de aprovação" : "aprovação indevida");
   }
@@ -33,11 +36,12 @@ function checarPlanoEFala(r: AgentReply, e: Esperado, falhas: string[]) {
   if (r.tela && !falaRespeitaSnapshot(r.resposta, r.tela.plano)) falhas.push("número fora do snapshot");
 }
 
-export async function rodarCenario(c: Cenario, llm: LlmPort): Promise<ResultadoCenario> {
+export async function rodarCenario(c: Cenario, llm: LlmPort, pausaMs = 0): Promise<ResultadoCenario> {
   const s = novaSessao(`eval-${c.id}`);
   const domain = new FakeDomain();
   const turnos = await c.turnos.reduce<Promise<ResultadoTurno[]>>(async (accPromise, t) => {
     const acc = await accPromise;
+    if (pausaMs > 0) await new Promise((r) => setTimeout(r, pausaMs));
     const r = await executarTurno(s, { texto: t.usuario, origem: "texto" }, { llm, domain });
     const falhas: string[] = [];
     checarEstadoENivel(r, s, t.esperado, falhas);

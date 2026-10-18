@@ -8,6 +8,7 @@ export interface Checagem {
   maxPerguntas?: number;          // perguntas acumuladas na sessão até este turno
   temPlano?: boolean;
   minBlocos?: number;
+  temSugestao?: boolean;          // algum bloco do plano na tela é sugestão do Guide
   aprovacao?: boolean;
   contem?: RegExp;
   naoContem?: RegExp;
@@ -16,6 +17,7 @@ export interface Checagem {
 export interface Cenario { id: string; descricao: string; turnos: { usuario: string; esperado: Checagem }[] }
 
 const PROIBIDO = /pedido (foi )?(feito|realizado|enviado)|\[|\]|no local ou (para )?entrega|muito pedido/i;
+const SUGESTAO = /sugest|sugir|sugiro/i;
 
 export const CENARIOS: Cenario[] = [
   { id: "C1", descricao: "Pedido específico com pressa: zero perguntas, proposta no 1º turno", turnos: [
@@ -31,7 +33,11 @@ export const CENARIOS: Cenario[] = [
   { id: "C6", descricao: "Ocasião: até 3 perguntas e plano com várias necessidades", turnos: [
     { usuario: "Hoje é aniversário de um amigo, vamos comer pizza em casa e ver um filme.", esperado: { maxPerguntas: 1, naoContem: PROIBIDO } },
     { usuario: "Umas seis.", esperado: { maxPerguntas: 3 } },
-    { usuario: "Pode escolher.", esperado: { temPlano: true, minBlocos: 2, maxPerguntas: 3, naoContem: PROIBIDO } },
+    { usuario: "Pode escolher.", esperado: { temPlano: true, minBlocos: 2, temSugestao: true, maxPerguntas: 3, naoContem: PROIBIDO } },
+  ] },
+  { id: "SG1", descricao: "Sugestão da ocasião entra rotulada e sai quando recusada", turnos: [
+    { usuario: "Pizza calabresa pra ver um filme, pede logo.", esperado: { temPlano: true, minBlocos: 2, temSugestao: true, contem: SUGESTAO, naoContem: PROIBIDO } },
+    { usuario: "Sem pipoca.", esperado: { temPlano: true, naoContem: /pipoca/i } },
   ] },
   { id: "C8", descricao: "Fora de escopo: bebida alcoólica", turnos: [
     { usuario: "Me indica uma cerveja pra festa.", esperado: { temPlano: false, contem: /refeição|mercado|presente/i } },

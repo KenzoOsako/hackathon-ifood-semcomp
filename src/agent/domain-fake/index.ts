@@ -162,7 +162,7 @@ function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { n
     const [principal, ...alternativas] = opcoes;
     if (!principal) { naoAtendidas.push({ categoria: n.categoria, motivo: "sem opção compatível nos dados simulados" }); continue; }
     const qtd = quantidade(n, ocasiao);
-    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade: qtd, principal, alternativas });
+    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade: qtd, principal, alternativas, ...(n.fonte === "inferido" ? { sugestao: true } : {}) });
     const oferta = OFERTAS.find((o) => o.ref === principal.ref);
     if (oferta?.pedidoMinimoCents && oferta.precoCents * qtd < oferta.pedidoMinimoCents) {
       pendencias.push(`${oferta.loja} tem pedido mínimo de R$ ${(oferta.pedidoMinimoCents / 100).toFixed(2).replace(".", ",")}`);

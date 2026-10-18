@@ -16,6 +16,7 @@ export const FRASES = {
   repetir: "Pode repetir só o nome?",
   semDadoCriterio: "Não tenho essa informação para comparar essas opções ainda. Quer ajustar de outro jeito?",
   semMudanca: "Essa já é a melhor opção para esse critério. Quer ajustar outra coisa?",
+  confirmacaoNegada: "Tudo bem. Me diz de novo o que você quer.",
 } as const;
 
 export type FraseFixa = keyof typeof FRASES;

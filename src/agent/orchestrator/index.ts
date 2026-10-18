@@ -2,8 +2,9 @@
 // Estados S0–S7 conforme docs/AGENTE_CONVERSA_E_FLUXO.md §3. O prompt orienta; este arquivo garante
 // teto de perguntas, nível que só rebaixa, encaminhamento único e que aprovação nunca é executada aqui.
 import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
-import { FRASES } from "../frases";
+import { FRASES, LIMIARES_CONFIANCA } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
+import { temDadoPessoal } from "../privacidade";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, EventoFeedback, LlmPort, Necessidade, Nivel, PlanoSnapshot, TurnoInterpretado } from "../types";
 
 export const MAX_PERGUNTAS = 3;
@@ -24,7 +25,7 @@ const PROIBIDO = /pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi
 export interface Deps { llm: LlmPort; domain: DomainPort; now?: () => number }
 
 export function novaSessao(subjectRef: string): AgentSession {
-  return { subjectRef, estado: "S0", perguntasFeitas: 0, confirmacoesSeguidas: 0, restricoes: [], turnos: 0, encaminhado: false, history: [], ocasiao: {}, necessidades: [] };
+  return { subjectRef, estado: "S0", perguntasFeitas: 0, confirmacoesSeguidas: 0, restricoes: [], turnos: 0, encaminhado: false, history: [], ocasiao: {}, necessidades: [], recusadas: [] };
 }
 
 // Estado do agente por sujeito da sessão de visitante (mesmo processo; RAM, como D-010).
@@ -38,6 +39,12 @@ export function sessaoDo(subjectRef: string): AgentSession {
   return s;
 }
 
+// Conversa nova para o mesmo visitante (ex.: medir a jornada várias vezes). Login iFood não é afetado.
+export function reiniciarSessao(subjectRef: string): AgentSession {
+  sessoes.delete(subjectRef);
+  return sessaoDo(subjectRef);
+}
+
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const APROVACAO_EXPLICITA = /\b(aprovo|confirmo)( o)? plano\b/;
 
@@ -45,6 +52,27 @@ async function comTimeout<T>(ms: number, fn: (signal: AbortSignal) => Promise<T>
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try { return await fn(ctrl.signal); } finally { clearTimeout(timer); }
+}
+
+const AFIRMA = /^(sim|isso|exato|exatamente|certo|correto|pode|ok|beleza|fechou|perfeito|e isso|e sim)\b/;
+const NEGA = /^(nao|negativo|errado|nada disso)\b/;
+const CRITERIO_FALADO: Record<string, string> = { mais_barata: "pela opção mais barata", mais_rapida: "pela opção mais rápida", melhor_avaliada: "pela opção mais bem avaliada", favorita: "pela sua favorita", outra: "por outra opção" };
+
+// Texto montado em código (não pelo LLM) com o que vai ser feito; undefined = nada a confirmar.
+function resumoParaConfirmar(s: AgentSession, turno: TurnoInterpretado, texto: string): string | undefined {
+  if (turno.intencao === "aprovar" && APROVACAO_EXPLICITA.test(texto) && s.plano) return `Entendi que você quer aprovar a versão ${s.plano.versao} do plano. É isso?`;
+  if (turno.intencao === "ajustar" && turno.ajuste && s.plano) {
+    return `Entendi: trocar ${turno.ajuste.categoria ? `a ${turno.ajuste.categoria}` : "o plano"} ${CRITERIO_FALADO[turno.ajuste.criterio]}. É isso?`;
+  }
+  if ((turno.intencao === "pedido" || turno.intencao === "responder") && turno.necessidades.length > 0) {
+    const itens = turno.necessidades.filter((n) => n.fonte !== "inferido").map((n) => n.categoria);
+    if (itens.length === 0) return undefined;
+    const pessoas = turno.ocasiao.pessoas ? `, para ${turno.ocasiao.pessoas} pessoas` : "";
+    const restricoes = [...new Set(turno.necessidades.flatMap((n) => n.restricoes))];
+    const sem = restricoes.length ? `, sem ${restricoes.join(" e sem ")}` : "";
+    return `Entendi: ${itens.join(" e ")}${pessoas}${sem}. É isso?`;
+  }
+  return undefined;
 }
 
 // Interromper o Guide é sinal de pressa, exceto quando ele acabou de perguntar (S2): aí a pessoa só está
@@ -66,6 +94,18 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   const pressa = PRESSA.test(texto) || pressaPelaVoz(s, input);
   s.turnos += 1;
 
+  // Resposta a uma confirmação pendente: "sim" segue com o que foi entendido, sem chamar o LLM de novo.
+  const pendente = s.confirmacaoPendente;
+  s.confirmacaoPendente = undefined;
+  if (pendente && NEGA.test(texto)) return fechar(s, input, deps, { resposta: FRASES.confirmacaoNegada }, tempos, t0);
+  if (pendente && AFIRMA.test(texto)) return despachar(s, input, deps, pendente.turno, pendente.texto, pendente.pressa, tempos, t0);
+
+  // Confiança baixa do STT: a voz já deveria ter pedido para repetir; defesa aqui, sem gastar LLM.
+  const confianca = input.sinais?.origem === "voz" ? input.sinais.confianca : undefined;
+  if (confianca !== undefined && confianca < LIMIARES_CONFIANCA.repetir) {
+    return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
+  }
+
   let turno: TurnoInterpretado;
   try {
     turno = await comTimeout(TIMEOUT_INTERPRETAR_MS, (signal) => deps.llm.interpretar({
@@ -79,6 +119,17 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   }
   tempos.interpretarMs = Math.round(now() - t0);
 
+  // Confiança média: confirmar o entendido antes de agir. Não conta no teto de perguntas.
+  // Quem acabou de responder a uma confirmação não é confirmado de novo (evita laço).
+  const resumo = !pendente && confianca !== undefined && confianca < LIMIARES_CONFIANCA.confirmar ? resumoParaConfirmar(s, turno, texto) : undefined;
+  if (resumo) {
+    s.confirmacaoPendente = { turno, texto, pressa };
+    return fechar(s, input, deps, { resposta: resumo }, tempos, t0);
+  }
+  return despachar(s, input, deps, turno, texto, pressa, tempos, t0);
+}
+
+function despachar(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, texto: string, pressa: boolean, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> | AgentReply {
   if (pressa) s.nivel = "L0";
   if (turno.intencao !== "incerto") s.confirmacoesSeguidas = 0;
 
@@ -117,7 +168,7 @@ function processarIncerto(s: AgentSession, input: ConverseInput, deps: Deps, tur
     return fechar(s, input, deps, { resposta: s.plano ? FRASES.jaEncaminhado : FRASES.semNecessidade }, tempos, t0);
   }
   const c = turno.confirmacao;
-  const valida = Boolean(c && !PROIBIDO.test(c) && c.trim().endsWith("?"));
+  const valida = Boolean(c && !PROIBIDO.test(c) && !temDadoPessoal(c) && c.trim().endsWith("?"));
   return fechar(s, input, deps, { resposta: valida && c ? c : FRASES.repetir }, tempos, t0);
 }
 
@@ -148,7 +199,7 @@ function processarPedidoOuResposta(s: AgentSession, input: ConverseInput, deps: 
 function devePerguntar(s: AgentSession, turno: TurnoInterpretado, pressa: boolean): boolean {
   const limite = s.nivel === "L1" ? MAX_PERGUNTAS_L1 : MAX_PERGUNTAS;
   // Pergunta com conteúdo proibido é descartada: segue para o plano em vez de falar algo indevido.
-  return Boolean(turno.pergunta && !PROIBIDO.test(turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
+  return Boolean(turno.pergunta && !PROIBIDO.test(turno.pergunta) && !temDadoPessoal(turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
 }
 
 async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> {
@@ -164,7 +215,21 @@ async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turn
 
 const COMIDA = (n: Necessidade) => n.vertical !== "SHOPPING";
 const ordenarStrings = (lista: string[]) => [...lista].sort((a, b) => a.localeCompare(b));
-const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), ordenarStrings(n.restricoes), n.orcamento ?? null])]);
+const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), ordenarStrings(n.restricoes), n.orcamento ?? null, n.fonte ?? "dito"])]);
+const chave = (n: Necessidade) => norm(n.categoria).split(" ")[0];
+const NAO_SUGERIR = /cerveja|vinho|vodka|whisky|cachaca|alcool|destilad|remedio|medic|farmacia/;
+
+// Sugestões do Guide (fonte "inferido"): sem cota própria (o teto é o do plano, 5 itens), mas nunca o que foi
+// recusado ou está fora do escopo. Sugestão que some da lista conta como recusa e não volta; o que o usuário
+// pediu não vira sugestão de novo.
+function aplicarSugestoes(s: AgentSession, lista: Necessidade[]): Necessidade[] {
+  const anteriores = new Map(s.necessidades.map((n) => [chave(n), n]));
+  const novas = lista.map((n) => ({ ...n }));
+  const agora = new Set(novas.map(chave));
+  for (const n of s.necessidades) if (n.fonte === "inferido" && !agora.has(chave(n)) && !s.recusadas.includes(chave(n))) s.recusadas.push(chave(n));
+  for (const n of novas) if (n.fonte === "inferido" && anteriores.has(chave(n)) && anteriores.get(chave(n))!.fonte !== "inferido") n.fonte = "dito";
+  return novas.filter((n) => n.fonte !== "inferido" || !(s.recusadas.includes(chave(n)) || NAO_SUGERIR.test(norm(n.categoria))));
+}
 
 // Devolve true se o pedido mudou de fato (aí o plano anterior deixa de valer).
 function aplicarEstado(s: AgentSession, turno: TurnoInterpretado): boolean {
@@ -172,7 +237,7 @@ function aplicarEstado(s: AgentSession, turno: TurnoInterpretado): boolean {
   // Restrição rígida é da sessão: só soma e vale para toda comida/mercado, mesmo se o LLM omitir ou renumerar.
   for (const n of turno.necessidades) for (const r of n.restricoes) if (!s.restricoes.includes(norm(r))) s.restricoes.push(norm(r));
   // LLM que devolve lista vazia por esquecimento não apaga o que já foi entendido.
-  if (turno.necessidades.length > 0) s.necessidades = turno.necessidades.map((n) => ({ ...n }));
+  if (turno.necessidades.length > 0) s.necessidades = aplicarSugestoes(s, turno.necessidades);
   s.necessidades = s.necessidades.map((n) => (COMIDA(n) ? { ...n, restricoes: [...new Set([...n.restricoes.map(norm), ...s.restricoes])] } : n));
   s.ocasiao = { ...s.ocasiao, ...turno.ocasiao };
   const mudou = assinatura(s) !== antes;
@@ -238,8 +303,8 @@ async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; 
   const tr = now();
   try {
     const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder(input, signal));
-    // Fala com número fora do snapshot ou conteúdo proibido cai para o template.
-    if (!fala || !falaRespeitaSnapshot(fala, input.plano) || PROIBIDO.test(fala) || /muito pedid|\bnovo\b|\bnova\b/i.test(fala)) return respostaTemplate(input);
+    // Fala com número fora do snapshot, conteúdo proibido ou dado pessoal cai para o template.
+    if (!fala || !falaRespeitaSnapshot(fala, input.plano) || PROIBIDO.test(fala) || temDadoPessoal(fala) || /muito pedid|\bnovo\b|\bnova\b/i.test(fala)) return respostaTemplate(input);
     return fala;
   } catch {
     return respostaTemplate(input);

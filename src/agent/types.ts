@@ -22,6 +22,8 @@ export const NecessidadeSchema = z.object({
   restricoes: z.array(z.string().max(60)).max(10).default([]),
   // min(1) e não positive(): o Gemini rejeita exclusiveMinimum no response_schema.
   orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
+  // "inferido": sugestão do Guide a partir da ocasião; "dito" (ou ausente): o usuário pediu.
+  fonte: z.enum(["dito", "inferido"]).optional(),
 });
 export type Necessidade = z.infer<typeof NecessidadeSchema>;
 
@@ -48,6 +50,8 @@ export const ConverseInputSchema = z.strictObject({
   origem: z.enum(["voz", "texto"]).default("texto"),
   sinais: VoiceSignalsSchema.optional(),
   hipoteses: z.array(z.string().max(200)).max(5).optional(),
+  // Começa uma conversa nova (zera o estado do agente; o login iFood continua).
+  reiniciar: z.boolean().optional(),
 });
 export type ConverseInput = z.infer<typeof ConverseInputSchema>;
 
@@ -73,6 +77,7 @@ export interface BlocoPlano {
   quantidade: number;
   principal: OpcaoPlano;
   alternativas: OpcaoPlano[];
+  sugestao?: boolean; // necessidade inferida pelo Guide, não pedida pelo usuário
 }
 
 export interface PlanoSnapshot {
@@ -117,6 +122,9 @@ export interface AgentSession {
   ocasiao: Ocasiao;
   necessidades: Necessidade[];
   plano?: PlanoSnapshot;
+  recusadas: string[];    // categorias sugeridas que o usuário recusou; não voltam na sessão
+  // Turno entendido com confiança média do STT: espera "sim" antes de buscar, ajustar ou aprovar.
+  confirmacaoPendente?: { turno: TurnoInterpretado; texto: string; pressa: boolean };
 }
 
 export interface InterpretarInput {
