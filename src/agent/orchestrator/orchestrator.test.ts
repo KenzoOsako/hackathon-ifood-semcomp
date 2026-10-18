@@ -44,6 +44,43 @@ describe("orquestrador", () => {
     expect(r.tela?.tipo).toBe("mostrar_plano");
   });
 
+  describe("pressa pelos sinais da voz", () => {
+    const voz = (interrompeu: boolean, palavras = 3) => ({ origem: "voz" as const, interrompeu, palavras });
+    const pergunta = { nivel: "L2" as const, necessidades: [pizza], pergunta: "Quantas pessoas?" };
+
+    it("interromper sem pergunta pendente força L0 e não pergunta", async () => {
+      const s = novaSessao("v1");
+      const r = await executarTurno(s, { texto: "quero pizza", origem: "voz", sinais: voz(true) }, { llm: new ScriptedLlm([pergunta]), domain: new FakeDomain() });
+      expect(r.nivel).toBe("L0");
+      expect(s.perguntasFeitas).toBe(0);
+      expect(r.tela?.tipo).toBe("mostrar_plano");
+    });
+
+    it("responder a uma pergunta, mesmo interrompendo com um 'sim' curto, não é pressa", async () => {
+      const s = novaSessao("v2");
+      const deps = { llm: new ScriptedLlm([pergunta, { intencao: "responder", nivel: "L2", necessidades: [pizza], ocasiao: { pessoas: 4 }, pergunta: "Tem orçamento?" }]), domain: new FakeDomain() };
+      await executarTurno(s, { texto: "quero pizza", origem: "voz", sinais: voz(false) }, deps);
+      expect(s.estado).toBe("S2");
+      const r = await executarTurno(s, { texto: "sim, quatro", origem: "voz", sinais: voz(true, 2) }, deps);
+      expect(r.nivel).not.toBe("L0");
+      expect(s.perguntasFeitas).toBe(2);
+    });
+
+    it("fala curta sem interrupção não vira pressa", async () => {
+      const s = novaSessao("v3");
+      const r = await executarTurno(s, { texto: "pizza", origem: "voz", sinais: voz(false, 1) }, { llm: new ScriptedLlm([pergunta]), domain: new FakeDomain() });
+      expect(r.nivel).not.toBe("L0");
+      expect(s.perguntasFeitas).toBe(1);
+    });
+
+    it("texto digitado não usa sinais de voz", async () => {
+      const s = novaSessao("v4");
+      const r = await executarTurno(s, { texto: "quero pizza", origem: "texto", sinais: { origem: "texto", interrompeu: true } }, { llm: new ScriptedLlm([pergunta]), domain: new FakeDomain() });
+      expect(s.perguntasFeitas).toBe(1);
+      expect(r.nivel).not.toBe("L0");
+    });
+  });
+
   it("nível nunca sobe depois de rebaixado", async () => {
     const { s, fale } = turno(new ScriptedLlm([{ nivel: "L0", necessidades: [pizza] }, { nivel: "L2", necessidades: [pizza], pergunta: "Quantas?" }]));
     await fale("pizza"); await fale("pizza de novo");

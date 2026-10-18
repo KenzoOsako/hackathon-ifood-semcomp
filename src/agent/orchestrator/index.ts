@@ -47,6 +47,12 @@ async function comTimeout<T>(ms: number, fn: (signal: AbortSignal) => Promise<T>
   try { return await fn(ctrl.signal); } finally { clearTimeout(timer); }
 }
 
+// Interromper o Guide é sinal de pressa, exceto quando ele acabou de perguntar (S2): aí a pessoa só está
+// respondendo, e um "sim" curto não é pressa. Fala curta sozinha não conta: é ambígua demais sem calibração.
+function pressaPelaVoz(s: AgentSession, input: ConverseInput): boolean {
+  return input.sinais?.origem === "voz" && input.sinais.interrompeu && s.estado !== "S2";
+}
+
 // Telemetria nunca derruba o turno nem deixa estado pela metade.
 function evento(deps: Deps, s: AgentSession, e: EventoFeedback) {
   void deps.domain.registrarEvento(s.subjectRef, e).catch(() => undefined);
@@ -57,7 +63,7 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   const t0 = now();
   const tempos: AgentReply["tempos"] = { interpretarMs: 0, totalMs: 0 };
   const texto = norm(input.texto);
-  const pressa = PRESSA.test(texto);
+  const pressa = PRESSA.test(texto) || pressaPelaVoz(s, input);
   s.turnos += 1;
 
   let turno: TurnoInterpretado;
