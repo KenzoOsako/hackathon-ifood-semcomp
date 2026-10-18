@@ -25,6 +25,8 @@ export function AgentScreen() {
   const tela = g.tela;
   const hasView = tela !== null;
   const compact = tela?.tipo === "aguardando_aprovacao" || tela?.tipo === "sacola";
+  // Com plano na tela e a conversa aberta, o orbe vira bolinha ao lado da legenda para o plano não ficar sem altura.
+  const miniOrb = compact || (hasView && showLog);
 
   let orbState: OrbState = g.state === "transcribing" ? "thinking" : g.state;
   if (g.busy && g.state !== "speaking") orbState = "thinking";
@@ -35,14 +37,14 @@ export function AgentScreen() {
   const adjust = () => inputRef.current?.focus();
 
   const caption = (
-    <div className={cn("w-full text-center", compact ? "min-w-0 flex-1 text-left text-sm" : hasView ? "px-6 pt-2 text-sm" : "px-6 pb-1 text-base")}>
+    <div className={cn("w-full text-center", miniOrb ? "min-w-0 flex-1 text-left text-sm" : hasView ? "px-6 pt-2 text-sm" : "px-6 pb-1 text-base")}>
       <p aria-hidden="true" className="line-clamp-2 leading-snug text-[color:var(--agent-voice)]">{shown}</p>
       <p role="status" aria-live="polite" className="sr-only whitespace-pre-wrap">{lastReply}</p>
     </div>
   );
 
   return (
-    <div className="agent-bg flex min-h-0 flex-1 flex-col">
+    <div className="agent-bg flex min-h-0 flex-1 flex-col overflow-y-auto">
       <header className="flex items-center gap-2 px-3 py-2">
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
         <span className="font-display text-lg font-medium">FoodPilot</span>
@@ -60,7 +62,7 @@ export function AgentScreen() {
         </Alert>
       )}
 
-      <section aria-label="Resultados" className={cn("flex min-h-0 flex-col overflow-hidden transition-[flex-grow,opacity] duration-500", hasView ? "grow opacity-100" : "grow-0 basis-0 opacity-0")}>
+      <section aria-label="Resultados" className={cn("flex min-h-0 flex-col overflow-hidden transition-[flex-grow,opacity] duration-500", hasView ? "min-h-[280px] grow opacity-100" : "grow-0 basis-0 opacity-0")}>
         {(tela?.tipo === "mostrar_plano" || tela?.tipo === "plano_atualizado") && (
           <PlanoView plano={tela.plano} atualizado={tela.tipo === "plano_atualizado"} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />
         )}
@@ -69,11 +71,11 @@ export function AgentScreen() {
       </section>
 
       <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "shrink-0 grow-0" : "grow")}>
-        <div className={cn("flex min-h-0", compact ? "items-center gap-3 px-4 pt-2" : "flex-col items-center", !hasView && "flex-1 justify-center overflow-y-auto text-center")}>
+        <div className={cn("flex min-h-0", miniOrb ? "items-center gap-3 px-4 pt-2" : "flex-col items-center", !hasView && "flex-1 justify-center overflow-y-auto text-center")}>
           {!hasView && !conversou && <h1 className="px-4 font-display text-balance text-3xl font-medium leading-tight">Qual a sua vibe de hoje?</h1>}
-          {hasView && !compact && caption}
-          <Orb size={compact ? "mini" : hasView ? "strip" : "hero"} state={orbState} />
-          {(compact || !hasView) && caption}
+          {hasView && !miniOrb && caption}
+          <Orb size={miniOrb ? "mini" : hasView ? "strip" : "hero"} state={orbState} />
+          {(miniOrb || !hasView) && caption}
           {!hasView && !conversou && (
             <ul className="flex flex-wrap justify-center gap-2 px-4" aria-label="Sugestões">
               {SUGGESTIONS.map((s) => (
@@ -91,7 +93,7 @@ export function AgentScreen() {
                 {showLog ? "Esconder conversa" : `Ver conversa (${g.lines.length})`}
               </Button>
               {showLog && (
-                <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-36 gap-2 overflow-y-auto rounded-2xl bg-background/90 p-2">
+                <ul id="conversa" role="log" aria-label="Conversa" className={cn("mb-2 grid gap-2 overflow-y-auto rounded-2xl bg-background/90 p-2", hasView ? "max-h-24" : "max-h-36")}>
                   {g.lines.map((m) => (
                     <li key={m.id} className={cn("max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm", m.from === "voce" ? "justify-self-end bg-accent text-accent-foreground" : "justify-self-start bg-secondary text-secondary-foreground")}>
                       <span className="sr-only">{m.from === "voce" ? "Você: " : "Guide: "}</span>
