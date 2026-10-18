@@ -51,7 +51,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const goTo = useCallback((t: AgentTurn) => {
     let target = "/agente";
     if (t.state === "ESCOLHENDO_OPCAO") target = "/agente/opcoes";
-    else if (t.state === "AGUARDANDO_CONFIRMACAO" || t.state === "PROPOSTA_APROVADA") target = "/agente/proposta";
+    else if (t.state === "AGUARDANDO_CONFIRMACAO") target = "/agente/proposta";
+    else if (t.state === "PROPOSTA_APROVADA") target = "/agente/continuar";
     if (target !== pathname) router.push(target);
   }, [pathname, router]);
 

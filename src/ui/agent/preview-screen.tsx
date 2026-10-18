@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Button } from "@/ui/components/button";
 import { useNow } from "@/ui/lib/use-now";
+import { ContinueView } from "./continue-view";
 import { ProposalView } from "./proposal-view";
 
 // Prévia de design com dados fixos. O mock do servidor ainda não gera proposta com total confirmado
@@ -55,6 +56,9 @@ export function PreviewScreen() {
           </Button>
         ))}
       </div>
+      {scenario === "aprovada" ? (
+        <ContinueView proposal={proposal} option={OPTION} />
+      ) : (
       <ProposalView
         proposal={proposal}
         option={OPTION}
@@ -65,6 +69,7 @@ export function PreviewScreen() {
         onCancel={() => {}}
         onRetry={() => {}}
       />
+      )}
     </div>
   );
 }

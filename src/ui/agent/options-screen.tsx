@@ -6,6 +6,7 @@ import type { Option, OptionLabel, Reason } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
+import { useFocusOnMount } from "@/ui/lib/use-focus-on-mount";
 import { DATA_ORIGIN, useAgent } from "./agent-context";
 import { fromReais } from "./format";
 
@@ -74,6 +75,7 @@ export function OptionCard({ option, onSelect, disabled }: { option: Option; onS
 export function OptionsScreen() {
   const { turn, busy, error, select, retry } = useAgent();
   const reduceMotion = useReducedMotion();
+  const headingRef = useFocusOnMount<HTMLHeadingElement>();
   const options = turn?.state === "ESCOLHENDO_OPCAO" ? turn.options ?? [] : [];
 
   return (
@@ -82,7 +84,7 @@ export function OptionsScreen() {
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para a conversa">
           <Link href="/agente"><ArrowLeft /></Link>
         </Button>
-        <h1 className="font-display text-lg font-bold">{options.length ? "Opções para você" : "Opções"}</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold outline-none">{options.length ? "Opções para você" : "Opções"}</h1>
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

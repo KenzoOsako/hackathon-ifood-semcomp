@@ -5,6 +5,7 @@ import type { Option, PublicProposal } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
+import { useFocusOnMount } from "@/ui/lib/use-focus-on-mount";
 import { useNow } from "@/ui/lib/use-now";
 import { DATA_ORIGIN } from "./agent-context";
 import { fromCents } from "./format";
@@ -33,6 +34,7 @@ type Props = {
 // e a UI nunca soma custos: ausência de frete/taxas aparece como pendência, não como zero.
 export function ProposalView({ proposal, option, busy, error, approvedReply, onApprove, onCancel, onRetry }: Props) {
   const now = useNow(15_000);
+  const headingRef = useFocusOnMount<HTMLHeadingElement>();
 
   const expiresAt = Date.parse(proposal.expiresAt);
   const expired = proposal.state === "expired" || (now !== null && now > expiresAt);
@@ -47,7 +49,7 @@ export function ProposalView({ proposal, option, busy, error, approvedReply, onA
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para as opções">
           <Link href="/agente/opcoes"><ArrowLeft /></Link>
         </Button>
-        <h1 className="font-display text-lg font-bold">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="font-display text-lg font-bold outline-none">{approved ? "Proposta aprovada" : "Revise sua proposta"}</h1>
         {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
 

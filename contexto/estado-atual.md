@@ -125,3 +125,9 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 ## UI: orbe orgânico e fundo quente — 17/10/2026
 - A pedido do dono da UI, a tela do agente segue a essência de uma imagem de referência: orbe como massa orgânica com gradiente de malha (vermelho, coral, âmbar, vinho) que muda de forma, quatro contornos ondulados como curvas de nível e ondas que se expandem por estado, sobre fundo creme/pêssego. Novos tokens decorativos `--orb-*`, `--warm` e `--peach` em `globals.css`; a bolinha da home usa o mesmo orbe. Só CSS, `prefers-reduced-motion` respeitado. Não feitos: barra inferior com microfone central e chips com ícones.
 - Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
+
+## UI: tela final e acessibilidade — 17/10/2026
+- Branch `feat/malveste-ui-final` (empilhada sobre `feat/malveste-ui-opcoes`). Nova rota `/agente/continuar`: depois que o servidor devolve `PROPOSTA_APROVADA`, mostra "Proposta aprovada. Nenhum pedido foi enviado", um resumo copiável (loja, itens, frete, taxas e total ou "pendente") e três passos para montar o carrinho no iFood. Sem link ou deeplink: transferência automática não existe nesta demo. A prévia ("Aprovada") exibe esta tela.
+- Acessibilidade: foco vai ao título ao trocar de tela (`useFocusOnMount`), título de página por rota, `muted-foreground` escurecido para `#5c5c5c` (contraste AA sobre o fundo pêssego), cópia com aviso em `role=status` e fallback de seleção manual.
+- Lacuna para o Kenzo: o resumo é montado na UI só reorganizando campos do snapshot; o `buildManualHandoffSummary` de `src/domain/handoff.ts` (K-4) não é servido por nenhuma rota. Ideal: o turno aprovado trazer o texto pronto, para a UI só exibir.
+- Validação: typecheck, lint, 92 testes e build passaram; jornada, foco, títulos e cópia conferidos por CDP a 375px, console limpo. Falta teste com leitor de tela real.
