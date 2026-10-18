@@ -13,6 +13,8 @@ export const VoiceSignalsSchema = z.strictObject({
   palavras: z.number().int().nonnegative().max(1000).optional(),
   // confiança média do STT (0 a 1); faixas em LIMIARES_CONFIANCA (src/agent/frases.ts). Ausente em texto.
   confianca: z.number().min(0).max(1).optional(),
+  // a heurística da voz suspeitou de instrução embutida na fala (ex.: "ignore as regras"). Só vai quando true; a voz NÃO bloqueia, o agente decide.
+  injecao: z.literal(true).optional(),
 });
 export type VoiceSignals = z.infer<typeof VoiceSignalsSchema>;
 
@@ -22,6 +24,8 @@ export interface Utterance {
   firstWordAt?: number;
   lastWordAt?: number;
   interrupted: boolean;
+  confianca?: number;
+  injecao?: boolean;
 }
 
 export const countWords = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
@@ -32,7 +36,7 @@ export function computeSignals(u: Utterance): VoiceSignals {
   const duracaoS = u.firstWordAt !== undefined && u.lastWordAt !== undefined ? (u.lastWordAt - u.firstWordAt) / 1000 : 0;
   // Frases curtas (<3 palavras) ou muito rápidas demais não dão taxa confiável.
   const velocidadeFala = palavras >= 3 && duracaoS >= 0.5 ? Math.min(20, Number((palavras / duracaoS).toFixed(2))) : undefined;
-  return { origem: "voz", interrompeu: u.interrupted, palavras, ...(silencioMs !== undefined ? { silencioMs } : {}), ...(velocidadeFala !== undefined ? { velocidadeFala } : {}) };
+  return { origem: "voz", interrompeu: u.interrupted, palavras, ...(silencioMs !== undefined ? { silencioMs } : {}), ...(velocidadeFala !== undefined ? { velocidadeFala } : {}), ...(u.injecao ? { injecao: true as const } : {}), ...(u.confianca !== undefined ? { confianca: Math.min(1, Math.max(0, Number(u.confianca.toFixed(3)))) } : {}) };
 }
 
 export const textSignals = (text: string): VoiceSignals => ({ origem: "texto", interrompeu: false, palavras: Math.min(1000, countWords(text)) });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { converseTurn, replyToEvents } from "./converse-client";
-import { encodeEvent } from "./converse-events";
+import { ConverseEventSchema, encodeEvent } from "./converse-events";
 
 const collect = async <T,>(g: AsyncGenerator<T>) => { const out: T[] = []; for await (const e of g) out.push(e); return out; };
 const jsonRes = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -60,5 +60,26 @@ describe("converseTurn", () => {
   it("resposta sem texto ou não-JSON não quebra: error", async () => {
     expect((await collect(converseTurn(input, { fetchImpl: (async () => jsonRes({ estado: "S0" })) as typeof fetch })))[0].type).toBe("error");
     expect((await collect(converseTurn(input, { fetchImpl: (async () => new Response("<html>", { status: 502 })) as typeof fetch })))[0]).toMatchObject({ type: "error", code: "RESPOSTA_INVALIDA" });
+  });
+});
+
+
+describe("login do iFood", () => {
+  const login = (loginUrl: unknown) => (async () => jsonRes({ state: "FALHA", code: "IFOOD_LOGIN", reply: "Conecte sua conta iFood.", loginUrl }, 401)) as typeof fetch;
+  it("401 com caminho relativo vira error com loginUrl (a tela mostra o botão)", async () => {
+    const ev = await collect(converseTurn(input, { fetchImpl: login("/api/auth/login") }));
+    expect(ev).toEqual([{ type: "error", code: "IFOOD_LOGIN", reply: "Conecte sua conta iFood.", loginUrl: "/api/auth/login" }]);
+  });
+  it("URL externa ou protocolo-relativo NUNCA vira link", async () => {
+    for (const bad of ["https://evil.example/login", "//evil.example", "javascript:alert(1)", "/x y", 42]) {
+      const ev = await collect(converseTurn(input, { fetchImpl: login(bad) }));
+      expect(ev[0]).not.toHaveProperty("loginUrl");
+    }
+  });
+  it("o contrato de eventos só aceita caminho relativo", () => {
+    const base = { type: "error", code: "X", reply: "r" };
+    expect(ConverseEventSchema.safeParse({ ...base, loginUrl: "/api/auth/login" }).success).toBe(true);
+    expect(ConverseEventSchema.safeParse({ ...base, loginUrl: "//evil.example" }).success).toBe(false);
+    expect(ConverseEventSchema.safeParse({ ...base, loginUrl: "https://evil.example" }).success).toBe(false);
   });
 });

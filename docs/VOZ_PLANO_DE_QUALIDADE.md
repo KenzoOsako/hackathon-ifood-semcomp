@@ -16,7 +16,7 @@ A ElevenLabs só leva o áudio (voz → texto, texto → voz). **O motor é o ba
 | 5 | **Latência (sem pausa chata)** | 1ª palavra do Guide ≤ 1,8 s; backend ≤ 700 ms | `LatencyTrace` em cada turno; medida em `/voz` | 🟡 |
 | 6 | **Fluidez da conversa** | Fala em pedaços, sem silêncio entre eles, entonação contínua | Player com fila e busca antecipada; testes | ✅ (lógica) ⚠️ (ouvido) |
 | 7 | **Interrupção** | Falar por cima corta o Guide na hora e processa a nova fala | Player e sessão testados com peças falsas (voz sustentada interrompe, estalo não); precisa de microfone real | 🟡 ⚠️ |
-| 8 | **Fim de fala automático** | Para de gravar sozinho após um silêncio; sem cortar a pessoa no meio | Detector com testes (fala curta 700 ms, normal 1 s, pausa curta não corta); teste humano para ajustar os tempos | 🟡 ⚠️ |
+| 8 | **Fim de fala automático** | Para de gravar sozinho após um silêncio; sem cortar a pessoa no meio | Detector com testes (fala curta 900 ms, normal 1,3 s, pausa curta não corta); teste humano para ajustar os tempos | 🟡 ⚠️ |
 | 9 | **Eco** (o Guide se ouvir) | O microfone não confunde a voz do Guide com a da pessoa | Teste humano com caixa de som e com fone | ⚠️ |
 | 10 | **Falhas** | Microfone negado, sem rede, provedor fora, 429, áudio vazio: sempre há um caminho em texto | Testes de rota e de player | ✅ |
 | 11 | **Segurança e abuso** | Ninguém gasta nossos créditos; chave nunca no navegador; dado sensível mascarado | Limite por visitante, limite global, guardas; testes | ✅ (1 processo) |
@@ -36,15 +36,16 @@ A ElevenLabs só leva o áudio (voz → texto, texto → voz). **O motor é o ba
 
 ## 4. Checklist do painel da ElevenLabs (agente de laboratório / plano B)
 Marcar só depois de conferir na tela.
-- [ ] **Segurança → Autenticação**: ligada (hoje o agente é público: qualquer pessoa com o ID usa nossos créditos).
-- [ ] **Segurança → Allowlist de hosts**: só os domínios da demo.
-- [ ] **Avançado → Duração máxima da conversa** e **tempo de silêncio** curtos (evita conversa aberta gastando minutos).
-- [ ] **Voz**: Amanda Kelly (ou a escolhida por escuta), **Expressive mode desligado**, estabilidade ~65–70%.
-- [ ] **Idioma**: Português (Brasil).
-- [ ] **Reconhecimento (ASR)**: conferir provedor e se há **palavras-chave**; cadastrar lojas e itens.
-- [ ] **Retenção de dados**: o mínimo possível; **não guardar áudio** se a opção existir (LGPD).
+- [x] **Segurança → Autenticação**: ligada (hoje o agente é público: qualquer pessoa com o ID usa nossos créditos).
+- [x] **Segurança → Allowlist de hosts** (domínio de fachada `guide.invalid`: o painel não aceita `localhost`; a autenticação é a proteção real): só os domínios da demo.
+- [x] **Avançado → Duração máxima da conversa** (180 s) e **tempo de silêncio** (20 s) (evita conversa aberta gastando minutos).
+- [~] **Voz**: Amanda Kelly (em uso; falta a audição comparativa) (ou a escolhida por escuta), **Expressive mode desligado**, estabilidade ~65–70%.
+- [x] **Idioma**: Português (Brasil).
+- [x] **Reconhecimento (ASR)** (20 palavras-chave cadastradas; o limite é 20 caracteres por palavra): conferir provedor e se há **palavras-chave**; cadastrar lojas e itens.
+- [x] **Retenção de dados** (7 dias, áudio não armazenado, Zero Retention desligado de propósito para poder depurar): o mínimo possível; **não guardar áudio** se a opção existir (LGPD).
+- [x] **Overrides (aba Segurança)**: todos desligados, inclusive *Text only* (17/10, conferido na tela e publicado). Ninguém que conecta troca prompt, LLM, voz, tools ou base de conhecimento.
 - [ ] **Guardrails**: ligar o que houver (injeção de prompt, conteúdo) e anotar o que cada opção faz.
-- [ ] **Análise / webhooks / integrações**: desligados.
+- [~] **Análise / webhooks / integrações**: no workspace não há webhook, secret nem conexão de autenticação cadastrados (conferido em 17/10); falta conferir as abas Analysis e Tools do agente.
 - [ ] **Chave de API**: permissões mínimas, limite de créditos, validade curta; **rotacionar** ao fim do evento.
 
 ## 5. Roteiro de teste humano (Chrome, microfone real)
@@ -88,7 +89,7 @@ Lógica separada do React em `src/voice/session.ts` (máquina de estados) e `end
 
 **Defeito de desenho achado pelos testes e corrigido:** no modo sem as mãos o microfone **reabria assim que a fala era entregue, enquanto o agente ainda pensava**. Agora ele só reabre depois que o Guide termina de falar (mais uma folga de 0,5 s contra eco), quando a resposta termina sem fala (`turnDone`) ou após 15 s sem resposta.
 
-**NÃO verificado (precisa de teste humano em Chrome com microfone):** os tempos de silêncio (700 ms e 1 s) e os níveis de voz (0,02 para fala, 0,06 para interromper) são **pontos de partida**; o eco com caixa de som; o comportamento com ruído de fundo; microfones de fone e de notebook. O código que liga o navegador (`browser-deps.ts`) só foi verificado por tipo, lint e build.
+**NÃO verificado (precisa de teste humano em Chrome com microfone):** os tempos de silêncio (900 ms e 1,3 s) e os níveis de voz (0,02 para fala, 0,06 para interromper) são **pontos de partida**; o eco com caixa de som; o comportamento com ruído de fundo; microfones de fone e de notebook. O código que liga o navegador (`browser-deps.ts`) só foi verificado por tipo, lint e build.
 
 ### Rodada 4 · "não reconhece mesmo falando alto" (teste humano, 17/10)
 **Causa provável (defeito meu):** o medidor local usava um limite **fixo** de volume (0,02) para decidir se "alguém falou", e **não enviava o áudio** ao reconhecimento quando achava que não. Microfones de notebook ficam abaixo disso mesmo com a pessoa falando alto.
