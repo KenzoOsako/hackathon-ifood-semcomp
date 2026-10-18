@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, Search, Send } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, MicOff, Search, Send } from "lucide-react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
@@ -70,6 +70,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   const lastReply = [...p.msgs].reverse().find((m) => m.from === "agente")?.text;
   // Parado, mostra a última resposta do agente (no modo texto ela é a "fala"); nos demais estados, o estado.
   const spoken = orbState === "idle" || orbState === "speaking" ? (lastReply ?? STATE_LABEL.idle) : STATE_LABEL[orbState];
+  // O selo "Simulado" do cabeçalho já rotula o dado; o prefixo só poluiria a legenda visível.
+  const shown = spoken.replace(/^\[Simulado\]\s*/, "");
+  // Revisão e continuidade precisam de altura: o orbe vira uma bolinha ao lado da legenda.
+  const compact = p.view === "proposal" || p.view === "continue";
 
   function adjust() {
     inputRef.current?.focus();
@@ -80,8 +84,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   }
 
   const caption = (
-    <div className={cn("w-full px-6 text-center", hasView ? "max-h-24 overflow-y-auto pt-2 text-sm" : "pb-1 text-base")}>
-      <p role="status" aria-live="polite" className="whitespace-pre-wrap leading-snug text-[color:var(--agent-voice)]">{spoken}</p>
+    <div className={cn("w-full text-center", compact ? "min-w-0 flex-1 px-0 text-left text-sm" : hasView ? "px-6 pt-2 text-sm" : "px-6 pb-1 text-base")}>
+      {/* A legenda visível é curta (2 linhas); o leitor de tela sempre recebe o texto completo. */}
+      <p aria-hidden="true" className="line-clamp-2 leading-snug text-[color:var(--agent-voice)]">{shown}</p>
+      <p role="status" aria-live="polite" className="sr-only whitespace-pre-wrap">{spoken}</p>
       {p.error && (
         <Alert variant="destructive" className="mt-2 text-left">
           <AlertTriangle aria-hidden="true" />
@@ -169,11 +175,11 @@ export function AgentView(p: Readonly<AgentViewProps>) {
       </section>
 
       <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0" : "grow")}>
-        <div className={cn("flex min-h-0 flex-col items-center", hasView ? "" : "flex-1 justify-center overflow-y-auto text-center")}>
+        <div className={cn("flex min-h-0", compact ? "items-center gap-3 px-4 pt-2" : "flex-col items-center", !hasView && "flex-1 justify-center overflow-y-auto text-center")}>
           {!hasView && <h1 className="px-4 font-display text-balance text-3xl font-medium leading-tight">Qual a sua vibe de hoje?</h1>}
-          {hasView && caption}
-          <Orb size={hasView ? "strip" : "hero"} state={orbState} />
-          {!hasView && caption}
+          {hasView && !compact && caption}
+          <Orb size={compact ? "mini" : hasView ? "strip" : "hero"} state={orbState} />
+          {(compact || !hasView) && caption}
           {!hasView && p.msgs.length === 0 && (
             <ul className="flex flex-wrap justify-center gap-2 px-4" aria-label="Sugestões">
               {SUGGESTIONS.map((s) => (
@@ -214,9 +220,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
             }}
           >
             {/* Sem onMicClick a voz ainda não existe: o botão fica desabilitado e o texto é o caminho completo. */}
-            <Button type="button" variant={orbState === "listening" ? "default" : "secondary"} size="icon" disabled={!p.onMicClick} onClick={p.onMicClick}
+            <Button type="button" variant={orbState === "listening" ? "default" : "outline"} size="icon" disabled={!p.onMicClick} onClick={p.onMicClick}
+              className="disabled:border-dashed disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
               aria-label={p.onMicClick ? "Falar" : "Falar (voz em breve)"} title={p.onMicClick ? undefined : "Voz em breve"}>
-              <Mic />
+              {p.onMicClick ? <Mic /> : <MicOff />}
             </Button>
             <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Refine ou peça outra coisa…" aria-label="Mensagem" maxLength={4000} />
             <Button type="submit" size="icon" disabled={p.busy || !input.trim()} aria-label="Enviar"><Send /></Button>
