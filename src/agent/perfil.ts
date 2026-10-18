@@ -1,4 +1,4 @@
-// Personalização mínima: o PRIMEIRO NOME da pessoa, para o Guide abrir a conversa chamando-a pelo nome.
+// Personalização mínima: o PRIMEIRO NOME da pessoa, para o Mimo abrir a conversa chamando-a pelo nome.
 // Privacidade (decisão de produto, 18/10): só o primeiro nome, só na memória do servidor, nunca em log; vai à fala (TTS de
 // terceiros) apenas na saudação e uma vez no encaminhamento do plano. Duas fontes, nesta ordem:
 //   1) a conta do iFood (getUser, nível BASIC), SOMENTE se o escopo extra foi habilitado de propósito

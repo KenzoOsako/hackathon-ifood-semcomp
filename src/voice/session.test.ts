@@ -210,7 +210,7 @@ describe("modo manual (Falar / Parar)", () => {
 });
 
 describe("modo sem as mãos", () => {
-  it("abre o microfone, para sozinho no silêncio, reconhece, e reabre depois que o Guide termina de falar", async () => {
+  it("abre o microfone, para sozinho no silêncio, reconhece, e reabre depois que o Mimo termina de falar", async () => {
     const s = makeSession();
     const apis: VoiceApi[] = [];
     (s as unknown as { ev: SessionEvents }).ev.onUtterance = (u, api) => { utterances.push(u); apis.push(api); };
@@ -284,7 +284,7 @@ describe("modo sem as mãos", () => {
     level = 0.3; await clock.advance(500); level = 0; await clock.advance(1100);
     expect(utterances).toHaveLength(1);
   });
-  it("falar por cima do Guide interrompe a fala e já grava, marcando a interrupção", async () => {
+  it("falar por cima do Mimo interrompe a fala e já grava, marcando a interrupção", async () => {
     const s = makeSession();
     await s.setHandsFree(true);
     level = 0.3; await clock.advance(1500); level = 0; await clock.advance(1200); // primeira fala
@@ -298,11 +298,11 @@ describe("modo sem as mãos", () => {
     expect(utterances).toHaveLength(2);
     expect(utterances[1].sinais.interrompeu).toBe(true);
   });
-  it("estalo curto durante a fala do Guide não interrompe", async () => {
+  it("estalo curto durante a fala do Mimo não interrompe", async () => {
     const s = makeSession();
     await s.setHandsFree(true);
     level = 0.3; await clock.advance(1500); level = 0; await clock.advance(1200);
-    player.speak("Frase longa do Guide."); await clock.advance(200);
+    player.speak("Frase longa do Mimo."); await clock.advance(200);
     level = 0.5; await clock.advance(150); level = 0; await clock.advance(500);
     expect(player.speaking).toBe(true);
     expect(s.state).toBe("speaking");
@@ -390,7 +390,7 @@ describe("reconhecimento incerto", () => {
   const reply = (texto: string, confianca?: number) => Promise.resolve(Response.json({ texto, ...(confianca !== undefined ? { confianca } : {}), injecao: false, redacoes: [] }));
   const say = async (s: VoiceSession) => { await s.start(); level = 0.3; await clock.advance(1200); level = 0; s.stop(); await clock.advance(300); };
 
-  it("confiança abaixo do limite NÃO vai ao agente: o Guide pede para repetir", async () => {
+  it("confiança abaixo do limite NÃO vai ao agente: o Mimo pede para repetir", async () => {
     fetchMock.mockImplementation(() => reply("essa coisa de eu já conto que eu", 0.5));
     const s = withUnclear();
     await say(s);

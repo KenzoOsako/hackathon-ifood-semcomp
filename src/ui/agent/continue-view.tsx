@@ -19,7 +19,7 @@ export function buildSummary(proposal: PublicProposal, option: Option | null, it
     return `${item.quantity}× ${itemLabel(item.ref, option, itemNames)} — ${fromCents(item.unitPrice.cents)}`;
   });
   return [
-    DATA_ORIGIN === "mock" ? "Resumo do FoodPilot (dados simulados)" : "Resumo do FoodPilot",
+    DATA_ORIGIN === "mock" ? "Resumo do Mimo (dados simulados)" : "Resumo do Mimo",
     option ? `Loja: ${option.candidate.merchantName}` : null,
     ...items,
     `Itens: ${fromCents(cost.items.cents)}`,

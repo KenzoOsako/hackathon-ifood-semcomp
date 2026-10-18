@@ -13,7 +13,7 @@
 - **Plano:** versão, necessidades, até 3 opções por necessidade com `reasons[]`, totais conhecidos ou ausentes, pendências, origem real ou simulada.
 
 ## Regras
-1. **O FoodPilot não finaliza pedido.** Continuidade no iFood: transferência validada, senão link confirmado, senão resumo copiável.
+1. **O Mimo não finaliza pedido.** Continuidade no iFood: transferência validada, senão link confirmado, senão resumo copiável.
 2. Selecionar, editar e aprovar são eventos distintos; aprovar **invalida** em mudança material (item, preço, endereço, restrição) e expira.
 3. Filtros rígidos (alergia, teto) nunca são relaxados sozinhos.
 4. **Sem carrinho remoto antes da aprovação** e nunca `submitOrder`.

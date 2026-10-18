@@ -32,7 +32,7 @@ const CHIP_DEFAULT = "bg-[var(--cat-5-bg)] text-[color:var(--cat-5-fg)]";
 type Props = {
   option: Option;
   media?: CatalogMedia;
-  tag?: string; // rótulo vindo do servidor (plano do Guide); sem ele, o do `label`
+  tag?: string; // rótulo vindo do servidor (plano do Mimo); sem ele, o do `label`
   first: boolean;
   expanded: boolean;
   disabled: boolean;

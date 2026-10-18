@@ -26,7 +26,7 @@ export interface TurnCtl {
 }
 
 export interface TurnHandlers {
-  onAgentText?(text: string): void; // o que o Guide disse (sem a frase de espera), para mostrar na tela
+  onAgentText?(text: string): void; // o que o Mimo disse (sem a frase de espera), para mostrar na tela
   onScreen?(event: string, payload: unknown): void;
   onLogin?(url: string, reply: string): void;
   onMeta?(meta: AgentMeta): void; // metadados do agente neste turno (para observabilidade)
@@ -38,7 +38,7 @@ export interface TurnDeps {
   signal?: AbortSignal;
 }
 
-export type TurnInput = Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses" | "configuracao">;
+export type TurnInput = Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses" | "configuracao" | "consentimentoSinais">;
 
 export async function runTurn(input: TurnInput, ctl: TurnCtl, handlers: TurnHandlers, deps: TurnDeps): Promise<void> {
   const converse = deps.converse ?? converseTurn;

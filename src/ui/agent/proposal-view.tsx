@@ -135,7 +135,7 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
         )}
 
         <p className="mt-4 text-xs text-muted-foreground">
-          O FoodPilot prepara a proposta; a compra é finalizada no iFood.
+          O Mimo prepara a proposta; a compra é finalizada no iFood.
         </p>
       </main>
 

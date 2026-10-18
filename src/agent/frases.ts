@@ -29,7 +29,7 @@ export const FRASES_FIXAS: readonly string[] = Object.values(FRASES);
 // A partir de `confirmar`: segue normal. Valores provisórios até a calibração com gravações reais.
 export const LIMIARES_CONFIANCA = { repetir: 0.6, confirmar: 0.85 } as const;
 
-// Quando a mesma frase fixa se repetiria (duas vezes seguidas), o Guide diz de outro jeito: nunca o mesmo texto, e sempre
+// Quando a mesma frase fixa se repetiria (duas vezes seguidas), o Mimo diz de outro jeito: nunca o mesmo texto, e sempre
 // com um caminho concreto. Cada lista é consumida em ordem pela repetição.
 export const ALTERNATIVAS: Record<string, readonly string[]> = {
   [FRASES.oQueFaco]: ["Posso buscar comida pronta, itens de mercado ou um presente. Me diz o que você precisa e eu monto o plano.", "Se quiser, comece pelo que está faltando: um prato, ingredientes ou um presente."],

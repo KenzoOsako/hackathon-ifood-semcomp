@@ -7,7 +7,7 @@
 //   g.lines            // conversa para mostrar (voce / agente)
 //   g.screen           // último evento de tela do agente ({ event: "mostrar_plano", payload: PlanoSnapshot })
 //   g.login            // { url } quando falta conectar o iFood (status ao abrir, ou 401 do agente): botão "Conectar iFood"
-//   g.unclear          // texto que o Guide não entendeu direito (ele já pediu para repetir)
+//   g.unclear          // texto que o Mimo não entendeu direito (ele já pediu para repetir)
 //   g.sendText("...")  // o texto sempre funciona (mesmo caminho do áudio)
 //   g.cancel()         // descarta a gravação em andamento (Esc faz o mesmo; Esc também interrompe a fala)
 //   g.rounds / g.stats // rodadas de latência medidas e p50/p95 por etapa (laboratório)
@@ -28,9 +28,9 @@ export type GuideRound = LatencySummary & { confianca?: number };
 export interface GuideLine { id: string; from: "voce" | "agente"; text: string }
 export interface GuideScreen { event: string; payload: unknown }
 
-export const GREETING = "Oi! Eu sou o Guide! Em que posso te ajudar hoje?";
+export const GREETING = "Oi! Eu sou o Mimo! Em que posso te ajudar hoje?";
 // Com o primeiro nome da pessoa (GET /api/perfil), a abertura já é personalizada.
-export const saudacaoPara = (nome?: string) => (nome ? `Oi, ${nome}! Eu sou o Guide. Em que posso te ajudar hoje?` : GREETING);
+export const saudacaoPara = (nome?: string) => (nome ? `Oi, ${nome}! Eu sou o Mimo. Em que posso te ajudar hoje?` : GREETING);
 
 const after = (fn: () => void, ms: number) => {
   const id = setTimeout(fn, ms);
@@ -38,6 +38,12 @@ const after = (fn: () => void, ms: number) => {
 };
 
 export function useGuideVoice() {
+  const [consentimentoSinais, setParticipacao] = useState(false);
+  const participacao = useRef(false);
+  const setConsentimentoSinais = useCallback((valor: boolean) => {
+    participacao.current = valor;
+    setParticipacao(valor);
+  }, []);
   const [lines, setLines] = useState<GuideLine[]>([{ id: "init", from: "agente", text: GREETING }]);
   const [screen, setScreen] = useState<GuideScreen | null>(null);
   const [login, setLogin] = useState<{ url: string } | null>(null);
@@ -103,7 +109,7 @@ export function useGuideVoice() {
     const patch = (p: Partial<TurnLog>) => setTurns((all) => all.map((t) => (t.id === turnId ? { ...t, ...p } : t)));
     setTurns((all) => [...all, { id: turnId, usuario: texto, origem, ...(sinais?.confianca !== undefined ? { confianca: sinais.confianca } : {}) }]);
     try {
-      await runTurn({ texto, origem, sinais, ...(configuracao ? { configuracao } : {}) }, ctl, {
+      await runTurn({ texto, origem, sinais, consentimentoSinais: participacao.current, ...(configuracao ? { configuracao } : {}) }, ctl, {
         onAgentText: (text) => { patch({ resposta: text }); setLines((l) => [...l, { id: nextId("a"), from: "agente", text }]); },
         onMeta: (meta) => patch({ meta }),
         onScreen: (event, payload) => { terms.current = termsFromPlan(payload); setScreen({ event, payload }); },
@@ -136,7 +142,7 @@ export function useGuideVoice() {
   const sendText = useCallback((texto: string, configuracao?: ConfiguracaoItem) => {
     const t = texto.trim();
     if (!t) return;
-    voiceStopSpeaking(); // digitar por cima do Guide interrompe a fala, como falar por cima (o `run` cancela o turno anterior)
+    voiceStopSpeaking(); // digitar por cima do Mimo interrompe a fala, como falar por cima (o `run` cancela o turno anterior)
     void run(t, "texto", undefined, { mark, enqueue: (x) => enqueue(x), done: turnDone, end: turnEnded, begin: beginTurn }, configuracao);
   }, [run, voiceStopSpeaking, mark, enqueue, turnDone, turnEnded, beginTurn]);
 
@@ -146,7 +152,7 @@ export function useGuideVoice() {
 
   const { state, cancel } = voice;
 
-  // Esc: descarta a gravação; se o Guide está falando, interrompe.
+  // Esc: descarta a gravação; se o Mimo está falando, interrompe.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -171,5 +177,5 @@ export function useGuideVoice() {
   // Fala a saudação (o navegador só deixa tocar áudio depois de um gesto da pessoa: chame num clique).
   const falarSaudacao = () => voice.enqueue(greeting);
 
-  return { ...voice, stopSpeaking, nome, greeting, falarSaudacao, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
+  return { ...voice, consentimentoSinais, setConsentimentoSinais, stopSpeaking, nome, greeting, falarSaudacao, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
 }

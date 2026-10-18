@@ -1,4 +1,4 @@
-// ATENDENTE COM FERRAMENTAS: o agente do Guide. Uma cabeça só: o LLM vê a conversa inteira, conversa, pesquisa
+// ATENDENTE COM FERRAMENTAS: o agente do Mimo. Uma cabeça só: o LLM vê a conversa inteira, conversa, pesquisa
 // no iFood quando precisa e decide quando mostrar o plano, como um atendente de balcão. O código não decide a conversa;
 // só guarda o que é proibido: aprovação só pela frase explícita da versão na tela, nada de álcool, sem dado pessoal,
 // preço e loja só do que o iFood devolveu. Ferramentas só de leitura (nenhuma compra, carrinho ou pedido).
@@ -13,6 +13,7 @@ import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } 
 import { temDadoPessoal } from "../privacidade";
 import { montarSacola } from "../sacola";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, GrupoOpcoes, Necessidade, OpcaoPlano, PlanoSnapshot } from "../types";
+import type { Sinal } from "@/data/sinais";
 
 const MAX_PASSOS = 4;          // rodadas de ferramenta por turno (buscar, buscar, mostrar...)
 const TIMEOUT_MS = 12_000;     // por chamada ao modelo
@@ -31,7 +32,7 @@ const DIZ_TELA = /\b(na|sua|da|pra|para a) tela\b/;
 const ALCOOL =/cerveja|vinho|vodka|whisky|cacha[cç]a|gin\b|licor|drink|chopp|alco[oó]l/i;
 const PROIBIDO = /pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|conclu[ií]da)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
 
-export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conversa por voz. Você ajuda a pessoa a decidir o que pedir (refeição, mercado ou presente) e monta um plano para ela aprovar. A compra termina no app do iFood.
+export const SYSTEM_ATENDENTE = `Você é o Mimo, o atendente do iFood que conversa por voz. Você ajuda a pessoa a decidir o que pedir (refeição, mercado ou presente) e monta um plano para ela aprovar. A compra termina no app do iFood.
 
 # Como você trabalha: como o melhor atendente de balcão
 - Escute, entenda o que a pessoa quer de verdade e CONDUZA. Nunca deixe a pessoa sem um próximo passo.
@@ -71,7 +72,8 @@ export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conv
 - Nada de bebida alcoólica, remédio ou conselho médico. Fora de refeição, mercado e presente: recuse com educação e ofereça ajuda.
 - Nunca peça nem repita CPF, cartão, senha, telefone, e-mail ou endereço.`;
 
-export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; domain: DomainPort; nome?: string; now?: () => number }
+// sinal: registro anônimo de demanda (src/data/sinais.ts); opcional para os testes não dependerem dele.
+export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; domain: DomainPort; nome?: string; now?: () => number; sinal?: (s: Sinal) => void }
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
 // grupoDe: cada opção aponta para a lista da busca em que apareceu (as que a pessoa viu juntas na tela).
@@ -84,6 +86,8 @@ function memoriaDe(subjectRef: string): Memoria {
   if (memorias.size > 2000) memorias.delete(memorias.keys().next().value!);
   return m;
 }
+// Sinal é bônus: um registro que falha não pode virar erro de ferramenta nem derrubar o turno.
+function registrar(deps: AtendenteDeps, sinal: Sinal): void { try { deps.sinal?.(sinal); } catch { /* descarta */ } }
 export function reiniciarAtendente(subjectRef: string): void { memorias.delete(subjectRef); }
 
 const reais = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -193,6 +197,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     if (bloqueios.length) { tela = { tipo: "plano_atualizado", plano: s.plano }; return fim(`Ainda falta configurar os itens. ${bloqueios[0]}`); }
     s.estado = "S5"; s.encaminhado = true;
     aprovacao = { planoId: s.plano.planoId, versao: s.plano.versao };
+    registrar(deps, { tipo: "aprovado", itens: s.plano.blocos.length });
     tela = { tipo: "sacola", plano: { ...s.plano, sacola: montarSacola(s.plano) } };
     return fim(FRASES.aprovacaoEnviada);
   }
@@ -286,6 +291,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora. NADA foi para a tela.`;
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
     if (mem.resumoBuscas.length > 8) mem.resumoBuscas.shift();
+    registrar(deps, { tipo: "busca", vertical: a.vertical, categoria: a.categoria, restricoes: s.restricoes, resultados: opcoes.length });
     console.info(`[atendente] buscar categoria="${a.categoria}" ordenar=${a.ordenar ?? "relevancia"} opcoes=${opcoes.length}`);
     return { texto, ...(opcoes.length ? { grupo: { categoria: a.categoria, vertical: a.vertical, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
   }
@@ -307,7 +313,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
       if (b.principal.complementos?.grupos.length) b.principal.complementos.composicaoNaoVerificada = true;
     }
     for (const b of plano.blocos) {
-      const porque = textoLivre(a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.porque, 90);
+      const porque = justificativaContextual(a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.porque);
       if (porque) b.porque = porque;
     }
     for (const b of plano.blocos) for (const o of [b.principal, ...b.alternativas]) mem.opcoes.set(o.ref, o);
@@ -319,6 +325,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const atualizado = Boolean(s.plano);
     s.plano = plano; s.necessidades = necessidades; s.estado = atualizado ? "S4" : "S3"; s.encaminhado = false;
     s.ultimaVersaoPlano = plano.versao;
+    registrar(deps, { tipo: "plano", ocasiao: a.ocasiao, pessoas: s.ocasiao.pessoas, categorias: plano.blocos.map((b) => b.categoria), naoAtendidas: plano.naoAtendidas.map((n) => n.categoria) });
     console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=${plano.blocos.length} naoAtendidas=${plano.naoAtendidas.length} versao=${plano.versao}`);
     const resumo = plano.blocos.map((b) => `${descreverBloco(b)}; complementos: ${resumoComplementos(b.principal).join(", ") || "a configurar se houver"}`).join("; ");
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");
@@ -347,6 +354,14 @@ function textoLivre(t: string | undefined, max: number): string | undefined {
   const limpo = (t ?? "").replace(/[*#[\]_`<>]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
   if (!limpo || /\d/.test(limpo) || PROIBIDO.test(limpo) || temDadoPessoal(limpo)) return undefined;
   return limpo;
+}
+
+// O texto do modelo explica o contexto pessoal; atributos de oferta continuam nos campos do catálogo.
+function justificativaContextual(t: string | undefined): string | undefined {
+  const texto = textoLivre(t, 90);
+  if (!texto) return undefined;
+  const atributos = /preco|frete|entrega|prazo|minuto|hora|nota|avaliad|promo|desconto|barat|rapid|gratis|gratuit|cupom|custo|taxa|disponiv|abert|fechad|estoque|qualidade|melhor|segur|alerg|lactose|gluten|composicao|saudavel/;
+  return atributos.test(norm(texto)) ? undefined : texto;
 }
 
 const planoVazio = (): PlanoSnapshot => ({ planoId: "", versao: 0, blocos: [], naoAtendidas: [], pendencias: [], origem: "real" });

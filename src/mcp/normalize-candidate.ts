@@ -1,4 +1,4 @@
-// Normalização pura de candidatos de busca para representação interna verificável do FoodPilot.
+// Normalização pura de candidatos de busca para representação interna verificável do Mimo.
 // Este formato é interno à aplicação: não representa schema oficial do iFood e não realiza chamadas de rede.
 import { z } from "zod";
 import {

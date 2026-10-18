@@ -6,7 +6,7 @@ import { lerTela, type GuideTela } from "./plano-tela";
 // Tipos do fluxo antigo (/api/chat): ainda usados pela prévia de design e pelas views de proposta.
 export type Msg = { id: number; from: "voce" | "agente"; text: string };
 export type View = "options" | "empty" | "proposal" | "continue" | null;
-// Rótulo das views antigas. Na tela do Guide a origem vem do servidor (`dados` e `origem` do plano).
+// Rótulo das views antigas. Na tela do Mimo a origem vem do servidor (`dados` e `origem` do plano).
 export const DATA_ORIGIN: "mock" | "real" = "mock";
 
 type AgentContextValue = ReturnType<typeof useGuideVoice> & { tela: GuideTela | null };

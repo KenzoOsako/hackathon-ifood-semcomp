@@ -247,7 +247,7 @@ export function buildManualHandoffSummary(input: ManualHandoffInput): ManualHand
 
   lines.push("");
   lines.push(
-    "Aviso importante: Nenhuma compra, reserva ou criação de carrinho remoto foi realizada pelo FoodPilot.",
+    "Aviso importante: Nenhuma compra, reserva ou criação de carrinho remoto foi realizada pelo Mimo.",
   );
   lines.push(
     "Como continuar: Abra o aplicativo do iFood, busque o estabelecimento e adicione os itens manualmente. Transferência automática e links externos não são gerados sem suporte validado.",
