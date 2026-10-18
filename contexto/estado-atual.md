@@ -169,6 +169,19 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Feedback registrado: F-002 a F-004 em contexto/feedback-mcp.md. Credenciais do .env eram iguais às que estiveram no histórico do .env.example; o secret foi atualizado localmente. Rotacionar o que estiver no histórico.
 - Próximo: McpDomain em src/agent/domain-mcp e cliente MCP + OAuth no app. O Kenzo autorizou o Hyago a implementar as duas peças, inclusive na zona dele (src/mcp, /api/auth, http.ts), com revisão dele.
 
+## Agente com MCP real no app — 17/10/2026, ~23h30 (Hyago)
+- `src/agent/domain-mcp/`: `McpDomain` implementa o `DomainPort` com `searchOffers` + normalização, elegibilidade e ranking do Kenzo; rótulos (mais barata = preço + frete, mais rápida, mais bem avaliada) só de campos reais; ajustes reordenam o cache sem nova chamada. 7 testes com respostas reais gravadas (`__fixtures__/search-sao-carlos.json`), incluindo a jornada do aniversário pelo orquestrador.
+- `src/mcp/real/`: OAuth PKCE (token só em memória, refresh único 5 min antes, login preso ao mesmo visitante) e cliente MCP por sujeito (D-016). Rotas `/api/auth/{login,concluir,status}` e `/callback`.
+- `/api/converse` com `MCP_MODE=real` usa o domínio real; sem login iFood devolve 401 `IFOOD_LOGIN` com `loginUrl`.
+- **Prova ao vivo:** login com o usuário de teste, jornada do aniversário pelo `/api/converse`: `mcp=real`, busca real em 2,1 s, plano `origem: real` com loja real de São Carlos; pipoca e presente sem loja aberta à noite (dado real).
+- **Não feito:** LLM real não testado (rodou em modo regras); UI ainda usa `/api/chat`, não `/api/converse`; checar presente/pipoca no horário da demo.
+
+## K-1 e K-5 — Fluxo aprovável na demo e domínio de proposta integrado (17/10/2026)
+- Branch `feat/kenzo-k1-fluxo-aprovavel` sobre `origin/main` (`32bb5b9`, PR #16 integrado).
+- `src/contracts/index.ts` e `fixtures/discovery.json`: `CandidateSchema` estendido de forma aditiva com `fees`, `costStatus` e `composition` opcionais; candidatos do mock (`m-1`, `m-2`, `m-4`, `m-5`, `m-6`, `m-7`) passaram a declarar `fees`, `costStatus: "confirmed"` e `composition`, enquanto `m-3` permanece sem `fees` para preservar o caso negativo de aprovação bloqueada por encargos desconhecidos.
+- `src/domain/proposal-workflow.ts` e `src/domain/proposal-workflow.test.ts`: lógica de criação/revisão de proposta, aprovação com resumo manual (`buildManualHandoffSummary`) e filtragem pré-ranking (`normalizeCandidates` + `filterEligibleCandidates` + `rankEligibleFilterResult`) extraída de `src/agent/agent.ts`.
+- Quando `items`, `delivery` e `fees` são conhecidos e confirmados (ex.: busca por `pizza`), a proposta nasce em `awaiting_approval` com `cost.status: "confirmed"`, `cost.total` preenchido e `unresolved: []`, habilitando o botão "Aprovar proposta" em `/agente/proposta` e `POST /api/confirm` (200 OK) com resumo manual copiável. Quando `fees` ou `delivery` estão ausentes (`m-3`), `cost.status` permanece `"unknown"` e a aprovação continua bloqueada com 400.
+
 
 ## UI: orbe compartilhado (PR A) — 17/10/2026
 - Branch `feat/malveste-ui-orbe`. Um só `<Orb size="fab|hero|strip" state=... />` (`src/ui/components/orb.tsx` e `orb-waves.tsx`) substitui `OrbStage`, `WaveField` e o orbe com Motion: núcleo em gradiente (âmbar, vinho e vermelho) com borda dupla, três anéis (1,4x, 1,75x e 2,15x o diâmetro) e três ondas senoidais em SVG atrás, com máscara nas pontas. O diâmetro vem de `--orb-d` (anima ao passar de hero para strip) e a amplitude da onda de `--wave-amp` por estado (idle, listening, thinking, speaking, error). Só CSS/SVG; `prefers-reduced-motion` desliga tudo. Usado na bolinha da home (`fab`, só o núcleo), na abertura (`hero`, 9,5 rem) e na faixa dos resultados (`strip`, 64 px, centralizada, com a legenda acima).

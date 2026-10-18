@@ -104,6 +104,34 @@ O agente só conhece estas ferramentas. **Nenhuma delas compra, aprova ou paga.*
 ### 4.3 Fluxo → Tela (Hyago → Malveste)
 Eventos de tela (`mostrar_plano`, `destacar_opção`, `plano_atualizado`, `aguardando_aprovação`), todos com o **snapshot** do domínio. A tela não recalcula nada.
 
+### 4.4 Resposta em pedaços e orçamento de latência
+**Princípio (alinhado em 17/10):** a ElevenLabs é só o meio do áudio (voz → texto e texto → voz). **O motor é o nosso backend**, que carrega o contexto, cruza com os dados do MCP e faz a análise crítica. Para a conversa não ter pausa, o backend **entrega a resposta em pedaços** e a voz fala o primeiro enquanto o resto ainda está sendo pensado.
+
+**Contrato:** NDJSON, um evento por linha, em `src/voice/converse-events.ts` (`ack`, `speech`, `screen`, `done`, `error`). `speech` tem `seq` e um trecho curto para falar; `screen` leva o snapshot do plano à interface; `done` fecha o turno (e permite descartar eventos de um turno interrompido).
+
+**Quem corta em pedaços:** o backend decide **quando** um trecho está pronto (por frase ou oração); a camada de voz ainda divide trechos longos (`src/voice/chunker.ts`: o primeiro pedaço sai curto, não corta em "R$ 39,90", "1,2 km", "Dr."). Pedaços de uma mesma resposta recebem o texto vizinho (`previous_text`/`next_text`, aceitos pela ElevenLabs) para manter a entonação.
+
+**Medido em 17/10 (nossa chave, voz brasileira, modelo Flash):**
+
+| Etapa | Medido | Meta |
+|---|---|---|
+| Reconhecimento em lote (fala de 2 a 3 s) | 380–550 ms | ≤ 600 ms |
+| Backend até o 1º pedaço (hoje, agente simulado) | ~80 ms | ≤ 700 ms **com MCP e LLM** |
+| Síntese até o 1º byte | 260–520 ms; **~1,4 s na 1ª chamada fria** | ≤ 450 ms (por isso o pré-aquecimento) |
+| Fim da fala do usuário até a 1ª palavra do Guide | ~1,15 s (texto digitado, backend simulado) | ≤ 1800 ms |
+| 5 sínteses **em paralelo** | 300–390 ms cada | sem piora: dá para buscar o próximo áudio enquanto o atual toca |
+
+**O que o backend (Hyago e Kenzo) precisa fazer para caber no orçamento:**
+1. **Uma chamada ao modelo por turno** e `speech` por template (o plano do agente já prevê).
+2. **Paralelizar:** uma busca por necessidade com `Promise.all`; começar a busca enquanto o modelo interpreta quando a intenção for óbvia (pedido rápido).
+3. **Falar o que já está pronto:** se a pizza já veio e o mercado ainda não, fala a pizza primeiro ("Já achei a pizza; vejo o mercado") e envia o resto depois.
+4. **Limite por busca** (por exemplo 1,5 s) com resposta parcial honesta em vez de silêncio. Reconhecimento imediato (`ack`) só se o trabalho passar de ~700 ms.
+5. **Cache** de resultados da mesma necessidade no turno e entre ajustes.
+
+**Interrupção:** ao interromper, o cliente aborta as buscas de áudio e descarta a fila; o backend deve poder **abortar o turno** quando a conexão cair (`req.signal`).
+
+A página `/voz` mostra a latência de cada turno dividida por etapa, para a gente ver onde está a pausa.
+
 ## 5. Guia de estilo de fala (dono: Felipe)
 
 A fonte única do "como soa". O Hyago a copia para os prompts; mudanças passam pelo Felipe.

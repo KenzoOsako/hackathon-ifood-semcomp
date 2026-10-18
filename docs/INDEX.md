@@ -12,6 +12,8 @@ Atualizado em 17/10/2026, ~20h. Status: **canônico** (aprovado), **V2** (propos
 | [PROPOSTA_DE_NEGOCIO_FOODPILOT.md](PROPOSTA_DE_NEGOCIO_FOODPILOT.md) | canônico | Decisões 1–39. A V2 propõe alterar o escopo (decisões 1 e 19) e o diferencial |
 | [PLANO_EXECUCAO_EQUIPE_FOODPILOT.md](PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) | canônico (donos podem mudar pela V2) | Tarefas FP-01 a FP-24, aceites AC-01 a AC-15, fluxo de PR |
 | [AUDITORIA-ALINHAMENTO-2026-10-17.md](AUDITORIA-ALINHAMENTO-2026-10-17.md) | canônico | O que existe de fato no código e as lacunas |
+| [VOZ_INTEGRACAO_BACKEND.md](VOZ_INTEGRACAO_BACKEND.md) | **V2** | Passagem da voz para o backend: como ouvir o agente falando, contrato de eventos, regras do texto falado |
+| [VOZ_PLANO_DE_QUALIDADE.md](VOZ_PLANO_DE_QUALIDADE.md) | **V2** | Matriz de qualidade da voz, checklist do painel ElevenLabs e roteiro de teste humano |
 | [mcp-ifood-referencia.md](mcp-ifood-referencia.md) | referência | 24 ferramentas, OAuth, escopos, erros (documentação, não `tools/list` real) |
 | [entregaveis/](entregaveis/) | entregáveis | 01 a 06, um arquivo cada |
 | [produto-v1.md](produto-v1.md) | histórico | Rascunho anterior (copiloto só de refeições) |
