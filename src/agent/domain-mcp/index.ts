@@ -9,6 +9,7 @@ import { compareEligibleCandidates } from "@/reco/rank-eligible";
 import { filterEligibleCandidates, type CandidateEligibilityResult } from "@/reco/eligibility";
 import { soOsEspecificos } from "../especificidade";
 import { descricaoDe } from "../descricao";
+import { urlDoIfood } from "../guardas-fala";
 import { MAX_CONSULTAS } from "../limites";
 import { vereditoLexico } from "../relevancia";
 import type { BlocoPlano, ContextoBusca, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
@@ -24,9 +25,9 @@ const PAGE_SIZE = 15;
 const RESTRICOES_MCP: Record<string, string> = { lactose: "LAC_FREE", gluten: "GLUTEN_FREE", acucar: "SUGAR_FREE" };
 
 interface ItemBusca {
-  itemId: string; itemName: string; unitPrice: number; promotionalUnitPrice?: number | null;
+  itemId: string; itemName: string; unitPrice: number; promotionalUnitPrice?: number | null; itemImageUrl?: string;
   merchant: {
-    merchantId: string; merchantName: string; isOpen?: boolean; reviewRating?: number; ratingCount?: number;
+    merchantId: string; merchantName: string; merchantLogoUrl?: string; isOpen?: boolean; reviewRating?: number; ratingCount?: number;
     straightLineDistanceKm?: number; minimumOrderAmount?: number;
     deliveryMethod?: { fee?: number; promotionalFee?: number; estimatedMinutes?: { min?: number; max?: number } } | null;
   };
@@ -54,7 +55,11 @@ function extrasDoCartao(item: ItemBusca, precoCents: number, minimoCents?: numbe
   const frete = entrega?.promotionalFee ?? entrega?.fee;
   const prazoMax = entrega?.estimatedMinutes?.max;
   const promo = typeof item.promotionalUnitPrice === "number" && item.promotionalUnitPrice < item.unitPrice;
+  const imagemUrl = urlDoIfood(item.itemImageUrl);
+  const logoUrl = urlDoIfood(m.merchantLogoUrl);
   const extras: Partial<OpcaoPlano> = {
+    ...(imagemUrl ? { imagemUrl } : {}),
+    ...(logoUrl ? { logoUrl } : {}),
     ...(typeof m.straightLineDistanceKm === "number" && m.straightLineDistanceKm >= 0 ? { distanciaKm: Math.round(m.straightLineDistanceKm * 10) / 10 } : {}),
     ...(typeof m.ratingCount === "number" && m.ratingCount > 0 ? { avaliacoes: Math.round(m.ratingCount) } : {}),
     ...(minimoCents ? { pedidoMinimoCents: minimoCents } : {}),

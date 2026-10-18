@@ -78,6 +78,8 @@ export interface OpcaoPlano {
   cobertura?: Cobertura;
   // Cartão de sugestão da interface: só campos reais (nada escrito pelo modelo). Ausente = o dado não veio.
   descricao?: string;          // uma linha: nota, distância, prazo, frete, pedido mínimo, promoção
+  imagemUrl?: string;          // foto do item (só https://static.ifood-static.com.br/...)
+  logoUrl?: string;            // logo da loja (idem)
   distanciaKm?: number;
   avaliacoes?: number;         // quantidade de avaliações por trás da nota
   pedidoMinimoCents?: number;

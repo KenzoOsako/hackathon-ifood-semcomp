@@ -24,6 +24,11 @@ const EMOJI = /\p{Extended_Pictographic}/gu;
 
 // Nome de categoria, loja ou item pronto para ser falado: sem marcação, link, emoji, endereço, telefone ou instrução.
 // Devolve "" quando não sobra nada confiável (quem chama escolhe uma palavra neutra).
+// Imagem do catálogo: só https do CDN do iFood (um catálogo hostil não pode apontar a interface para outro site).
+export function urlDoIfood(u: unknown): string | undefined {
+  return typeof u === "string" && u.length <= 400 && /^https:\/\/static\.ifood-static\.com\.br\/[\w\-./%?=&,]+$/.test(u) ? u : undefined;
+}
+
 export function limparNome(texto: string, max = 60): string {
   let t = String(texto ?? "").normalize("NFC").replace(LINK, " ").replace(MARCACAO, " ").replace(EMOJI, " ").replace(/\s+/g, " ").trim();
   if (INSTRUCAO.test(t) || temDadoPessoal(t)) return "";
@@ -39,6 +44,7 @@ function sanearOpcao(o: OpcaoPlano): OpcaoPlano {
   if (o.nota !== undefined && !(Number.isFinite(o.nota) && o.nota >= 0 && o.nota <= 5)) delete out.nota;
   if (o.prazo !== undefined) { const p = limparNome(o.prazo, 40); if (p) out.prazo = p; else delete out.prazo; }
   if (o.descricao !== undefined) { const d = limparNome(o.descricao, 200); if (d) out.descricao = d; else delete out.descricao; }
+  for (const k of ["imagemUrl", "logoUrl"] as const) { if (o[k] !== undefined && !urlDoIfood(o[k])) delete out[k]; }
   for (const k of ["distanciaKm", "avaliacoes", "pedidoMinimoCents", "precoOriginalCents"] as const) {
     const v = o[k];
     if (v !== undefined && !(Number.isFinite(v) && v >= 0)) delete out[k];

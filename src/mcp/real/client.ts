@@ -46,7 +46,10 @@ export function mcpToolsDo(subjectRef: string): McpTools {
     async callTool(name, args) {
       const client = await clienteDo(subjectRef);
       const r = await client.callTool({ name, arguments: args }, undefined, { timeout: TIMEOUT_MS });
-      if (r.isError) throw new Error(`MCP_TOOL_ERRO:${name}`);
+      if (r.isError) {
+        const detalhe = Array.isArray(r.content) ? r.content.map((c) => (c.type === "text" ? c.text : "")).join(" ").replace(/\s+/g, " ").trim().slice(0, 300) : "";
+        throw new Error(`MCP_TOOL_ERRO:${name}${detalhe ? `:${detalhe}` : ""}`);
+      }
       if (r.structuredContent) return r.structuredContent;
       const texto = Array.isArray(r.content) ? r.content.map((c) => (c.type === "text" ? c.text : "")).join("") : "";
       try { return JSON.parse(texto); } catch { throw new Error(`MCP_RESPOSTA_INVALIDA:${name}`); }
@@ -62,7 +65,8 @@ export async function listarFerramentas(subjectRef: string) {
     const schema = (t.inputSchema ?? {}) as { required?: string[]; properties?: Record<string, { type?: string; enum?: unknown[] }> };
     return {
       name: t.name,
-      description: (t.description ?? "").slice(0, 400),
+      description: (t.description ?? "").slice(0, 3000),
+      esquema: JSON.stringify(t.inputSchema ?? {}).slice(0, 6000),
       obrigatorios: schema.required ?? [],
       parametros: Object.fromEntries(Object.entries(schema.properties ?? {}).map(([k, v]) => [k, v.enum ? "enum" : (v.type ?? "?")])),
     };

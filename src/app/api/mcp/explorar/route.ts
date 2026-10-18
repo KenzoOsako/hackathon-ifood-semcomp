@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   try { subjectRef = visitorSessions.resolve(req, false).visitor.conversation.subjectRef; } catch { return jsonResponse(LOGIN, 401); }
   if (!conectado(subjectRef)) return jsonResponse(LOGIN, 401);
   const vivas = await listarFerramentas(subjectRef).catch(() => []);
-  const v = await explorar(mcpToolsDo(subjectRef), vivas);
+  const v = await explorar(mcpToolsDo(subjectRef), vivas, Date.now, 8000);
   if (new URL(req.url).searchParams.get("gravar") === "1") {
     mkdirSync("quality", { recursive: true });
     writeFileSync("quality/mcp-formas.json", JSON.stringify(v, null, 2));

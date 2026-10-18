@@ -89,7 +89,7 @@ export function mesclar(formas: Forma[]): Forma {
 }
 
 export interface Sondagem { ferramenta: string; argumentos: Record<string, unknown>; ok: boolean; ms: number; forma?: Forma; erro?: string }
-export interface Ferramenta { name: string; description: string; obrigatorios: string[]; parametros: Record<string, string> }
+export interface Ferramenta { name: string; description: string; obrigatorios: string[]; parametros: Record<string, string>; esquema?: string }
 export interface Varredura { geradoEm: string; localizacao: string; ferramentas: Ferramenta[]; sondagens: Sondagem[]; naoChamadas: typeof NAO_CHAMADAS; divergenciasComADoc: string[] }
 
 // As 24 ferramentas da documentação: o que o MCP ao vivo expõe a mais ou a menos aparece em `divergenciasComADoc`.
@@ -101,7 +101,7 @@ const ids = (r: unknown, ...campos: string[]): string | undefined => {
   return undefined;
 };
 
-export async function explorar(tools: McpTools, ferramentasVivas: Ferramenta[], agora: () => number = Date.now): Promise<Varredura> {
+export async function explorar(tools: McpTools, ferramentasVivas: Ferramenta[], agora: () => number = Date.now, pausaMs = 0): Promise<Varredura> {
   const sondagens: Sondagem[] = [];
   const chamar = async (ferramenta: string, argumentos: Record<string, unknown>, opts: OpcoesForma): Promise<unknown> => {
     if (!LEITURA.has(ferramenta)) throw new Error(`BLOQUEADA:${ferramenta}`); // última trava: nada fora da lista de leitura
@@ -111,7 +111,7 @@ export async function explorar(tools: McpTools, ferramentasVivas: Ferramenta[], 
       sondagens.push({ ferramenta, argumentos: ocultarCoordenadas(argumentos), ok: true, ms: agora() - t0, forma: formaDe(r, opts) });
       return r;
     } catch (e) {
-      sondagens.push({ ferramenta, argumentos: ocultarCoordenadas(argumentos), ok: false, ms: agora() - t0, erro: String((e as Error)?.message ?? e).slice(0, 160) });
+      sondagens.push({ ferramenta, argumentos: ocultarCoordenadas(argumentos), ok: false, ms: agora() - t0, erro: String((e as Error)?.message ?? e).slice(0, 400) });
       return undefined;
     }
   };
@@ -143,6 +143,14 @@ export async function explorar(tools: McpTools, ferramentasVivas: Ferramenta[], 
     await chamar("listItemTaxonomy", { merchantType, pageSize: 20 }, catalogo);
   }
 
+  // Como a busca trata termos abstratos e o que os facets (categorias) devolvem: define o que o juiz de relevância precisa cobrir.
+  for (const [merchantType, query] of [["GROCERIES", "churrasco"], ["GROCERIES", "ingredientes para bolo"], ["GROCERIES", "carvão"], ["GROCERIES", "picanha"], ["RESTAURANT", "churrasco"], ["RESTAURANT", "lanche"], ["RESTAURANT", "pizza calabresa"]] as const) {
+    await chamar("searchOffers", { query, ...base, resultKind: "ITEM", merchantType, pageSize: 10, includeFacets: true }, catalogo);
+  }
+  await chamar("searchOffers", { query: "pizza calabresa", ...base, resultKind: "ITEM", merchantType: "RESTAURANT", pageSize: 10, intention: "product_exact" }, catalogo);
+  await chamar("searchOffers", { query: "pizza", ...base, resultKind: "ITEM", merchantType: "RESTAURANT", pageSize: 10, refinements: { onlyWithPromotion: true, sort: "PRICE", maxItemPrice: 40 } }, catalogo);
+  await chamar("browseOffers", { ...base, merchantType: "RESTAURANT", resultKind: "ITEM", pageSize: 10, includeFacets: true }, catalogo);
+
   // Hábitos e recomendações (a base do "o de sempre"): cada modo, para loja e para item quando a tabela permite.
   const modos: [string, string[]][] = [["RECOMMENDED", ["MERCHANT", "ITEM"]], ["RECENT_ORDERS", ["MERCHANT", "ITEM"]], ["FAVORITE_MERCHANTS", ["MERCHANT"]], ["BEST_DEALS", ["MERCHANT", "ITEM"]], ["FEATURED_LOCAL", ["MERCHANT"]]];
   let ultimoPedido: string | undefined;
@@ -154,7 +162,16 @@ export async function explorar(tools: McpTools, ferramentasVivas: Ferramenta[], 
         if (contentMode === "RECENT_ORDERS") ultimoPedido ??= ids(r, "lastOrderId");
       }
     }
+    // Chamada mínima (só o obrigatório): separa "o modo não existe" de "faltou ou sobrou parâmetro".
+    for (const merchantType of ["RESTAURANT", "GROCERIES"]) await chamar("getRecommendations", { contentMode, ...base, merchantType }, pessoal);
+    await chamar("getRecommendations", { contentMode, ...base }, pessoal);
   }
+
+  // Intermitência: os erros INTERNAL são do iFood ou passam? Repete uma vez, depois de uma pausa (a instrução do MCP é não repetir já).
+  await new Promise((r) => setTimeout(r, pausaMs));
+  await chamar("getRecommendations", { contentMode: "RECENT_ORDERS", ...base, merchantType: "RESTAURANT", resultKind: "MERCHANT", pageSize: 10 }, pessoal);
+  await chamar("getRecommendations", { contentMode: "BEST_DEALS", ...base, merchantType: "RESTAURANT", resultKind: "ITEM", pageSize: 10 }, catalogo);
+  await chamar("listItemTaxonomy", { merchantType: "RESTAURANT" }, catalogo);
 
   // Detalhe de uma loja e de um item achados acima (se houver) e do último pedido (só formato, valores ocultos).
   if (ultimaLoja) await chamar("getMerchant", { merchantId: ultimaLoja.split("|")[0], ...base }, catalogo);
