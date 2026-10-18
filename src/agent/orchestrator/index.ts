@@ -3,8 +3,9 @@
 // teto de perguntas, nível que só rebaixa, encaminhamento único e que aprovação nunca é executada aqui.
 import { ZodError } from "zod";
 import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
+import { PROIBIDO, falaDoPlanoValida, falaMinima, falaSegura, higienizarTurno, limparNome, sanearPlano } from "../guardas-fala";
 import { criarRelevancia } from "../relevancia";
-import { FRASES, LIMIARES_CONFIANCA } from "../frases";
+import { ALTERNATIVAS, FRASES, GENERICAS, LIMIARES_CONFIANCA } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
 import { temDadoPessoal } from "../privacidade";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, EventoFeedback, LlmPort, Necessidade, Nivel, PlanoSnapshot, TurnoInterpretado } from "../types";
@@ -22,7 +23,6 @@ export { FRASES };
 
 // Frases livres do LLM que não podem chegar ao usuário.
 // Números da fala do plano são checados à parte, contra o snapshot (falaRespeitaSnapshot).
-const PROIBIDO = /\b(adicionei|adicionado|adicionada|coloquei|comprei|reservei|finalizei|fechei o pedido)\b|carrinho|pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|concluida|concluída)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
 
 export interface Deps { llm: LlmPort; domain: DomainPort; now?: () => number }
 
@@ -135,6 +135,7 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
     return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
   }
   tempos.interpretarMs = Math.round(now() - t0);
+  turno = higienizarTurno(turno); // o que o modelo disse nunca entra sujo em nenhum caminho
 
   // Confiança média: confirmar o entendido antes de agir. Não conta no teto de perguntas. Um complemento
   // ouvido com confiança média também é confirmado; o "sim" puro que encerra a confirmação não chega aqui.
@@ -185,7 +186,7 @@ function processarIncerto(s: AgentSession, input: ConverseInput, deps: Deps, tur
     return fechar(s, input, deps, { resposta: s.plano ? FRASES.jaEncaminhado : FRASES.semNecessidade }, tempos, t0);
   }
   const c = turno.confirmacao;
-  const valida = Boolean(c && !PROIBIDO.test(c) && !temDadoPessoal(c) && c.trim().endsWith("?"));
+  const valida = Boolean(c && falaSegura(c) && c.trim().endsWith("?"));
   return fechar(s, input, deps, { resposta: valida && c ? c : FRASES.repetir }, tempos, t0);
 }
 
@@ -223,7 +224,7 @@ function perguntaSobreSugestao(s: AgentSession, pergunta: string): boolean {
 function devePerguntar(s: AgentSession, turno: TurnoInterpretado, pressa: boolean): boolean {
   const limite = s.nivel === "L1" ? MAX_PERGUNTAS_L1 : MAX_PERGUNTAS;
   // Pergunta com conteúdo proibido é descartada: segue para o plano em vez de falar algo indevido.
-  return Boolean(turno.pergunta && !PROIBIDO.test(turno.pergunta) && !temDadoPessoal(turno.pergunta) && !perguntaSobreSugestao(s, turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
+  return Boolean(turno.pergunta && falaSegura(turno.pergunta) && !perguntaSobreSugestao(s, turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
 }
 
 async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> {
@@ -261,7 +262,10 @@ function aplicarEstado(s: AgentSession, turno: TurnoInterpretado): boolean {
   // Restrição rígida é da sessão: só soma e vale para toda comida/mercado, mesmo se o LLM omitir ou renumerar.
   for (const n of turno.necessidades) for (const r of n.restricoes) if (!s.restricoes.includes(norm(r))) s.restricoes.push(norm(r));
   // LLM que devolve lista vazia por esquecimento não apaga o que já foi entendido.
-  if (turno.necessidades.length > 0) s.necessidades = aplicarSugestoes(s, turno.necessidades);
+  const limpas = turno.necessidades
+    .map((n) => ({ ...n, categoria: limparNome(n.categoria), ...(n.consultas ? { consultas: n.consultas.map((c) => limparNome(c, 80)).filter(Boolean) } : {}) }))
+    .filter((n) => n.categoria.length > 0);
+  if (limpas.length > 0) s.necessidades = aplicarSugestoes(s, limpas);
   s.necessidades = s.necessidades.map((n) => (COMIDA(n) ? { ...n, restricoes: [...new Set([...n.restricoes.map(norm), ...s.restricoes])] } : n));
   s.ocasiao = { ...s.ocasiao, ...turno.ocasiao };
   const mudou = assinatura(s) !== antes;
@@ -281,7 +285,7 @@ async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: 
   try {
     const ctx = { relevancia: criarRelevancia(deps.llm) };
     const itens = await Promise.all(s.necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao, ctx) })));
-    plano = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
+    plano = sanearPlano(await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens }));
   } catch {
     tempos.dominioMs = Math.round(now() - td);
     return fechar(s, input, deps, { resposta: FRASES.erroFerramenta }, tempos, t0);
@@ -307,7 +311,7 @@ async function ajustar(s: AgentSession, input: ConverseInput, deps: Deps, turno:
   const td = now();
   let plano: PlanoSnapshot;
   try {
-    plano = await deps.domain.ajustarPlano({ subjectRef: s.subjectRef, planoId: atual.planoId, versao: atual.versao, categoria: turno.ajuste!.categoria, criterio: turno.ajuste!.criterio });
+    plano = sanearPlano(await deps.domain.ajustarPlano({ subjectRef: s.subjectRef, planoId: atual.planoId, versao: atual.versao, categoria: turno.ajuste!.categoria, criterio: turno.ajuste!.criterio }));
   } catch (error) {
     tempos.dominioMs = Math.round(now() - td);
     const semDado = error instanceof Error && error.message === "SEM_DADO_CRITERIO";
@@ -328,25 +332,41 @@ async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; 
   const tr = now();
   try {
     const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder(input, signal));
-    // Fala com número fora do snapshot, conteúdo proibido ou dado pessoal cai para o template.
-    if (!fala || !falaRespeitaSnapshot(fala, input.plano) || (input.plano.blocos.some((b) => b.cobertura === "proxima") && !/parecid|pr[óo]xim|n[ãa]o (achei|encontrei)/i.test(fala)) || PROIBIDO.test(fala) || temDadoPessoal(fala) || /muito pedid|\bnovo\b|\bnova\b/i.test(fala)) return respostaTemplate(input);
+    // A fala do LLM só vale vinculada aos fatos do plano (guardas-fala.ts); senão, o template.
+    if (!falaDoPlanoValida(fala ?? "", input.plano).ok) return seguraOuTemplate(input);
     return fala;
   } catch {
-    return respostaTemplate(input);
+    return seguraOuTemplate(input);
   } finally {
     tempos.responderMs = Math.round(now() - tr);
   }
+}
+
+// O template também passa pela guarda: se nem ele serve (plano estranho), a fala é a mais simples e verdadeira possível.
+function seguraOuTemplate(input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }): string {
+  const t = respostaTemplate(input);
+  const v = falaDoPlanoValida(t, input.plano);
+  if (!v.ok && process.env.CAOS_DEBUG) console.info(`[caos] template inválido: ${v.motivo} :: ${t.slice(0, 300)}`);
+  return v.ok ? t : falaMinima(input.plano);
 }
 
 function opcoesFaladas(plano?: PlanoSnapshot): string[] {
   return plano ? plano.blocos.flatMap((b) => [b.principal, ...b.alternativas].map((o) => `${o.item} da ${o.loja}`)) : [];
 }
 
+// Outra forma de dizer a mesma coisa, diferente da última fala. Frases fixas têm alternativas próprias (frases.ts).
+function variar(resposta: string, ultima?: string): string {
+  const candidatas = [...(ALTERNATIVAS[resposta] ?? []), ...GENERICAS];
+  return candidatas.find((c) => c !== resposta && c !== ultima) ?? resposta;
+}
+
 function fechar(s: AgentSession, input: ConverseInput, deps: Deps, out: Pick<AgentReply, "resposta"> & Partial<Pick<AgentReply, "fraseEspera" | "tela" | "aprovacao">>, tempos: AgentReply["tempos"], t0: number): AgentReply {
   const now = deps.now ?? (() => performance.now());
-  let resposta = out.resposta;
+  let resposta = out.resposta.trim() ? out.resposta : FRASES.naoEntendi;
   // Anti-repetição só para a fala do plano: perguntas e erros podem ser repetidos legitimamente.
   if (resposta === s.ultimaFala && s.plano && out.tela && resposta !== FRASES.jaEncaminhado) resposta = FRASES.jaEncaminhado;
+  // Nunca a mesma resposta duas vezes seguidas: a repetição vira outra forma de dizer, que leva a pessoa adiante.
+  if (resposta === s.ultimaFala) resposta = variar(resposta, s.ultimaFala);
   s.ultimaFala = resposta;
   s.history.push({ role: "user", text: input.texto }, { role: "agent", text: resposta });
   if (s.history.length > HISTORICO) s.history.splice(0, s.history.length - HISTORICO);

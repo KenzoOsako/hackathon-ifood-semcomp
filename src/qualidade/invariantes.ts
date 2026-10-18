@@ -3,6 +3,7 @@
 // ao vivo com o LLM, testes aleatórios (caos) e conversas reais gravadas. Um bug achado em teste vira uma invariante
 // (ou um caso em quality/regressoes) e deixa de poder voltar sem que algum teste falhe.
 import { falaRespeitaSnapshot } from "@/prompts/responder";
+import { ALTERNATIVAS, FRASES_FIXAS, GENERICAS } from "@/agent/frases";
 import { temDadoPessoal } from "@/agent/privacidade";
 import { speakableIssues } from "@/voice/speakable";
 import type { AgentReply, AgentSession, PlanoSnapshot } from "@/agent/types";
@@ -28,6 +29,8 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCa
 const ACAO_DE_COMPRA = /\b(adicionei|adicionado|adicionada|coloquei|comprei|reservei|finalizei|paguei|fechei o pedido|realizei o pedido|pedi para voc[eê])\b|carrinho/i;
 const APROVACAO_EXPLICITA = /\b(aprovo|confirmo)( o)? plano\b/;
 const PERMITIDOS = new Set(["ifood", "guide", "casa", "trabalho"]);
+// Frases fixas do agente não descrevem o plano (dizem "sem mudança", "está na tela"): não cabe cobrar a falta delas.
+const FIXAS = new Set<string>([...FRASES_FIXAS, ...Object.values(ALTERNATIVAS).flat(), ...GENERICAS]);
 
 const textoDoPlano = (p: PlanoSnapshot) => norm(p.blocos.flatMap((b) => [b.categoria, ...[b.principal, ...b.alternativas].flatMap((o) => [o.loja, o.item])]).join(" "));
 
@@ -70,8 +73,9 @@ export const INVARIANTES: Invariante[] = [
   {
     id: "cobertura_honesta", descricao: "O que o catálogo não tem é dito (\"não achei\", \"o mais parecido\", \"ainda não tenho\"), nunca apresentado como o pedido",
     verificar: (c) => {
-      const p = c.reply.tela?.plano;
-      if (!p) return undefined;
+      // Só quando o Guide APRESENTA o plano (mostrar/atualizar); "o plano está na tela" depois de um "pode" já foi dito antes.
+      if (!c.reply.tela || c.reply.tela.tipo === "aguardando_aprovacao" || FIXAS.has(c.reply.resposta)) return undefined;
+      const p = c.reply.tela.plano;
       const f = norm(c.reply.resposta);
       if (p.blocos.some((b) => b.cobertura === "proxima") && !/parecid|proxim|nao (achei|encontrei)/.test(f)) return "bloco aproximado dito como se fosse o pedido";
       if (p.naoAtendidas.length > 0 && !/ainda nao tenho|nao (achei|encontrei|tenho)/.test(f)) return "necessidade não atendida não foi dita";

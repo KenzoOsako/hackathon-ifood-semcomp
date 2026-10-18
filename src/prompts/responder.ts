@@ -60,7 +60,9 @@ export function numerosPermitidos(plano: PlanoSnapshot): Set<string> {
   const ok = new Set<string>();
   const add = (s: string) => { for (const m of s.match(/\d+(?:[.,]\d+)?/g) ?? []) ok.add(m.replace(".", ",")); };
   for (const b of plano.blocos) {
+    add(b.categoria);
     for (const o of [b.principal, ...b.alternativas]) {
+      add(o.loja); // "Loja 24h", "Padaria 2 Irmãos": o dígito do nome é fato do plano
       add((o.precoCents / 100).toFixed(2)); add(String(o.precoCents / 100));
       if (o.freteCents !== undefined) add((o.freteCents / 100).toFixed(2));
       if (o.nota !== undefined) add(String(o.nota));
@@ -69,6 +71,7 @@ export function numerosPermitidos(plano: PlanoSnapshot): Set<string> {
     add(String(b.quantidade));
   }
   plano.pendencias.forEach(add);
+  plano.naoAtendidas.forEach((n) => add(n.categoria));
   return ok;
 }
 
