@@ -11,6 +11,8 @@ export const VoiceSignalsSchema = z.strictObject({
   // o usuário começou a falar por cima do agente
   interrompeu: z.boolean(),
   palavras: z.number().int().nonnegative().max(1000).optional(),
+  // confiança média do STT (0 a 1); faixas em LIMIARES_CONFIANCA (src/agent/frases.ts). Ausente em texto.
+  confianca: z.number().min(0).max(1).optional(),
 });
 export type VoiceSignals = z.infer<typeof VoiceSignalsSchema>;
 
