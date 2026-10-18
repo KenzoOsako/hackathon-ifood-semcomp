@@ -13,6 +13,7 @@ export interface ContextoTurno {
   reply: AgentReply;
   sessao: Pick<AgentSession, "perguntasFeitas">;
   anterior?: string; // resposta do turno anterior (para detectar repetição)
+  nome?: string; // primeiro nome da pessoa, quando o Guide a chama pelo nome
 }
 
 export interface Invariante {
@@ -35,12 +36,13 @@ const FIXAS = new Set<string>([...FRASES_FIXAS, ...Object.values(ALTERNATIVAS).f
 const textoDoPlano = (p: PlanoSnapshot) => norm(p.blocos.flatMap((b) => [b.categoria, ...[b.principal, ...b.alternativas].flatMap((o) => [o.loja, o.item])]).join(" "));
 
 // Nome próprio na fala (palavra com inicial maiúscula fora do começo de frase) que não está no plano: nome inventado.
-function nomesForaDoPlano(fala: string, plano: PlanoSnapshot): string[] {
+function nomesForaDoPlano(fala: string, plano: PlanoSnapshot, nome?: string): string[] {
   const doPlano = textoDoPlano(plano);
+  const pessoa = nome ? norm(nome) : undefined;
   const fora: string[] = [];
   for (const m of fala.matchAll(/(?<![.!?:]\s)(?<!^)\b([A-ZÀ-Ý][\p{L}]{2,})\b/gu)) {
     const w = norm(m[1]);
-    if (!doPlano.includes(w) && !PERMITIDOS.has(w)) fora.push(m[1]);
+    if (!doPlano.includes(w) && !PERMITIDOS.has(w) && w !== pessoa) fora.push(m[1]);
   }
   return fora;
 }
@@ -57,7 +59,7 @@ export const INVARIANTES: Invariante[] = [
   },
   {
     id: "nomes_no_plano", descricao: "Loja e item citados são os do plano: nenhum nome inventado",
-    verificar: (c) => { if (!c.reply.tela) return undefined; const f = nomesForaDoPlano(c.reply.resposta, c.reply.tela.plano); return f.length ? `nome fora do plano: ${f.join(", ")}` : undefined; },
+    verificar: (c) => { if (!c.reply.tela) return undefined; const f = nomesForaDoPlano(c.reply.resposta, c.reply.tela.plano, c.nome); return f.length ? `nome fora do plano: ${f.join(", ")}` : undefined; },
   },
   {
     id: "fala_valida", descricao: "A fala serve para ser falada: sem markdown, lista, emoji, link, dado sensível, e curta",

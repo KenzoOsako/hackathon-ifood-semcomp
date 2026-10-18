@@ -61,12 +61,13 @@ const PERMITIDOS = new Set(["ifood", "guide", "casa", "trabalho"]);
 const textoDoPlano = (p: PlanoSnapshot) => norm(p.blocos.flatMap((b) => [b.categoria, ...[b.principal, ...b.alternativas].flatMap((o) => [o.loja, o.item])]).join(" "));
 
 // Nome próprio na fala (inicial maiúscula fora do começo de frase) que não está no plano: nome inventado.
-export function nomesForaDoPlano(fala: string, plano: PlanoSnapshot): string[] {
+export function nomesForaDoPlano(fala: string, plano: PlanoSnapshot, permitidos: string[] = []): string[] {
   const doPlano = textoDoPlano(plano);
+  const extras = new Set(permitidos.map(norm));
   const fora: string[] = [];
   for (const m of fala.matchAll(/(?<![.!?:]\s)(?<!^)\b([A-ZÀ-Ý][\p{L}]{2,})\b/gu)) {
     const w = norm(m[1]);
-    if (!doPlano.includes(w) && !PERMITIDOS.has(w)) fora.push(m[1]);
+    if (!doPlano.includes(w) && !PERMITIDOS.has(w) && !extras.has(w)) fora.push(m[1]);
   }
   return fora;
 }
@@ -86,7 +87,7 @@ export function falaSegura(texto: string): boolean {
 }
 
 // Fala do LLM sobre um plano: vale só se vinculada aos fatos do plano.
-export function falaDoPlanoValida(fala: string, plano: PlanoSnapshot): ResultadoGuarda {
+export function falaDoPlanoValida(fala: string, plano: PlanoSnapshot, permitidos: string[] = []): ResultadoGuarda {
   if (!fala.trim()) return { ok: false, motivo: "vazia" };
   if (PROIBIDO.test(fala) || INSTRUCAO.test(fala)) return { ok: false, motivo: "conteúdo proibido" };
   if (temDadoPessoal(fala)) return { ok: false, motivo: "dado pessoal" };
@@ -95,7 +96,7 @@ export function falaDoPlanoValida(fala: string, plano: PlanoSnapshot): Resultado
   if (issues.length) return { ok: false, motivo: issues.join("; ") };
   if (!falaRespeitaSnapshot(fala, plano)) return { ok: false, motivo: "número fora do plano" };
   if (plano.blocos.length > 0 && !mencionaOPlano(fala, plano)) return { ok: false, motivo: "não cita o plano" };
-  const fora = nomesForaDoPlano(fala, plano);
+  const fora = nomesForaDoPlano(fala, plano, permitidos);
   if (fora.length) return { ok: false, motivo: `nome fora do plano: ${fora.join(", ")}` };
   const f = norm(fala);
   if (plano.blocos.some((b) => b.cobertura === "proxima") && !/parecid|proxim|nao (achei|encontrei)/.test(f)) return { ok: false, motivo: "aproximado dito como o pedido" };

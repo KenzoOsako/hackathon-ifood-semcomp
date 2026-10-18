@@ -28,6 +28,8 @@ export interface GuideLine { id: string; from: "voce" | "agente"; text: string }
 export interface GuideScreen { event: string; payload: unknown }
 
 export const GREETING = "Oi! Eu sou o Guide! Em que posso te ajudar hoje?";
+// Com o primeiro nome da pessoa (GET /api/perfil), a abertura já é personalizada.
+export const saudacaoPara = (nome?: string) => (nome ? `Oi, ${nome}! Eu sou o Guide. Em que posso te ajudar hoje?` : GREETING);
 
 const after = (fn: () => void, ms: number) => {
   const id = setTimeout(fn, ms);
@@ -41,6 +43,7 @@ export function useGuideVoice() {
   const [unclear, setUnclear] = useState<string | null>(null);
   const [utterance, setUtterance] = useState<Utterance | null>(null);
   const [busy, setBusy] = useState(false);
+  const [nome, setNome] = useState<string | undefined>(undefined);
   const [rounds, setRounds] = useState<GuideRound[]>([]);
   const [turns, setTurns] = useState<TurnLog[]>([]); // o que cada turno falou e o que o agente decidiu
   const [dados, setDados] = useState<string | undefined>(undefined); // modo dos dados do agente: mock | real
@@ -49,6 +52,21 @@ export function useGuideVoice() {
   const terms = useRef<string[]>([]); // nomes do plano na tela: ajudam o reconhecimento na próxima fala
   const seq = useRef(0);
   const nextId = (p: string) => `${p}-${++seq.current}`;
+
+  // Primeiro nome para a saudação personalizada. Sem nome (ou sem rede), fica a saudação de sempre.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/perfil")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p: { nome?: string } | null) => {
+        if (!alive || typeof p?.nome !== "string" || !p.nome) return;
+        const nome = p.nome;
+        setNome(nome);
+        setLines((l) => l.map((x) => (x.id === "init" ? { ...x, text: saudacaoPara(nome) } : x)));
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
 
   // Ao abrir: se o app está em modo real e o iFood não está conectado, o botão já aparece (sem esperar o 401).
   useEffect(() => {
@@ -148,5 +166,9 @@ export function useGuideVoice() {
   }, [state, stop, stopSpeaking, start]);
   const label = { idle: voice.handsFree ? "Escutando…" : "Falar", listening: voice.handsFree ? "Ouvindo… (toque para encerrar)" : "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
 
-  return { ...voice, stopSpeaking, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
+  const greeting = saudacaoPara(nome);
+  // Fala a saudação (o navegador só deixa tocar áudio depois de um gesto da pessoa: chame num clique).
+  const falarSaudacao = () => voice.enqueue(greeting);
+
+  return { ...voice, stopSpeaking, nome, greeting, falarSaudacao, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
 }

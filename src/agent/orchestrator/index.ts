@@ -24,7 +24,7 @@ export { FRASES };
 // Frases livres do LLM que não podem chegar ao usuário.
 // Números da fala do plano são checados à parte, contra o snapshot (falaRespeitaSnapshot).
 
-export interface Deps { llm: LlmPort; domain: DomainPort; now?: () => number }
+export interface Deps { llm: LlmPort; domain: DomainPort; now?: () => number; nome?: string }
 
 export function novaSessao(subjectRef: string): AgentSession {
   return { subjectRef, estado: "S0", perguntasFeitas: 0, confirmacoesSeguidas: 0, restricoes: [], turnos: 0, encaminhado: false, history: [], ocasiao: {}, necessidades: [], recusadas: [] };
@@ -363,6 +363,11 @@ function variar(resposta: string, ultima?: string): string {
 function fechar(s: AgentSession, input: ConverseInput, deps: Deps, out: Pick<AgentReply, "resposta"> & Partial<Pick<AgentReply, "fraseEspera" | "tela" | "aprovacao">>, tempos: AgentReply["tempos"], t0: number): AgentReply {
   const now = deps.now ?? (() => performance.now());
   let resposta = out.resposta.trim() ? out.resposta : FRASES.naoEntendi;
+  // Personalização: o primeiro nome entra uma vez por sessão, no encaminhamento do plano ("Pronto, Felipe, o plano...").
+  if (deps.nome && !s.nomeUsado && resposta === FRASES.encaminhar) {
+    resposta = FRASES.encaminhar.replace("Pronto, o plano", `Pronto, ${deps.nome}, o plano`);
+    s.nomeUsado = true;
+  }
   // Anti-repetição só para a fala do plano: perguntas e erros podem ser repetidos legitimamente.
   if (resposta === s.ultimaFala && s.plano && out.tela && resposta !== FRASES.jaEncaminhado) resposta = FRASES.jaEncaminhado;
   // Nunca a mesma resposta duas vezes seguidas: a repetição vira outra forma de dizer, que leva a pessoa adiante.

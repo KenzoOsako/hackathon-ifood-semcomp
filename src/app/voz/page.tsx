@@ -43,6 +43,8 @@ export default function VozLab() {
         );
       })()}
 
+      <p style={{ margin: "8px 0" }}><button type="button" onClick={g.falarSaudacao} style={smallButton}>Ouvir saudação</button></p>
+
       <section aria-live="polite" style={{ display: "grid", gap: 8, margin: "16px 0" }}>
         {g.lines.map((l) => (
           <div key={l.id} style={{ padding: "8px 12px", borderRadius: 12, background: l.from === "voce" ? "#ffe3e5" : "#f1f1f1", color: "#111", justifySelf: l.from === "voce" ? "end" : "start", whiteSpace: "pre-wrap" }}>{l.text}</div>

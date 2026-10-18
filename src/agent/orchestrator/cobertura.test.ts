@@ -88,3 +88,28 @@ describe("o orquestrador entrega o juiz de relevância ao domínio", () => {
     expect(m.get("a")).toBe("serve");
   });
 });
+
+describe("personalização: o primeiro nome entra uma vez, no encaminhamento", () => {
+  const exato = plano([bloco("pizza", opcao("Pizza Calabresa", "Forno"))]);
+  const consentir = (nome?: string) => {
+    const { d } = dominio(exato);
+    const s = novaSessao(`nome-${nome ?? "sem"}`);
+    const llm = new Llm("Montei assim: pizza calabresa da Forno. Quer ajustar algo?", { necessidades: [{ id: "n1", vertical: "RESTAURANT", categoria: "pizza calabresa", restricoes: [] }] });
+    return { s, run: (texto: string, intencao: TurnoInterpretado["intencao"] = "pedido") => executarTurno(s, { texto, origem: "texto" }, { llm: Object.assign(Object.create(llm), { interpretar: async () => ({ intencao, nivel: "L0", ocasiao: {}, necessidades: intencao === "pedido" ? [{ id: "n1", vertical: "RESTAURANT", categoria: "pizza calabresa", restricoes: [] }] : [], assumido: [] }) }), domain: d, nome }) };
+  };
+
+  it("com nome: 'Pronto, Felipe, o plano está na sua tela…' uma vez só", async () => {
+    const { s, run } = consentir("Felipe");
+    await run("pizza calabresa");
+    const a = await run("pode", "consentir");
+    expect(a.resposta).toBe("Pronto, Felipe, o plano está na sua tela. É só revisar e aprovar; a compra termina no iFood.");
+    expect(s.nomeUsado).toBe(true);
+    const b = await run("pode", "consentir");
+    expect(b.resposta).not.toContain("Felipe");
+  });
+  it("sem nome, a frase é a de sempre", async () => {
+    const { run } = consentir(undefined);
+    await run("pizza calabresa");
+    expect((await run("pode", "consentir")).resposta).toBe("Pronto, o plano está na sua tela. É só revisar e aprovar; a compra termina no iFood.");
+  });
+});
