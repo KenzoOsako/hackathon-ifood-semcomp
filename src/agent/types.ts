@@ -144,6 +144,8 @@ export type EventoFeedback =
 export interface DomainPort {
   detalharItem?(opcao: OpcaoPlano): Promise<OpcaoPlano>;
   buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]>;
+  // Mesma busca, só dentro de uma loja (para completar a lista de mercado num mercado só).
+  buscarNaLoja?(n: Necessidade, lojaId: string, ocasiao: Ocasiao): Promise<OpcaoPlano[]>;
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot>;
   ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot>;
   registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void>;

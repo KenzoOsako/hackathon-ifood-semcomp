@@ -167,6 +167,7 @@ export function RevisaoView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
         <h2 className="font-display text-2xl font-semibold">Revise o plano</h2>
         <p className="text-sm text-muted-foreground">Versão {plano.versao}. Para mudar algo, é só falar.</p>
+        <Pedidos n={porLoja(plano).length} />
         {porLoja(plano).map((l) => (
           <section key={l.lojaId} className="mt-3 rounded-2xl border border-border bg-card">
             <header className="flex items-center gap-2 border-b border-border p-3">
@@ -211,11 +212,12 @@ export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
           <Badge variant="simulated" className="ml-auto">Simulação</Badge>
         </div>
         <p className="text-sm text-muted-foreground">Versão {sacola.versao} aprovada. Nada foi enviado ao iFood.</p>
-        {sacola.lojas.map((l) => (
+        <Pedidos n={sacola.lojas.length} />
+        {sacola.lojas.map((l, i) => (
           <section key={l.lojaId} className="mt-3 rounded-2xl border border-border bg-card">
             <header className="flex items-center gap-2 border-b border-border p-3">
               <StoreLogo seed={l.lojaId} shape="square" imageSrc={mesmaVersao ? plano.blocos.filter(b => chaveLoja(b.principal) === l.lojaId).map(b => paraOption(b.principal).media.logo).find(Boolean) : undefined} className="size-8" />
-              <span className="font-display font-semibold">{l.loja}</span>
+              <span className="font-display font-semibold">{sacola.lojas.length > 1 && <span className="mr-1 text-xs font-normal text-muted-foreground">Pedido {i + 1}</span>}{l.loja}</span>
               <span className="ml-auto"><Origem origem={l.origem} /></span>
             </header>
             <ul className="divide-y divide-border">
@@ -252,6 +254,11 @@ export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
       </div>
     </div>
   );
+}
+
+// O iFood fecha um carrinho por loja: com mais de uma loja, a pessoa vê que são pedidos separados.
+function Pedidos({ n }: Readonly<{ n: number }>) {
+  return n > 1 ? <p className="mt-1 text-sm font-medium">São {n} pedidos separados no iFood, um por loja, cada um com seu frete.</p> : null;
 }
 
 function ItemPhoto({ src }: Readonly<{ src?: string }>) {

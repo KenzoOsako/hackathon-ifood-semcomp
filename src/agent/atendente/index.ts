@@ -11,7 +11,8 @@ import { FRASES, LIMIARES_CONFIANCA } from "../frases";
 import { sanearPlano, limparNome } from "../guardas-fala";
 import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } from "../complementos";
 import { temDadoPessoal } from "../privacidade";
-import { montarSacola } from "../sacola";
+import { chaveLoja, montarSacola } from "../sacola";
+import { unificarMercado } from "../mercado-unico";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, GrupoOpcoes, Necessidade, OpcaoPlano, PlanoSnapshot } from "../types";
 import type { Sinal } from "@/data/sinais";
 
@@ -52,7 +53,8 @@ export const SYSTEM_ATENDENTE = `Você é o Mimo, o atendente do iFood que conve
 - Aniversário, surpresa, data romântica, festa, visita: o roteiro depende de QUEM é a pessoa. Pense nela: quem é (namorado, namorada, mãe, amigo, criança), do que gosta, o momento. Não existe roteiro padrão; não repita sugestões de outras conversas.
 - Se você não sabe nada do gosto da pessoa, faça primeiro UMA pergunta curta sobre ela, com opções concretas e variadas (ex.: "Do que ele mais gosta: um doce, um salgado caprichado ou um presente?"). Se já souber, proponha DE UMA VEZ um roteiro de 2 ou 3 itens, de lojas e verticais diferentes quando fizer sentido, coerente com o gosto dela, e diga o roteiro em uma frase.
 - Se um item do roteiro tiver um caminho que muda tudo, pergunte isso UMA vez ANTES de buscar esse item, com prós e contras curtos, e não busque nada nesse turno (ex.: um bolo pode ser comprado pronto, que chega rápido, ou feito em casa, que é mais pessoal).
-- "Pronto": busque o item pronto (bolo em confeitaria é RESTAURANT). "Fazer": monte a lista COMPLETA de ingredientes de uma receita simples como itens de mercado (GROCERIES), um item por ingrediente. Ex.: bolo de chocolate → farinha de trigo, ovos, açúcar, chocolate em pó, leite, manteiga, fermento em pó. Lista de mercado NÃO se busca item por item: chame mostrar_plano direto com todos os ingredientes (e os outros itens do plano), que ele mesmo busca cada um.
+- "Pronto": busque o item pronto (bolo em confeitaria é RESTAURANT). "Fazer": monte a lista COMPLETA de ingredientes de uma receita simples como itens de mercado (GROCERIES), um item por ingrediente. Ex.: bolo de chocolate → farinha de trigo, ovos, açúcar, chocolate em pó, leite, manteiga, fermento em pó. Lista de mercado NÃO se busca item por item: chame mostrar_plano direto com todos os ingredientes (e os outros itens do plano), que ele mesmo busca cada um e junta tudo num mercado só (um pedido, um frete). Se faltar algo nesse mercado, pergunte se a pessoa quer outro item de lá ou trazer de outra loja (que vira outro pedido); não traga de outra loja por conta própria.
+- Cada loja é um pedido separado no iFood. Quando o plano tiver mais de uma loja, diga isso na revisão.
 - Opções na tela não são plano: depois de buscar, diga "separei algumas opções", nunca "montei o plano". Plano é só depois de mostrar_plano.
 - Para comparar, busque cada item do roteiro e deixe a tela mostrar as opções lado a lado.
 - Em mostrar_plano, dê um nome curto à ocasião (ocasiao) e, para cada item, uma linha de porque ligada à pessoa e ao momento, com o que ela disse do gosto dela, sem preço, nota ou número.
@@ -77,12 +79,13 @@ export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; doma
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
 // grupoDe: cada opção aponta para a lista da busca em que apareceu (as que a pessoa viu juntas na tela).
-type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[] }>; resumoBuscas: string[] };
+// doPlano: categoria de cada opção que já esteve num plano (ex.: a do mercado escolhido, achada na busca dentro da loja).
+type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[] }>; doPlano: Map<string, string>; resumoBuscas: string[] };
 const g = globalThis as unknown as { __guideAtendente?: Map<string, Memoria> };
 const memorias = (g.__guideAtendente ??= new Map());
 function memoriaDe(subjectRef: string): Memoria {
   let m = memorias.get(subjectRef);
-  if (!m) { m = { opcoes: new Map(), grupoDe: new Map(), resumoBuscas: [] }; memorias.set(subjectRef, m); }
+  if (!m) { m = { opcoes: new Map(), grupoDe: new Map(), doPlano: new Map(), resumoBuscas: [] }; memorias.set(subjectRef, m); }
   if (memorias.size > 2000) memorias.delete(memorias.keys().next().value!);
   return m;
 }
@@ -307,8 +310,15 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const base = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
     // Nomes de loja e item vêm do catálogo: limpos antes de ir à tela e à fala.
     const titulo = textoLivre(a.ocasiao, 40);
-    const escolhido: PlanoSnapshot = { ...base, ...(titulo ? { titulo } : {}), versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem, s.restricoes.length > 0)) };
-    const plano = sanearPlano(await detalharPlano(escolhido, deps.domain.detalharItem?.bind(deps.domain)));
+    const refDe = (b: PlanoSnapshot["blocos"][number]) => a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref;
+    const opcoesDe = (id: string) => itens.find((i) => i.necessidade.id === id)?.opcoes ?? [];
+    const escolhido: PlanoSnapshot = { ...base, ...(titulo ? { titulo } : {}), versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, refDe(b), mem, s.restricoes.length > 0, opcoesDe(b.necessidadeId))) };
+    // Lista de mercado num mercado só (um carrinho do iFood é de uma loja); o que a pessoa escolheu não é trocado.
+    const buscarNaLoja = deps.domain.buscarNaLoja?.bind(deps.domain);
+    const { plano: unificado, faltas } = await unificarMercado(escolhido, opcoesDe, new Set(base.blocos.filter((b) => refDe(b)).map((b) => b.necessidadeId)),
+      buscarNaLoja && ((b, lojaId) => buscarNaLoja(necessidades.find((n) => n.id === b.necessidadeId)!, lojaId, s.ocasiao)));
+    for (const f of faltas) for (const o of f.foraDaLoja) { mem.opcoes.set(o.ref, o); mem.doPlano.set(o.ref, norm(f.categoria)); }
+    const plano = sanearPlano(await detalharPlano(unificado, deps.domain.detalharItem?.bind(deps.domain)));
     if (s.restricoes.length) for (const b of plano.blocos) {
       if (b.principal.complementos?.grupos.length) b.principal.complementos.composicaoNaoVerificada = true;
     }
@@ -316,7 +326,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
       const porque = justificativaContextual(a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.porque);
       if (porque) b.porque = porque;
     }
-    for (const b of plano.blocos) for (const o of [b.principal, ...b.alternativas]) mem.opcoes.set(o.ref, o);
+    for (const b of plano.blocos) for (const o of [b.principal, ...b.alternativas]) { mem.opcoes.set(o.ref, o); mem.doPlano.set(o.ref, norm(b.categoria)); }
     // Nada encontrado: não vira plano (nem substitui o que está na tela), e o modelo é avisado de que nada apareceu.
     if (!plano.blocos.length) {
       console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=0 (nada aberto)`);
@@ -328,9 +338,12 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     registrar(deps, { tipo: "plano", ocasiao: a.ocasiao, pessoas: s.ocasiao.pessoas, categorias: plano.blocos.map((b) => b.categoria), naoAtendidas: plano.naoAtendidas.map((n) => n.categoria) });
     console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=${plano.blocos.length} naoAtendidas=${plano.naoAtendidas.length} versao=${plano.versao}`);
     const resumo = plano.blocos.map((b) => `${descreverBloco(b)}; complementos: ${resumoComplementos(b.principal).join(", ") || "a configurar se houver"}`).join("; ");
-    const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");
+    const semOpcao = plano.naoAtendidas.filter((n) => !faltas.some((f) => f.categoria === n.categoria)).map((n) => n.categoria).join(", ");
+    // Falta no mercado escolhido: o modelo pergunta; com as refs de fora, consegue trazer de outra loja se a pessoa quiser.
+    const faltaMercado = faltas.map((f) => `${f.categoria} (a ${f.loja} não tem; em outra loja, que vira outro pedido: ${f.foraDaLoja.map((o) => `${o.item} da ${o.loja} ${reais(o.precoCents)} [ref=${o.ref}]`).join(", ") || "nada aberto"})`).join("; ");
+    const pedidos = new Set(plano.blocos.map((b) => chaveLoja(b.principal))).size;
     return {
-      texto: `Plano versão ${plano.versao} na tela: ${resumo}.${faltas ? ` Sem opção agora para: ${faltas}.` : ""}`,
+      texto: `Plano versão ${plano.versao} na tela: ${resumo}.${pedidos > 1 ? ` São ${pedidos} pedidos separados no iFood, um por loja.` : ""}${semOpcao ? ` Sem opção agora para: ${semOpcao}.` : ""}${faltaMercado ? ` Ficaram de fora para manter o mercado num pedido só: ${faltaMercado}. Pergunte se a pessoa quer outro item do mesmo mercado ou trazer de outra loja.` : ""}`,
       tela: { tipo: atualizado ? "plano_atualizado" as const : "mostrar_plano" as const, plano },
     };
   }
@@ -338,7 +351,9 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     if (!s.plano) return { texto: "Não há plano na tela ainda. Monte com mostrar_plano primeiro." };
     if (impedimentosPlano(s.plano).length) return { texto: "Complete os complementos obrigatórios ou verifique os detalhes antes de revisar.", tela: { tipo: "plano_atualizado", plano: s.plano } };
     s.estado = "S5"; s.encaminhado = true;
-    return { texto: "Revisão aberta na tela. Diga para a pessoa conferir e dizer \"aprovo o plano\".", tela: { tipo: "aguardando_aprovacao", plano: s.plano } };
+    const lojas = [...new Map(s.plano.blocos.map((b) => [chaveLoja(b.principal), b.principal.loja])).values()];
+    const pedidos = lojas.length > 1 ? ` São ${lojas.length} pedidos separados no iFood, um por loja (${lojas.join(", ")}), cada um com seu frete: diga isso.` : "";
+    return { texto: `Revisão aberta na tela.${pedidos} Diga para a pessoa conferir e dizer "aprovo o plano".`, tela: { tipo: "aguardando_aprovacao", plano: s.plano } };
   }
   return { texto: `Ferramenta desconhecida: ${nome}` };
 }
@@ -368,12 +383,15 @@ const planoVazio = (): PlanoSnapshot => ({ planoId: "", versao: 0, blocos: [], n
 
 // A opção que a pessoa escolheu vira a principal do bloco; a anterior vira alternativa. Vale uma alternativa do bloco ou
 // uma opção que a pessoa viu numa busca da MESMA categoria; opção de outra necessidade é recusada. As outras opções
-// dessa busca também ficam como alternativas, para trocar tocando.
-function escolher(b: PlanoSnapshot["blocos"][number], ref: string | undefined, mem: Memoria, exigirElegibilidadeAtual: boolean): PlanoSnapshot["blocos"][number] {
+// dessa busca também ficam como alternativas, para trocar tocando. frescas: tudo o que a busca de agora trouxe para o
+// item (elegível agora); doPlano: opção que já esteve num plano para este item (ex.: a do mercado único).
+function escolher(b: PlanoSnapshot["blocos"][number], ref: string | undefined, mem: Memoria, exigirElegibilidadeAtual: boolean, frescas: OpcaoPlano[] = []): PlanoSnapshot["blocos"][number] {
   const mesmaCategoria = (r: string) => { const g = mem.grupoDe.get(r); return g && norm(g.categoria) === norm(b.categoria) ? g : undefined; };
+  const jaNoPlano = (r: string) => mem.doPlano.get(r) === norm(b.categoria);
   let principal = b.principal;
   if (ref && ref !== b.principal.ref) {
-    const escolhida = b.alternativas.find((o) => o.ref === ref) ?? (!exigirElegibilidadeAtual && mesmaCategoria(ref) ? mem.opcoes.get(ref) : undefined);
+    const escolhida = b.alternativas.find((o) => o.ref === ref) ?? frescas.find((o) => o.ref === ref)
+      ?? (!exigirElegibilidadeAtual && (mesmaCategoria(ref) || jaNoPlano(ref)) ? mem.opcoes.get(ref) : undefined);
     if (!escolhida) throw new Error("OPCAO_FORA_DA_NECESSIDADE");
     principal = escolhida;
   }

@@ -175,17 +175,27 @@ export class McpDomain implements DomainPort {
     }
   }
 
-  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+    return this.buscar(n, ocasiao);
+  }
+
+  // Dentro de uma loja basta o primeiro termo: o item é concreto ("farinha de trigo") e cada termo é uma chamada.
+  // Não grava a última busca da necessidade (essa é a da busca geral).
+  buscarNaLoja(n: Necessidade, lojaId: string, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+    return this.buscar(n, ocasiao, lojaId);
+  }
+
+  private async buscar(n: Necessidade, ocasiao: Ocasiao, merchantId?: string): Promise<OpcaoPlano[]> {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);
     // O catálogo busca ITEM por termo: o planejador devolve 1 a 3 termos concretos (sinônimos reais), em paralelo.
-    const consultas = consultasDe(n);
+    const consultas = merchantId ? consultasDe(n).slice(0, 1) : consultasDe(n);
     const buscas = await Promise.allSettled(consultas.map((query) => this.tools.callTool("searchOffers", {
       query,
       userLocation: { latitude: this.local.latitude, longitude: this.local.longitude },
       resultKind: "ITEM",
       merchantType: n.vertical as Vertical,
       pageSize: PAGE_SIZE,
-      refinements: { onlyOpen: true, ...(restricoesMcp.length ? { itemRestrictions: restricoesMcp } : {}) },
+      refinements: { onlyOpen: true, ...(merchantId ? { merchantId } : {}), ...(restricoesMcp.length ? { itemRestrictions: restricoesMcp } : {}) },
     })));
     const respostas = buscas.flatMap((b) => (b.status === "fulfilled" ? [b.value] : []));
     // Só falha se TODAS falharam: uma consulta que cai não derruba a necessidade.
@@ -232,6 +242,7 @@ export class McpDomain implements DomainPort {
       // "Mais parecida" não é "mais barata": o rótulo diz a verdade sobre por que esta opção está aqui.
       return cobertura === "proxima" ? { ...o, rotulo: "mais parecida", motivo: `não encontrei "${n.categoria}"; esta é a opção mais parecida`, cobertura } : o;
     });
+    if (merchantId) return opcoes.filter((o) => o.lojaId === merchantId);
     this.ultimaBusca.set(n.id, candidatos.map((c, i) => ({ ...c, opcao: opcoes[i] })));
     return opcoes;
   }

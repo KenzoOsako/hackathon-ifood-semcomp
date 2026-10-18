@@ -50,10 +50,6 @@ export function AgentScreen() {
         <span className="font-display text-lg font-medium">Mimo</span>
         {simulado ? <Badge variant="simulated" className="ml-auto">Simulado</Badge> : !g.login && <Badge variant="success" className="ml-auto">iFood real</Badge>}
       </header>
-      <label className="mx-4 mb-2 flex items-start gap-2 text-xs text-muted-foreground">
-        <input type="checkbox" checked={g.consentimentoSinais} disabled={g.busy} onChange={e => g.setConsentimentoSinais(e.target.checked)} />
-        <span>Quero contribuir com estatísticas de demanda no painel público. Só rótulos gerais e contagens, sem conversa ou identificação. Opcional; desmarcar interrompe novos registros.</span>
-      </label>
 
       {g.login && (
         <Alert className="mx-3">
