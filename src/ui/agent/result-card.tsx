@@ -2,6 +2,7 @@ import { BadgeCheck, Clock, Heart, History, MapPin, Sparkles, Star, Tag, Wallet,
 import type { Option, OptionLabel, Reason } from "@/contracts";
 import { Button } from "@/ui/components/button";
 import { cn } from "@/ui/lib/utils";
+import { StoreLogo } from "@/ui/components/store-logo";
 import { fromReais } from "./format";
 
 const LABELS: Record<OptionLabel, { title: string; Icon: LucideIcon }> = {
@@ -57,10 +58,8 @@ export function ResultCard({ option, first, expanded, disabled, onToggle, onSele
         onClick={onToggle}
         className="flex w-full items-start gap-3 rounded-[20px] p-3 text-left"
       >
-        {/* Sem logos reais na demo: a inicial da loja faz o papel da imagem. */}
-        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent font-display text-lg font-medium text-accent-foreground">
-          {c.merchantName.charAt(0)}
-        </span>
+        {/* Sem logos reais na demo: ícone neutro com cor estável por loja (o contrato ainda não traz a categoria). */}
+        <StoreLogo seed={c.merchantId} className="size-11" />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-display text-base font-medium leading-tight">{c.merchantName}</span>
           {/* Cada trecho não quebra por dentro; a linha só quebra entre eles. */}
@@ -69,7 +68,7 @@ export function ResultCard({ option, first, expanded, disabled, onToggle, onSele
               <span className="inline-flex items-center gap-0.5 whitespace-nowrap"><Star className="size-3" aria-hidden="true" />{rating}</span>
             )}
             {c.deliveryTimeMinutes !== undefined && <span className="whitespace-nowrap">· {c.deliveryTimeMinutes} min</span>}
-            <span className="whitespace-nowrap">· {fee}</span>
+            <span className={cn("whitespace-nowrap", c.deliveryFee === 0 && "font-semibold text-success-foreground")}>· {fee}</span>
           </span>
         </span>
         <span className="shrink-0 text-right">
