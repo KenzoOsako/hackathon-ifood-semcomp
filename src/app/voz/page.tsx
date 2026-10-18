@@ -12,6 +12,7 @@ export default function VozLab() {
   const [busy, setBusy] = useState(false);
 
   const [utterance, setUtterance] = useState<Utterance | null>(null);
+  const [terms, setTerms] = useState<string[]>([]); // nomes na tela: ajudam o reconhecimento
 
   interface Ctl { mark: (m: "request_sent" | "first_chunk") => void; speak: (t: string) => unknown; begin?: () => void }
 
@@ -22,7 +23,8 @@ export default function VozLab() {
       ctl.begin?.();
       ctl.mark("request_sent");
       const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
-      const t = (await r.json()) as { reply: string };
+      const t = (await r.json()) as { reply: string; options?: Array<{ candidate: { merchantName: string; itemName: string } }> };
+      if (t.options) setTerms(t.options.flatMap((o) => [o.candidate.merchantName, o.candidate.itemName]));
       ctl.mark("first_chunk"); // o backend de hoje devolve tudo de uma vez; no fluxo real, este é o 1º pedaço
       setLines((l) => [...l, { from: "agente", text: t.reply }]);
       ctl.speak(t.reply); // divide em pedaços, busca o áudio de todos em paralelo e toca em ordem
@@ -32,10 +34,13 @@ export default function VozLab() {
   }, []);
 
   // Fala reconhecida: guarda o diagnóstico, envia ao agente e responde falando.
-  const voice = useVoice((u, api) => {
-    setUtterance(u);
-    void send(u.texto, { mark: api.mark, speak: api.speak });
-  });
+  const voice = useVoice(
+    (u, api) => {
+      setUtterance(u);
+      void send(u.texto, { mark: api.mark, speak: api.speak });
+    },
+    { getTerms: () => terms },
+  );
 
   const listening = voice.state === "listening";
   const label = { idle: "Falar", listening: "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];

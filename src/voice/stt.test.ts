@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetVoiceLimitsForTests } from "./rate-limit";
 import { __resetTtsForTests, sttUsed } from "./budget";
 import { VoiceHttpError, readLimited, requireSameOrigin } from "./http-guard";
 import { confidenceFrom } from "./stt";
@@ -57,7 +58,7 @@ describe("confiança do reconhecimento", () => {
 });
 
 describe("rota /api/voice/stt", () => {
-  beforeEach(() => { __resetTtsForTests(); vi.stubEnv("STT_SECONDS_BUDGET", "100"); vi.stubEnv("ELEVENLABS_API_KEY", "sk_teste"); });
+  beforeEach(() => { __resetTtsForTests(); __resetVoiceLimitsForTests(); vi.stubEnv("STT_SECONDS_BUDGET", "100"); vi.stubEnv("ELEVENLABS_API_KEY", "sk_teste"); });
   afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
   it("transcreve, devolve confiança e duração, e envia português sem tags de áudio", async () => {
@@ -83,6 +84,24 @@ describe("rota /api/voice/stt", () => {
     expect(j.injecao).toBe(true);
     expect(JSON.stringify(j)).not.toContain("123.456");
   });
+  it("resposta vazia COM palavras-chave tenta uma vez SEM elas (medido: uma fala saiu vazia só com palavras-chave)", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json(scribe({ text: "" })))
+      .mockResolvedValueOnce(Response.json(scribe({ text: "Me indica um presente até R$ 100" })));
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await stt(req(audioBytes()));
+    expect(r.status).toBe(200);
+    expect((await r.json()).texto).toBe("Me indica um presente até R$ 100");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((fetchMock.mock.calls[0][1].body as FormData).getAll("keyterms").length).toBeGreaterThan(0);
+    expect((fetchMock.mock.calls[1][1].body as FormData).getAll("keyterms")).toHaveLength(0);
+  });
+  it("vazia mesmo sem palavras-chave responde 422, sem laço de tentativas", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(Response.json(scribe({ text: "" }))));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await stt(req(audioBytes()))).status).toBe(422);
+    expect(fetchMock).toHaveBeenCalledTimes(2); // com palavras-chave e depois sem, só isso
+  });
   it("origem inválida, formato inválido, áudio minúsculo e áudio enorme são recusados", async () => {
     expect((await stt(req(audioBytes(), { Origin: "http://evil.example" }))).status).toBe(403);
     expect((await stt(req(audioBytes(), { "Content-Type": "application/json" }))).status).toBe(415);
@@ -96,7 +115,7 @@ describe("rota /api/voice/stt", () => {
     expect((await semChave.json()).code).toBe("VOICE_NOT_CONFIGURED");
 
     vi.stubEnv("ELEVENLABS_API_KEY", "sk_teste");
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(scribe({ text: "  " }))));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(Response.json(scribe({ text: "  " })))));
     const vazia = await stt(req(audioBytes()));
     expect(vazia.status).toBe(422);
 
@@ -105,7 +124,7 @@ describe("rota /api/voice/stt", () => {
     expect(falha.status).toBe(503);
     expect(JSON.stringify(await falha.json())).not.toContain("detalhe interno");
 
-    __resetTtsForTests(); // consumo zerado: a verificação do limite começa limpa
+    __resetTtsForTests(); __resetVoiceLimitsForTests(); // consumo zerado: a verificação do limite começa limpa
     vi.stubEnv("STT_SECONDS_BUDGET", "1");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(scribe({ audio_duration_secs: 5 }))));
     expect((await stt(req(audioBytes()))).status).toBe(200); // estoura o limite nesta

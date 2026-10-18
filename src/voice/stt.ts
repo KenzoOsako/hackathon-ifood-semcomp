@@ -45,31 +45,38 @@ export function confidenceFrom(words: ScribeWord[] | undefined): number | undefi
   return Math.min(1, Math.max(0, Number(Math.exp(mean).toFixed(3))));
 }
 
-export async function transcribe(audio: Uint8Array, mime: string, cfg: SttConfig = sttConfig(), signal?: AbortSignal): Promise<SttResult> {
+// Uma chamada ao provedor. Devolve o JSON ou lança PROVIDER.
+async function callScribe(audio: Uint8Array, mime: string, cfg: SttConfig, keyterms: string[], signal?: AbortSignal): Promise<ScribeResponse> {
+  const form = new FormData();
+  form.append("model_id", cfg.modelId);
+  form.append("language_code", "por");
+  form.append("tag_audio_events", "false"); // sem "(risos)" no meio da transcrição
+  for (const k of keyterms) form.append("keyterms", k); // vocabulário do contexto (lojas, itens)
+  form.append("file", new Blob([audio as BlobPart], { type: mime }), `fala.${EXT[mime] ?? "webm"}`);
+  let res: Response;
+  try {
+    res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: { "xi-api-key": cfg.apiKey! }, body: form, signal });
+  } catch {
+    throw new SttError("PROVIDER");
+  }
+  if (!res.ok) throw new SttError("PROVIDER");
+  try {
+    return (await res.json()) as ScribeResponse;
+  } catch {
+    throw new SttError("PROVIDER");
+  }
+}
+
+export async function transcribe(audio: Uint8Array, mime: string, cfg: SttConfig = sttConfig(), signal?: AbortSignal, keyterms: string[] = []): Promise<SttResult> {
   if (!cfg.apiKey) throw new SttError("NOT_CONFIGURED");
   try {
     assertSttBudget();
   } catch {
     throw new SttError("BUDGET");
   }
-  const form = new FormData();
-  form.append("model_id", cfg.modelId);
-  form.append("language_code", "por");
-  form.append("tag_audio_events", "false"); // sem "(risos)" no meio da transcrição
-  form.append("file", new Blob([audio as BlobPart], { type: mime }), `fala.${EXT[mime] ?? "webm"}`);
-  let res: Response;
-  try {
-    res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: { "xi-api-key": cfg.apiKey }, body: form, signal });
-  } catch {
-    throw new SttError("PROVIDER");
-  }
-  if (!res.ok) throw new SttError("PROVIDER");
-  let data: ScribeResponse;
-  try {
-    data = (await res.json()) as ScribeResponse;
-  } catch {
-    throw new SttError("PROVIDER");
-  }
+  let data = await callScribe(audio, mime, cfg, keyterms, signal);
+  // Medido na bateria de 17/10: com palavras-chave, uma fala saiu VAZIA e sem elas saiu certa. Tenta uma vez sem.
+  if (!(data.text ?? "").trim() && keyterms.length > 0) data = await callScribe(audio, mime, cfg, [], signal);
   if (data.audio_duration_secs) recordStt(data.audio_duration_secs);
   const raw = (data.text ?? "").trim();
   if (!raw) throw new SttError("EMPTY");

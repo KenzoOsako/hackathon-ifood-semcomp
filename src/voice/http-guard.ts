@@ -1,9 +1,9 @@
 // Guardas HTTP das rotas de voz. Mesma política do chat (origem same-origin, corpo limitado),
 // mas SEM depender de MCP_MODE: voz não acessa dado privado e não pode quebrar quando o MCP for real.
-export type VoiceHttpCode = "FORBIDDEN" | "BAD_REQUEST" | "TOO_LARGE" | "UNSUPPORTED";
+export type VoiceHttpCode = "FORBIDDEN" | "BAD_REQUEST" | "TOO_LARGE" | "UNSUPPORTED" | "RATE_LIMITED";
 
 export class VoiceHttpError extends Error {
-  constructor(public code: VoiceHttpCode) {
+  constructor(public code: VoiceHttpCode, public retryAfterMs?: number) {
     super(code);
   }
 }
@@ -65,14 +65,23 @@ export async function readJson(req: Request, maxBytes = 16_384): Promise<unknown
   }
 }
 
-const STATUS: Record<VoiceHttpCode, number> = { FORBIDDEN: 403, BAD_REQUEST: 400, TOO_LARGE: 413, UNSUPPORTED: 415 };
+const STATUS: Record<VoiceHttpCode, number> = { FORBIDDEN: 403, BAD_REQUEST: 400, TOO_LARGE: 413, UNSUPPORTED: 415, RATE_LIMITED: 429 };
 const REPLY: Record<VoiceHttpCode, string> = {
   FORBIDDEN: "Sessão ou origem inválida. Recarregue a página.",
   BAD_REQUEST: "Dados inválidos.",
   TOO_LARGE: "Áudio ou texto grande demais.",
   UNSUPPORTED: "Formato não suportado.",
+  RATE_LIMITED: "Muitas solicitações de voz. Aguarde um instante ou use o texto.",
 };
 
 export function voiceHttpErrorResponse(error: VoiceHttpError): Response {
-  return Response.json({ state: "FALHA", code: error.code, reply: REPLY[error.code] }, { status: STATUS[error.code], headers: { "Cache-Control": "no-store" } });
+  const headers: Record<string, string> = { "Cache-Control": "no-store" };
+  if (error.code === "RATE_LIMITED") headers["Retry-After"] = String(Math.ceil((error.retryAfterMs ?? 1000) / 1000));
+  return Response.json({ state: "FALHA", code: error.code, reply: REPLY[error.code] }, { status: STATUS[error.code], headers });
+}
+
+// Anexa o cookie anônimo de voz (se este visitante é novo) à resposta.
+export function withVisitorCookie(res: Response, setCookie?: string): Response {
+  if (setCookie) res.headers.append("Set-Cookie", setCookie);
+  return res;
 }

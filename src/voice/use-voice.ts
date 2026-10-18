@@ -8,7 +8,7 @@ import { computeSignals, type VoiceSignals } from "./signals";
 import { pickMimeType, rms, VoiceActivityTracker } from "./vad";
 
 export type VoiceState = "idle" | "listening" | "transcribing" | "speaking" | "error";
-export type VoiceErrorCode = "unsupported" | "permission_denied" | "too_short" | "no_speech" | "stt_failed" | "stt_unavailable";
+export type VoiceErrorCode = "unsupported" | "permission_denied" | "too_short" | "no_speech" | "stt_failed" | "stt_unavailable" | "rate_limited";
 
 export interface Utterance {
   texto: string;
@@ -25,6 +25,7 @@ const MESSAGES: Record<VoiceErrorCode, string> = {
   no_speech: "Não ouvi nada. Chegue mais perto do microfone.",
   stt_failed: "Não consegui reconhecer a fala. Pode repetir ou digitar?",
   stt_unavailable: "Reconhecimento de voz indisponível. Seguindo em texto.",
+  rate_limited: "Muitas falas em pouco tempo. Aguarde um instante ou digite.",
 };
 
 export interface VoiceApi {
@@ -34,7 +35,12 @@ export interface VoiceApi {
 }
 
 // O callback recebe a fala reconhecida e uma API para responder falando (evita ref circular na tela).
-export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
+export interface VoiceOptions {
+  // Palavras que estão na tela agora (lojas, itens). Ajudam o reconhecimento a acertar os nomes.
+  getTerms?: () => string[];
+}
+
+export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, options: VoiceOptions = {}) {
   const [state, setState] = useState<VoiceState>("idle");
   const [error, setError] = useState<VoiceErrorCode | null>(null);
   const [level, setLevel] = useState(0);
@@ -48,7 +54,8 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
   const meta = useRef({ micOpenedAt: 0, interrupted: false, mime: "audio/webm" });
   const cleanupFns = useRef<Array<() => void>>([]);
   const onUtt = useRef(onUtterance);
-  useEffect(() => { onUtt.current = onUtterance; }, [onUtterance]);
+  const termsFn = useRef(options.getTerms);
+  useEffect(() => { onUtt.current = onUtterance; termsFn.current = options.getTerms; }, [onUtterance, options.getTerms]);
 
   useEffect(() => {
     player.current = new SpeechPlayer(setSpeaking, {
@@ -115,7 +122,10 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void) {
       if (!tracker.heardSpeech) return fail("no_speech");
       setState("transcribing");
       try {
-        const res = await fetch("/api/voice/stt", { method: "POST", headers: { "Content-Type": meta.current.mime }, body: blob });
+        const terms = termsFn.current?.() ?? [];
+        const query = terms.length ? `?terms=${encodeURIComponent(JSON.stringify(terms.slice(0, 40)))}` : "";
+        const res = await fetch(`/api/voice/stt${query}`, { method: "POST", headers: { "Content-Type": meta.current.mime }, body: blob });
+        if (res.status === 429) return fail("rate_limited");
         if (res.status === 503) return fail("stt_unavailable");
         if (!res.ok) return fail("stt_failed");
         const data = (await res.json()) as { texto: string; confianca?: number; injecao: boolean; redacoes: string[] };
