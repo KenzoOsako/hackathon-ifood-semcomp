@@ -299,3 +299,13 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - PDF com 3 páginas, formato de relatório: bloco de identificação e seção 01 com 1.1 a 1.7 (sumário, problema, público, proposta de valor, solução com o equilíbrio de perguntas, diferenciais, modelo de negócio com canal, impacto e custos). O Mimo é apresentado como recurso do próprio iFood, não como fornecedor externo; escopo, validação, riscos, roadmap e parcerias foram cortados a pedido do time. 02 a 06 ainda não entraram.
 - A 01 condensa a proposta canônica com a Direção V2, com hipóteses rotuladas e sem números de impacto. Rascunho para revisão do time; os arquivos `01-…` a `06-…` desta pasta seguem como esqueletos.
 - 02 (Desenho de Solução) adicionado: página própria com o diagrama de fluxo em 8 etapas (`docs/entregaveis/img/fluxo-solucao.svg` e `.png`). Checklist em `docs/entregaveis/CHECKLIST.md`.
+
+## Task 1: mais de uma opção na tela — 18/10/2026, ~05h30 (Hyago)
+- Branch feat/hyago-mais-opcoes. Tela nova `mostrar_opcoes` ("Opções para você"): o que o atendente pesquisa aparece na hora (até 3 por busca, até 3 buscas), com nota, prazo, frete, preço e foto; tocar em "Selecionar" manda "quero a <prato> da <loja>". No plano, cada item tem "Ver mais opções" com alternativas reais (as do domínio + as outras opções que a pessoa viu na busca); tocar manda "troca <item> pela <prato> da <loja>". O atendente recebe o plano com refs das alternativas para trocar.
+- Provas: typecheck, lint, build e testes (atendente com teste novo da tela de opções e das alternativas); vídeo da jornada em mock com Gemini: busca por nota → opções → escolher tocando → plano → trocar tocando (v2) → revisão → sacola.
+- Próximo: Task 2 (justificar cada opção: chips de dados reais + uma linha de "por que pra você").
+
+## Ajuste solicitado por Kenzo no PR35 — 18/10/2026
+- Removido orçamento dos schemas das ferramentas e sua propagação; domínio real/mock não exclui opções por teto legado. Mantidos preços/fretes e ordenação.
+- Busca posterior no mesmo turno preserva tela de plano/revisão já montada. Com restrição alimentar, memória não reintroduz opções excluídas na busca atual.
+- Cobertura nova: preço sem bloqueio no domínio real e no atendente; precedência da tela de plano; restrição alimentar após busca anterior.

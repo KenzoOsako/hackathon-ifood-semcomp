@@ -18,6 +18,13 @@ const local = { latitude: -22.0069, longitude: -47.8946, fonte: "fixa" as const 
 const pizza = { id: "n1", vertical: "RESTAURANT" as const, categoria: "pizza", restricoes: [] };
 
 describe("McpDomain com respostas reais gravadas", () => {
+  it("não exclui ofertas por teto de preço legado", async () => {
+    const d = new McpDomain(new ToolsGravadas(), local);
+    const semTeto = await d.buscarNecessidade(pizza, {});
+    const comTeto = await d.buscarNecessidade({ ...pizza, orcamento: { max: 1, tipo: "teto" } }, {});
+    expect(comTeto.map(o => o.ref)).toEqual(semTeto.map(o => o.ref));
+    expect(comTeto.some(o => o.precoCents > 100)).toBe(true);
+  });
   it("chama searchOffers com o contrato real e só devolve lojas abertas com entrega", async () => {
     const tools = new ToolsGravadas();
     const opcoes = await new McpDomain(tools, local).buscarNecessidade(pizza, {});

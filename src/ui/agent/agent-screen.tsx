@@ -9,7 +9,7 @@ import { Input } from "@/ui/components/input";
 import { Orb, type OrbState } from "@/ui/components/orb";
 import { cn } from "@/ui/lib/utils";
 import { useAgent } from "./agent-context";
-import { PlanoView, RevisaoView, SacolaView } from "./guide-telas";
+import { OpcoesView, PlanoView, RevisaoView, SacolaView } from "./guide-telas";
 
 
 // Ocasiões de exemplo (storyboard): enviam a frase como se a pessoa tivesse falado.
@@ -63,6 +63,7 @@ export function AgentScreen() {
       )}
 
       <section aria-label="Resultados" className={cn("flex min-h-0 flex-col overflow-hidden transition-[flex-grow,opacity] duration-500", hasView ? "min-h-[280px] grow opacity-100" : "grow-0 basis-0 opacity-0")}>
+        {tela?.tipo === "mostrar_opcoes" && <OpcoesView plano={tela.plano} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />}
         {(tela?.tipo === "mostrar_plano" || tela?.tipo === "plano_atualizado") && (
           <PlanoView key={`${tela.plano.planoId}-${tela.plano.versao}`} plano={tela.plano} atualizado={tela.tipo === "plano_atualizado"} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />
         )}

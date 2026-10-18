@@ -1,6 +1,6 @@
 // Ponte entre o que o agente manda para a tela (evento `screen` com o plano) e os componentes do Malveste.
 // Só lê e formata: nenhuma regra de fluxo, ranking ou soma acontece aqui (docs/PLANO_TELA_GUIDE.md).
-import type { OpcaoPlano, PlanoSnapshot, Sacola, TipoTela } from "@/agent/types";
+import type { GrupoOpcoes, OpcaoPlano, PlanoSnapshot, Sacola, TipoTela } from "@/agent/types";
 import { chaveLoja } from "@/agent/sacola";
 import type { Option, OptionLabel, Reason } from "@/contracts";
 
@@ -8,16 +8,17 @@ import { catalogImage, type CatalogMedia } from "@/ui/lib/catalog-media";
 import { mockMediaFor } from "@/ui/lib/mock-media";
 import { precoConfigurado } from "@/agent/complementos";
 
-export type PlanoTela = PlanoSnapshot & { sacola?: Sacola };
+export type PlanoTela = PlanoSnapshot & { sacola?: Sacola; opcoes?: GrupoOpcoes[] };
 export type GuideTela = { tipo: TipoTela; plano: PlanoTela };
 
-const TIPOS: readonly TipoTela[] = ["mostrar_plano", "plano_atualizado", "aguardando_aprovacao", "sacola"];
+const TIPOS: readonly TipoTela[] = ["mostrar_opcoes", "mostrar_plano", "plano_atualizado", "aguardando_aprovacao", "sacola"];
 
 // O evento vem da rede: confere o mínimo antes de desenhar. Evento desconhecido é ignorado.
 export function lerTela(screen: { event: string; payload: unknown } | null): GuideTela | null {
   if (!screen || !TIPOS.includes(screen.event as TipoTela)) return null;
   const p = screen.payload as Partial<PlanoTela> | null;
   if (!p || !Array.isArray(p.blocos) || typeof p.versao !== "number") return null;
+  if (screen.event === "mostrar_opcoes" && !(Array.isArray(p.opcoes) && p.opcoes.some((g) => Array.isArray(g?.itens) && g.itens.length > 0))) return null;
   return { tipo: screen.event as TipoTela, plano: p as PlanoTela };
 }
 

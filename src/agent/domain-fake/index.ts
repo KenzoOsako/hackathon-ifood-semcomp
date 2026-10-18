@@ -91,13 +91,13 @@ export class FakeDomain implements DomainPort {
   private candidatos(n: Necessidade, ocasiao: Ocasiao): Oferta[] {
     const cat = norm(n.categoria);
     const restricoes = n.restricoes.map(norm);
-    const qtd = quantidade(n, ocasiao);
+    void ocasiao; // Preço é apresentado para escolha, sem teto de exclusão.
     const daCategoria = OFERTAS.filter((o) => o.vertical === n.vertical)
       .filter((o) => o.termos.some((t) => cat.includes(t) || t.includes(cat)) || norm(o.item).includes(cat));
     return soOsEspecificos(daCategoria, n.categoria, (o) => `${o.item} ${o.termos.join(" ")}`)
       // Filtro rígido: restrição declarada exclui a oferta; nunca é relaxado aqui.
-      .filter((o) => !restricoes.some((r) => (o.contem ?? []).some((c) => r.includes(c) || c.includes(r))))
-      .filter((o) => n.orcamento?.tipo !== "teto" || o.precoCents * qtd <= Math.round(n.orcamento.max * 100));
+      .filter((o) => !restricoes.some((r) => (o.contem ?? []).some((c) => r.includes(c) || c.includes(r))));
+
   }
 
   buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
