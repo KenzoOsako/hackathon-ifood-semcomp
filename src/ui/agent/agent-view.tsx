@@ -174,7 +174,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
         )}
       </section>
 
-      <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0" : "grow")}>
+      <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "shrink-0 grow-0" : "grow")}>
         <div className={cn("flex min-h-0", compact ? "items-center gap-3 px-4 pt-2" : "flex-col items-center", !hasView && "flex-1 justify-center overflow-y-auto text-center")}>
           {!hasView && <h1 className="px-4 font-display text-balance text-3xl font-medium leading-tight">Qual a sua vibe de hoje?</h1>}
           {hasView && !compact && caption}
@@ -190,7 +190,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
         </div>
 
         <footer className="relative px-3 pb-3">
-          {p.msgs.length > 0 && (
+          {p.msgs.length > 0 && !compact && (
             <>
               <Button variant="ghost" size="sm" aria-expanded={showLog} aria-controls="conversa" onClick={() => setShowLog((v) => !v)}>
                 {showLog ? <ChevronDown /> : <ChevronUp />}

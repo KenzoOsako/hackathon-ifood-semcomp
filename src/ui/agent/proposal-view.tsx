@@ -140,11 +140,11 @@ export function ProposalView({ proposal, option, itemNames, busy, error, embedde
       </main>
 
       {!approved && (
-        <footer className="grid gap-2 border-t border-border bg-background px-4 pb-4 pt-3">
+        <footer className="grid gap-1.5 border-t border-border bg-background px-4 pb-3 pt-2.5">
           <Button disabled={!open || blockers || busy} onClick={onApprove}>Aprovar proposta</Button>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" disabled={busy} onClick={onEditOrder}>Mudar o pedido</Button>
-            <Button variant="ghost" disabled={busy || proposal.state === "cancelled"} onClick={onCancel}>Cancelar proposta</Button>
+            <Button variant="outline" size="sm" disabled={busy} onClick={onEditOrder}>Mudar o pedido</Button>
+            <Button variant="ghost" size="sm" disabled={busy || proposal.state === "cancelled"} onClick={onCancel}>Cancelar proposta</Button>
           </div>
         </footer>
       )}

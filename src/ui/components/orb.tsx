@@ -8,7 +8,7 @@ export type OrbState = "idle" | "listening" | "thinking" | "speaking" | "error";
 // · mini: faixa compacta da revisão (só o núcleo).
 export type OrbSize = "fab" | "hero" | "strip" | "mini";
 
-const DIAMETER: Record<OrbSize, string> = { fab: "4rem", hero: "9.5rem", strip: "4rem", mini: "2.75rem" };
+const DIAMETER: Record<OrbSize, string> = { fab: "4rem", hero: "9.5rem", strip: "4rem", mini: "2.5rem" };
 
 type OrbProps = { size?: OrbSize; state?: OrbState; className?: string };
 
