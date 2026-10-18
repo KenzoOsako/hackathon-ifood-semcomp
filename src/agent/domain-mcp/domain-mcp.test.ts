@@ -86,7 +86,8 @@ describe("McpDomain com respostas reais gravadas", () => {
     const r = await executarTurno(s, { texto: "Pode escolher.", origem: "texto" }, deps);
     expect(r.origem).toBe("real");
     expect(r.tela?.plano.blocos.map((b) => b.categoria)).toEqual(expect.arrayContaining(["pizza", "pipoca"]));
-    expect(r.tela?.plano.naoAtendidas.map((n) => n.categoria)).toContain("presente");
-    expect(falado.resposta).toMatch(/Ainda não tenho opção para presente/);
+    // Sugestão do Guide sem resultado some em silêncio: a pessoa não pediu "presente", então não há "não tenho".
+    expect(r.tela?.plano.naoAtendidas.map((n) => n.categoria)).not.toContain("presente");
+    expect(falado.resposta).not.toMatch(/Ainda não tenho opção para presente/);
   });
 });

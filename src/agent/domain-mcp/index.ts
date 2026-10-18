@@ -145,12 +145,16 @@ function rotular(c: Candidato, lista: Candidato[], preferido?: CriterioComDado):
   return { ...c.opcao, rotulo: "alternativa", motivo: "outra opção aberta e com entrega" };
 }
 
+// Onde procurar quando a vertical escolhida não tem catálogo aqui.
+const ALTERNATIVA: Partial<Record<Vertical, Vertical>> = { GROCERIES: "RESTAURANT", RESTAURANT: "GROCERIES" };
+
 interface PlanoGuardado { subjectRef: string; snapshot: PlanoSnapshot; ocasiao: Ocasiao; necessidades: Necessidade[]; candidatos: Map<string, Candidato[]> }
 export type PlanosStore = Map<string, PlanoGuardado>;
 
 export class McpDomain implements DomainPort {
   // Candidatos da última busca por necessidade, para montar e ajustar o plano sem nova chamada.
   private readonly ultimaBusca = new Map<string, Candidato[]>();
+  private readonly verticaisVazias = new Map<Vertical, number>();
 
   constructor(
     private readonly tools: McpTools,
@@ -163,20 +167,35 @@ export class McpDomain implements DomainPort {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);
     // O catálogo busca ITEM por termo: o planejador devolve 1 a 3 termos concretos (sinônimos reais), em paralelo.
     const consultas = consultasDe(n);
-    const buscas = await Promise.allSettled(consultas.map((query) => this.tools.callTool("searchOffers", {
-      query,
-      userLocation: { latitude: this.local.latitude, longitude: this.local.longitude },
-      resultKind: "ITEM",
-      merchantType: n.vertical as Vertical,
-      pageSize: PAGE_SIZE,
-      refinements: { onlyOpen: true, ...(restricoesMcp.length ? { itemRestrictions: restricoesMcp } : {}) },
-    })));
-    const respostas = buscas.flatMap((b) => (b.status === "fulfilled" ? [b.value] : []));
-    // Só falha se TODAS falharam: uma consulta que cai não derruba a necessidade.
-    if (respostas.length === 0) throw (buscas[0] as PromiseRejectedResult).reason;
+    const buscarEm = async (tipo: Vertical) => {
+      const buscas = await Promise.allSettled(consultas.map((query) => this.tools.callTool("searchOffers", {
+        query,
+        userLocation: { latitude: this.local.latitude, longitude: this.local.longitude },
+        resultKind: "ITEM",
+        merchantType: tipo,
+        pageSize: PAGE_SIZE,
+        refinements: { onlyOpen: true, ...(restricoesMcp.length ? { itemRestrictions: restricoesMcp } : {}) },
+      })));
+      const respostas = buscas.flatMap((b) => (b.status === "fulfilled" ? [b.value] : []));
+      // Só falha se TODAS falharam: uma consulta que cai não derruba a necessidade.
+      if (respostas.length === 0) throw (buscas[0] as PromiseRejectedResult).reason;
+      const unicos = new Map<string, ItemBusca>();
+      for (const r of respostas) for (const i of extrairItens(r)) if (!unicos.has(i.itemId)) unicos.set(i.itemId, i);
+      return { respostas, unicos };
+    };
+    // A vertical que o modelo escolheu é um palpite: se o catálogo dela está vazio aqui (conta/região sem mercado, por
+    // exemplo), busca onde há catálogo, e lembra disso para não gastar chamadas à toa nos próximos pedidos.
+    const alternativa = ALTERNATIVA[n.vertical as Vertical];
+    let tipo = n.vertical as Vertical;
+    const pular = alternativa !== undefined && (this.verticaisVazias.get(tipo) ?? 0) >= 2;
+    let { respostas, unicos } = pular && alternativa ? await buscarEm(alternativa) : await buscarEm(tipo);
+    if (pular && alternativa) tipo = alternativa;
+    else if (unicos.size === 0 && alternativa) {
+      this.verticaisVazias.set(tipo, (this.verticaisVazias.get(tipo) ?? 0) + 1);
+      const outra = await buscarEm(alternativa).catch(() => undefined);
+      if (outra && outra.unicos.size > 0) { ({ respostas, unicos } = outra); tipo = alternativa; }
+    } else if (unicos.size > 0) this.verticaisVazias.set(tipo, 0);
     const observedAt = new Date().toISOString();
-    const unicos = new Map<string, ItemBusca>();
-    for (const r of respostas) for (const i of extrairItens(r)) if (!unicos.has(i.itemId)) unicos.set(i.itemId, i);
     const convertidos = [...unicos.values()].map((i) => paraCandidato(i, observedAt)).filter((c): c is NonNullable<typeof c> => !!c);
     void ocasiao; // quantidade é calculada ao montar o plano
     // Restrições com filtro oficial do MCP (ex.: LAC_FREE) vão no refinamento; as demais passam pelo filtro
@@ -212,10 +231,13 @@ export class McpDomain implements DomainPort {
     let cobertura: "exata" | "proxima" = "exata";
     if (ctx?.relevancia && pool.length > 0) {
       // Os de texto mais próximo do pedido vão primeiro: o juiz avalia poucos itens e o ranking por preço não os esconde.
-      const ordem = (c: Candidato) => ({ serve: 0, proximo: 1, nao_serve: 2 })[vereditoLexico(n, c.opcao.item)];
+      const ordem = (c: Candidato) => ({ serve: 0, avulso: 1, proximo: 2, nao_serve: 3 })[vereditoLexico(n, c.opcao.item)];
       const paraJuiz = pool.map((c, i) => ({ c, i })).sort((a, b) => ordem(a.c) - ordem(b.c) || a.i - b.i).map((x) => x.c);
       const veredito = await ctx.relevancia.julgar(n, paraJuiz.map((c) => ({ ref: c.opcao.ref, item: c.opcao.item, loja: c.opcao.loja })));
-      const serve = pool.filter((c) => veredito.get(c.opcao.ref) === "serve");
+      const serveInteiro = pool.filter((c) => veredito.get(c.opcao.ref) === "serve");
+      const avulso = pool.filter((c) => veredito.get(c.opcao.ref) === "avulso");
+      // O item completo vence; o avulso (fatia, mini) só aparece se não houver nenhum completo.
+      const serve = serveInteiro.length > 0 ? serveInteiro : avulso;
       const proximo = pool.filter((c) => veredito.get(c.opcao.ref) === "proximo");
       if (serve.length > 0) todos = serve;
       else if (proximo.length > 0 && n.fonte !== "inferido") { todos = proximo; cobertura = "proxima"; }
@@ -289,6 +311,8 @@ function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { n
   for (const { necessidade: n, lista } of itens) {
     const [principal, ...resto] = lista;
     if (!principal) {
+      // Sugestão do próprio Guide que não achou nada some em silêncio: a pessoa não pediu, então "não tenho" só gera ruído.
+      if (n.fonte === "inferido") continue;
       naoAtendidas.push({ categoria: n.categoria, motivo: n.restricoes.length ? "nenhuma opção aberta com composição confirmada para a restrição" : "nenhuma opção aberta com entrega no iFood agora" });
       continue;
     }

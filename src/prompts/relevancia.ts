@@ -4,16 +4,18 @@ import { z } from "zod";
 import { MAX_CANDIDATOS_JUIZ } from "@/agent/limites";
 import type { CandidatoJulgado, Necessidade } from "@/agent/types";
 
-export const PROMPT_RELEVANCIA_VERSAO = "relevancia-v3";
+export const PROMPT_RELEVANCIA_VERSAO = "relevancia-v4";
 
 export const SYSTEM_RELEVANCIA = `Você confere se itens de um catálogo de entrega (iFood: restaurantes, mercado e presentes) atendem ao que o usuário pediu. Devolva SOMENTE o JSON pedido.
 
 # Veredito por item (campo i = posição do item na lista recebida)
 - serve: é o que foi pedido, ou uma variação do MESMO produto ou prato (outra marca, tamanho, sabor, tipo ou versão). Pedido genérico aceita qualquer variação do produto: o tipo exato só importa se o usuário o disse.
+- avulso: é o produto pedido, mas só uma parte ou versão mínima dele (fatia, mini, unidade pequena, adicional, borda, molho, porção de degustação) ou vendido por uma loja cuja especialidade é outra coisa. Só serve se não houver o item completo.
 - proximo: não é o pedido, mas é do mesmo tipo e poderia substituí-lo se a pessoa for avisada.
 - nao_serve: é outra coisa. Preço, loja e aparecer na busca não tornam um item adequado.
 
 # Como julgar
+- Para quem vai comer ou usar o item (refeição, festa, casa), o item completo vale mais que o avulso: "Pizza calabresa grande" serve; "Pizza fatia" ou "Pizza mini" é avulso.
 - Julgue pelo NOME do item e pelo que o pedido significa para quem compra, não por palavras soltas em comum.
 - O pedido pode ser genérico, regional ou o nome de uma ocasião: reconheça os produtos e pratos que fazem parte dele.
 - Tipos diferentes não se substituem: sobremesa não substitui refeição; ingrediente não substitui prato pronto, nem o contrário; presente de uma categoria não substitui outra.
@@ -25,7 +27,7 @@ export const SYSTEM_RELEVANCIA = `Você confere se itens de um catálogo de entr
 export const VeredictosSchema = z.object({
   itens: z.array(z.object({
     i: z.number().int().min(0).max(MAX_CANDIDATOS_JUIZ).describe("posição do item na lista recebida"),
-    v: z.enum(["serve", "proximo", "nao_serve"]),
+    v: z.enum(["serve", "avulso", "proximo", "nao_serve"]),
   })).max(MAX_CANDIDATOS_JUIZ),
 });
 

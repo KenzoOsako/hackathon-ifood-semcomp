@@ -32,7 +32,8 @@ export function AgentScreen() {
   if (g.busy && g.state !== "speaking") orbState = "thinking";
   const conversou = g.lines.length > 1;
   const lastReply = [...g.lines].reverse().find((l) => l.from === "agente")?.text ?? "";
-  const shown = g.unclear ? `Não entendi bem: "${g.unclear}"` : orbState === "thinking" ? "Pensando…" : orbState === "listening" ? "Ouvindo…" : lastReply;
+  // Com opções na tela a transcrição some: só o estado (Ouvindo/Pensando). O texto segue para leitor de tela (sr-only).
+  const shown = g.unclear ? `Não entendi bem: "${g.unclear}"` : orbState === "thinking" ? "Pensando…" : orbState === "listening" ? "Ouvindo…" : hasView ? "" : lastReply;
   const simulado = g.dados !== "real";
   const adjust = () => inputRef.current?.focus();
 
@@ -86,7 +87,7 @@ export function AgentScreen() {
         </div>
 
         <footer className="relative px-3 pb-3">
-          {conversou && !compact && (
+          {conversou && !compact && !hasView && (
             <>
               <Button variant="ghost" size="sm" aria-expanded={showLog} aria-controls="conversa" onClick={() => setShowLog((v) => !v)}>
                 {showLog ? <ChevronDown /> : <ChevronUp />}

@@ -144,6 +144,8 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   tempos.interpretarMs = Math.round(now() - t0);
   const antes = turno.necessidades.length;
   turno = higienizarTurno(turno); // o que o modelo disse nunca entra sujo em nenhum caminho
+  // O que a pessoa DISSE nesta fala é pedido dela, não sugestão do Guide, mesmo que o modelo o marque como inferido.
+  turno = { ...turno, necessidades: turno.necessidades.map((n) => (n.fonte === "inferido" && ditoNaFala(n, texto) ? { ...n, fonte: "dito" as const } : n)) };
   if (turno.necessidades.length < antes) anotar(s, "higiene:necessidade_removida");
 
   // Confiança média: confirmar o entendido antes de agir. Não conta no teto de perguntas. Um complemento
@@ -264,6 +266,7 @@ async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turn
 const COMIDA = (n: Necessidade) => n.vertical !== "SHOPPING";
 const ordenarStrings = (lista: string[]) => [...lista].sort((a, b) => a.localeCompare(b));
 const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), ordenarStrings(n.restricoes), n.orcamento ?? null, n.fonte ?? "dito", ordenarStrings((n.consultas ?? []).map(norm))])]);
+const ditoNaFala = (n: Necessidade, textoNorm: string) => { const k = chave(n); return k.length >= 4 && textoNorm.includes(k.slice(0, Math.max(4, k.length - 2))); };
 const chave = (n: Necessidade) => norm(n.categoria).split(" ")[0];
 const NAO_SUGERIR = /cerveja|vinho|vodka|whisky|cachaca|alcool|destilad|remedio|medic|farmacia/;
 
@@ -275,6 +278,7 @@ function aplicarSugestoes(s: AgentSession, lista: Necessidade[]): Necessidade[] 
   const novas = lista.map((n) => ({ ...n }));
   const agora = new Set(novas.map(chave));
   for (const n of s.necessidades) if (n.fonte === "inferido" && !agora.has(chave(n)) && !s.recusadas.includes(chave(n))) s.recusadas.push(chave(n));
+  // O que a pessoa pediu nunca é rebaixado a sugestão pelo modelo num turno seguinte.
   for (const n of novas) if (n.fonte === "inferido" && anteriores.has(chave(n)) && anteriores.get(chave(n))!.fonte !== "inferido") n.fonte = "dito";
   return novas.filter((n) => n.fonte !== "inferido" || !(s.recusadas.includes(chave(n)) || NAO_SUGERIR.test(norm(n.categoria))));
 }

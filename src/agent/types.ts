@@ -116,7 +116,8 @@ export type EventoFeedback =
   | { tipo: "friccao"; perguntas: number; nivel: Nivel; turnos: number };
 
 // Relevância: o que a busca devolveu serve para o que foi pedido? (src/agent/relevancia.ts)
-export type Veredito = "serve" | "proximo" | "nao_serve";
+// "avulso": é o produto, mas só uma parte (fatia, mini, adicional, porção pequena): só vale se não houver o item completo.
+export type Veredito = "serve" | "avulso" | "proximo" | "nao_serve";
 export interface CandidatoJulgado { ref: string; item: string; loja?: string }
 export interface RelevancePort {
   julgar(n: Necessidade, candidatos: CandidatoJulgado[]): Promise<Map<string, Veredito>>;

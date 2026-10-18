@@ -40,10 +40,10 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mt-1 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-4 pt-4">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="font-display text-2xl font-semibold">Seu plano</h2>
+          <h2 className="font-display text-xl font-semibold">Seu plano</h2>
           <span className="shrink-0 text-xs text-muted-foreground">versão {plano.versao}{atualizado && " · atualizado"}</span>
         </div>
-        <ul className="mt-2 flex flex-col gap-3">
+        <ul className="mt-1 flex flex-col gap-1.5">
           {plano.blocos.map((b, i) => {
             const { option, tag } = paraOption(b.principal);
             return (
@@ -55,7 +55,7 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
                   <span className="ml-auto"><Origem origem={b.principal.origem} /></span>
                 </div>
                 {/* Sem "Selecionar": trocar de alternativa tocando fica para depois; ajustar é falar ou digitar. */}
-                <ResultCard option={option} tag={tag} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
+                <ResultCard option={option} tag={tag} fotoUrl={b.principal.imagemUrl} logoUrl={b.principal.logoUrl} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
                   onToggle={() => setAberto(aberto === b.necessidadeId ? null : b.necessidadeId)} onAdjust={onAdjust} />
               </motion.li>
             );
