@@ -124,6 +124,8 @@ Ordem combinada: **medir antes de otimizar**.
 - Cuidados para o `McpDomain`: filtrar `isOpen` e loja com método de entrega; "presente" é amplo e ruidoso (pede pergunta ou termo mais específico); combos com `optionGroups` obrigatórios viram pendência; nota vem como float (arredondar); `agentHints` do servidor são texto para modelo, não instrução para o nosso código.
 - Teste feito com script isolado (fora do repo); amostras de catálogo guardadas localmente para montar o adaptador.
 
+> **18/10 ~01h30:** o próximo passo é o Guide nas telas do Malveste. Plano: `docs/PLANO_TELA_GUIDE.md` (fonte: storyboard "Jornada do Guide").
+
 ## Plano seguinte: Gemini, inferência e cenários com MCP (17/10 ~23h30, Hyago)
 
 ### Onde estamos
