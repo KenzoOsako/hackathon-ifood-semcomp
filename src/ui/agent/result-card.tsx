@@ -1,7 +1,9 @@
+import Image from "next/image";
 import { BadgeCheck, Clock, Heart, History, MapPin, Sparkles, Star, Tag, Wallet, Zap, type LucideIcon } from "lucide-react";
 import type { Option, OptionLabel, Reason } from "@/contracts";
 import { Button } from "@/ui/components/button";
 import { StoreLogo } from "@/ui/components/store-logo";
+import { mockMediaFor } from "@/ui/lib/mock-media";
 import { cn } from "@/ui/lib/utils";
 import { fromReais } from "./format";
 
@@ -46,6 +48,7 @@ export function ResultCard({ option, expanded, disabled, onToggle, onSelect, onA
   const panelId = `acoes-${c.itemId}`;
   const free = c.deliveryFee === 0;
   const rating = c.rating?.toFixed(1).replace(".", ",");
+  const media = mockMediaFor(c.merchantId);
 
   return (
     <div className={cn("min-w-0 rounded-2xl transition-colors", expanded && "bg-accent/40")}>
@@ -58,7 +61,7 @@ export function ResultCard({ option, expanded, disabled, onToggle, onSelect, onA
         className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left"
       >
         {/* Sem logos reais na demo: ícone neutro com cor estável por loja (o contrato ainda não traz a categoria). */}
-        <StoreLogo seed={c.merchantId} shape="square" className="size-[72px]" />
+        <StoreLogo seed={c.merchantId} shape="square" imageSrc={media?.logo} className="size-[72px]" />
         <span className="min-w-0 flex-1">
           {/* A tag vem do rótulo da opção (como "Mais Pedido" no iFood). */}
           <span className="mb-1 inline-block rounded-md bg-accent px-1.5 py-0.5 text-xs font-medium text-accent-foreground">{title}</span>
@@ -92,8 +95,15 @@ export function ResultCard({ option, expanded, disabled, onToggle, onSelect, onA
             })}
           </span>
         </span>
-        {/* Favorito é só cenário (como no iFood): não é focável e não faz nada. */}
-        <Heart className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+        {/* Com foto do produto (mock), ela ocupa o lugar do coração; sem foto, o favorito é só cenário
+            (como no iFood): não é focável e não faz nada. */}
+        {media ? (
+          <span aria-hidden="true" className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border">
+            <Image src={media.photo} alt="" fill sizes="64px" className="object-cover" />
+          </span>
+        ) : (
+          <Heart className="size-6 shrink-0 text-muted-foreground" aria-hidden="true" />
+        )}
       </button>
 
       {expanded && (

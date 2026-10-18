@@ -282,8 +282,9 @@ export function parseSearchIntentFromText(
   hardBudgetBrl?: number;
   allergies: string[];
 } {
+  // "aniversario", "bolo", "rosa" e "presente" existem só para o exemplo da demo no mock (bolo e rosa como alternativas).
   const foodQuery =
-    ["hamburguer", "pizza", "sushi", "acai", "lanche"].find((f) => normalizedText.includes(f)) ??
+    ["hamburguer", "pizza", "sushi", "acai", "lanche", "aniversario", "bolo", "rosa", "presente"].find((f) => normalizedText.includes(f)) ??
     (normalizedText.includes("fome") ? "hamburguer" : rawText);
 
   const budgetMatch = normalizedText.match(/ate\s*r?\$?\s*(\d+(?:[.,]\d{1,2})?)/)?.[1];
