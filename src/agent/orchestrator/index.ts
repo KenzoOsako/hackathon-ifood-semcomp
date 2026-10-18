@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
 import { PROIBIDO, falaDoPlanoValida, falaMinima, falaSegura, higienizarTurno, limparNome, sanearPlano } from "../guardas-fala";
 import { criarRelevancia } from "../relevancia";
+import { codigoDaSessao, contar, registrarFeedback, registrarTurno } from "../telemetria";
 import { ALTERNATIVAS, FRASES, GENERICAS, LIMIARES_CONFIANCA } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
 import { temDadoPessoal } from "../privacidade";
@@ -93,7 +94,10 @@ function pressaPelaVoz(s: AgentSession, input: ConverseInput): boolean {
 }
 
 // Telemetria nunca derruba o turno nem deixa estado pela metade.
+const anotar = (s: AgentSession, motivo: string) => { (s.guardas ??= []).push(motivo); };
+
 function evento(deps: Deps, s: AgentSession, e: EventoFeedback) {
+  try { registrarFeedback(e); } catch { /* telemetria nunca derruba o turno */ }
   void deps.domain.registrarEvento(s.subjectRef, e).catch(() => undefined);
 }
 
@@ -132,10 +136,13 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
     // Saída inválida ou falha do provedor: frase curta, nada inventado, nível intacto.
     tempos.interpretarMs = Math.round(now() - t0);
     console.warn(`[agente] interpretar falhou em ${tempos.interpretarMs}ms: ${motivoFalha(error)}`);
+    anotar(s, "modelo:interpretar_falhou");
     return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
   }
   tempos.interpretarMs = Math.round(now() - t0);
+  const antes = turno.necessidades.length;
   turno = higienizarTurno(turno); // o que o modelo disse nunca entra sujo em nenhum caminho
+  if (turno.necessidades.length < antes) anotar(s, "higiene:necessidade_removida");
 
   // Confiança média: confirmar o entendido antes de agir. Não conta no teto de perguntas. Um complemento
   // ouvido com confiança média também é confirmado; o "sim" puro que encerra a confirmação não chega aqui.
@@ -148,6 +155,7 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
 }
 
 function despachar(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, texto: string, pressa: boolean, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> | AgentReply {
+  s.ultimaIntencao = turno.intencao;
   if (pressa) s.nivel = "L0";
   if (turno.intencao !== "incerto") s.confirmacoesSeguidas = 0;
 
@@ -288,6 +296,7 @@ async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: 
     plano = sanearPlano(await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens }));
   } catch {
     tempos.dominioMs = Math.round(now() - td);
+    anotar(s, "dominio:falhou");
     return fechar(s, input, deps, { resposta: FRASES.erroFerramenta }, tempos, t0);
   }
   tempos.dominioMs = Math.round(now() - td);
@@ -301,7 +310,7 @@ async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: 
   s.plano = plano; s.estado = "S3"; s.encaminhado = false;
   evento(deps, s, { tipo: "opcoes_exibidas", planoId: plano.planoId, versao: plano.versao, blocos: plano.blocos.length, origem: plano.origem });
   evento(deps, s, { tipo: "friccao", perguntas: s.perguntasFeitas, nivel: s.nivel ?? "L1", turnos: s.turnos });
-  const resposta = await falar(deps, { plano, assumido: turno.assumido }, tempos);
+  const resposta = await falar(deps, { plano, assumido: turno.assumido }, tempos, s);
   return fechar(s, input, deps, { resposta, fraseEspera: FRASES.espera, tela: { tipo: "mostrar_plano", plano } }, tempos, t0);
 }
 
@@ -323,30 +332,33 @@ async function ajustar(s: AgentSession, input: ConverseInput, deps: Deps, turno:
   // Nova versão invalida qualquer encaminhamento/aprovação anterior.
   s.plano = plano; s.estado = "S4"; s.encaminhado = false;
   evento(deps, s, { tipo: "reacao", planoId: plano.planoId, reacao: "ajustou", motivo: turno.ajuste!.criterio });
-  const resposta = await falar(deps, { plano, mudou, assumido: [] }, tempos);
+  const resposta = await falar(deps, { plano, mudou, assumido: [] }, tempos, s);
   return fechar(s, input, deps, { resposta, fraseEspera: FRASES.espera, tela: { tipo: "plano_atualizado", plano } }, tempos, t0);
 }
 
-async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }, tempos: AgentReply["tempos"]): Promise<string> {
+async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }, tempos: AgentReply["tempos"], s: AgentSession): Promise<string> {
   const now = deps.now ?? (() => performance.now());
   const tr = now();
   try {
     const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder(input, signal));
     // A fala do LLM só vale vinculada aos fatos do plano (guardas-fala.ts); senão, o template.
-    if (!falaDoPlanoValida(fala ?? "", input.plano).ok) return seguraOuTemplate(input);
+    const v = falaDoPlanoValida(fala ?? "", input.plano, deps.nome ? [deps.nome] : []);
+    if (!v.ok) { anotar(s, `plano:${v.motivo}`); return seguraOuTemplate(input, s); }
     return fala;
   } catch {
-    return seguraOuTemplate(input);
+    anotar(s, "modelo:responder_falhou");
+    return seguraOuTemplate(input, s);
   } finally {
     tempos.responderMs = Math.round(now() - tr);
   }
 }
 
 // O template também passa pela guarda: se nem ele serve (plano estranho), a fala é a mais simples e verdadeira possível.
-function seguraOuTemplate(input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }): string {
+function seguraOuTemplate(input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }, s: AgentSession): string {
   const t = respostaTemplate(input);
   const v = falaDoPlanoValida(t, input.plano);
   if (!v.ok && process.env.CAOS_DEBUG) console.info(`[caos] template inválido: ${v.motivo} :: ${t.slice(0, 300)}`);
+  if (!v.ok) anotar(s, "fala_minima");
   return v.ok ? t : falaMinima(input.plano);
 }
 
@@ -371,11 +383,21 @@ function fechar(s: AgentSession, input: ConverseInput, deps: Deps, out: Pick<Age
   // Anti-repetição só para a fala do plano: perguntas e erros podem ser repetidos legitimamente.
   if (resposta === s.ultimaFala && s.plano && out.tela && resposta !== FRASES.jaEncaminhado) resposta = FRASES.jaEncaminhado;
   // Nunca a mesma resposta duas vezes seguidas: a repetição vira outra forma de dizer, que leva a pessoa adiante.
-  if (resposta === s.ultimaFala) resposta = variar(resposta, s.ultimaFala);
+  if (resposta === s.ultimaFala) { resposta = variar(resposta, s.ultimaFala); anotar(s, "repeticao_evitada"); }
   s.ultimaFala = resposta;
   s.history.push({ role: "user", text: input.texto }, { role: "agent", text: resposta });
   if (s.history.length > HISTORICO) s.history.splice(0, s.history.length - HISTORICO);
   tempos.totalMs = Math.round(now() - t0);
+  try {
+    const plano = out.tela?.plano ?? s.plano;
+    registrarTurno({
+      em: Date.now(), sessao: codigoDaSessao(s.subjectRef), turno: s.turnos, intencao: s.ultimaIntencao, nivel: s.nivel ?? "L1", estado: s.estado, llm: deps.llm.nome,
+      origem: s.plano?.origem ?? "simulado", necessidades: s.necessidades.map((n) => n.categoria).slice(0, 8), blocos: plano?.blocos.length ?? 0,
+      proximas: plano?.blocos.filter((b) => b.cobertura === "proxima").length ?? 0, naoAtendidas: out.tela ? plano?.naoAtendidas.map((n) => n.categoria) ?? [] : [],
+      guardas: s.guardas ?? [], perguntou: resposta.trim().endsWith("?") && s.estado === "S2", tempos: { ...tempos },
+    });
+  } catch { /* telemetria nunca derruba o turno */ }
+  s.guardas = []; s.ultimaIntencao = undefined;
   const nivel: Nivel = s.nivel ?? "L1";
   return { estado: s.estado, nivel, resposta, ...(out.fraseEspera ? { fraseEspera: out.fraseEspera } : {}), ...(out.tela ? { tela: out.tela } : {}), ...(out.aprovacao ? { aprovacao: out.aprovacao } : {}), origem: s.plano?.origem ?? "simulado", llm: deps.llm.nome, tempos };
 }

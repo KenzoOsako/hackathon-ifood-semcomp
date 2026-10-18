@@ -5,6 +5,7 @@
 //     (pedido de uma palavra só, sinônimo, categoria que o catálogo nomeia diferente).
 // Se o juiz falhar ou demorar, vale a camada léxica e a conversa segue. Sem veredito "serve", o agente diz que não achou.
 import { MAX_CANDIDATOS_JUIZ, TIMEOUT_JUIZ_MS } from "./limites";
+import { contar } from "./telemetria";
 import type { CandidatoJulgado, LlmPort, Necessidade, RelevancePort, Veredito } from "./types";
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -91,6 +92,7 @@ export function criarRelevancia(llm: Pick<LlmPort, "julgar">, opts: { timeoutMs?
         // O que o juiz não comentou (ou comentou fora do formato) cai no veredito léxico.
         return new Map(candidatos.map((c) => [c.ref, dito[c.ref] ?? lexico.get(c.ref)!]));
       } catch {
+        contar("juiz:falhou");
         return aposFalhaDoJuiz(lexico);
       }
     },

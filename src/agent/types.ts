@@ -146,7 +146,9 @@ export interface AgentSession {
   necessidades: Necessidade[];
   plano?: PlanoSnapshot;
   recusadas: string[];    // categorias sugeridas que o usuário recusou; não voltam na sessão
-  nomeUsado?: boolean;    // o Guide já chamou a pessoa pelo nome no encaminhamento (uma vez por sessão)
+  nomeUsado?: boolean;
+  ultimaIntencao?: string; // para a telemetria
+  guardas?: string[];      // guardas que dispararam NESTE turno (telemetria); limpo ao fechar o turno    // o Guide já chamou a pessoa pelo nome no encaminhamento (uma vez por sessão)
   // Turno entendido com confiança média do STT: espera "sim" antes de buscar, ajustar ou aprovar.
   confirmacaoPendente?: { turno: TurnoInterpretado; texto: string; pressa: boolean };
 }

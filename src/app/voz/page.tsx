@@ -24,6 +24,14 @@ async function exportRounds(rounds: GuideRound[], stats: GuideStats, skipFirst: 
 export default function VozLab() {
   const g = useGuideVoice();
   const [input, setInput] = useState("");
+  const [tele, setTele] = useState<unknown>(null);
+  // Observabilidade do agente (resumo e guardas acionadas). Precisa de TELEMETRIA=1 no .env; sem texto do usuário.
+  const carregarTele = async () => {
+    try {
+      const r = await fetch("/api/telemetria");
+      setTele(r.ok ? ((await r.json()) as { resumo: unknown }).resumo : { erro: `HTTP ${r.status}: defina TELEMETRIA=1 no .env e reinicie o servidor` });
+    } catch { setTele({ erro: "sem resposta do servidor" }); }
+  };
 
   return (
     <main style={{ boxSizing: "border-box", width: "100%", height: "100%", overflowY: "auto", overflowX: "hidden", padding: 16, fontFamily: "system-ui, sans-serif", background: "#fff", color: "#111", colorScheme: "light" }}>
@@ -166,6 +174,13 @@ export default function VozLab() {
           <div><small>Vermelho = acima da meta; confiança em âmbar = abaixo de 0,85 (faixa em que o agente deve confirmar). Com menos de 5 rodadas o p95 é só indicativo.</small></div>
         </details>
       )}
+
+      <details style={{ marginTop: 16, color: "#444" }}>
+        <summary>Telemetria do agente (guardas acionadas, tempos, demanda não atendida)</summary>
+        <p><button type="button" onClick={() => void carregarTele()} style={smallButton}>Atualizar</button></p>
+        {tele !== null && <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f7f7f7", color: "#111", padding: 12, borderRadius: 8, overflow: "auto", fontSize: 12 }}>{JSON.stringify(tele, null, 2)}</pre>}
+        <small>Cada guarda acionada é um erro do modelo que o código segurou. Taxa de template alta = ajustar prompt ou modelo.</small>
+      </details>
 
       {g.utterance && (
         <details open style={{ marginTop: 16, color: "#444" }}>
