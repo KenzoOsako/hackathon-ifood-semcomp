@@ -59,7 +59,11 @@ async function callScribe(audio: Uint8Array, mime: string, cfg: SttConfig, keyte
   } catch {
     throw new SttError("PROVIDER");
   }
-  if (!res.ok) throw new SttError("PROVIDER");
+  if (!res.ok) {
+    // Só o status (nunca o corpo nem o áudio): para saber, no log do servidor, por que o provedor recusou.
+    console.warn(`[stt] provedor respondeu ${res.status} (palavras-chave: ${keyterms.length})`);
+    throw new SttError("PROVIDER");
+  }
   try {
     return (await res.json()) as ScribeResponse;
   } catch {
@@ -74,7 +78,14 @@ export async function transcribe(audio: Uint8Array, mime: string, cfg: SttConfig
   } catch {
     throw new SttError("BUDGET");
   }
-  let data = await callScribe(audio, mime, cfg, keyterms, signal);
+  let data: ScribeResponse;
+  try {
+    data = await callScribe(audio, mime, cfg, keyterms, signal);
+  } catch (error) {
+    // O provedor pode recusar as palavras-chave (limites que mudam); sem elas a fala ainda é reconhecida.
+    if (!(error instanceof SttError) || error.code !== "PROVIDER" || keyterms.length === 0 || signal?.aborted) throw error;
+    data = await callScribe(audio, mime, cfg, [], signal);
+  }
   // Medido na bateria de 17/10: com palavras-chave, uma fala saiu VAZIA e sem elas saiu certa. Tenta uma vez sem.
   if (!(data.text ?? "").trim() && keyterms.length > 0) data = await callScribe(audio, mime, cfg, [], signal);
   if (data.audio_duration_secs) recordStt(data.audio_duration_secs);
