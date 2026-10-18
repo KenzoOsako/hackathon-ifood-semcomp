@@ -38,6 +38,12 @@ const after = (fn: () => void, ms: number) => {
 };
 
 export function useGuideVoice() {
+  const [consentimentoSinais, setParticipacao] = useState(false);
+  const participacao = useRef(false);
+  const setConsentimentoSinais = useCallback((valor: boolean) => {
+    participacao.current = valor;
+    setParticipacao(valor);
+  }, []);
   const [lines, setLines] = useState<GuideLine[]>([{ id: "init", from: "agente", text: GREETING }]);
   const [screen, setScreen] = useState<GuideScreen | null>(null);
   const [login, setLogin] = useState<{ url: string } | null>(null);
@@ -103,7 +109,7 @@ export function useGuideVoice() {
     const patch = (p: Partial<TurnLog>) => setTurns((all) => all.map((t) => (t.id === turnId ? { ...t, ...p } : t)));
     setTurns((all) => [...all, { id: turnId, usuario: texto, origem, ...(sinais?.confianca !== undefined ? { confianca: sinais.confianca } : {}) }]);
     try {
-      await runTurn({ texto, origem, sinais, ...(configuracao ? { configuracao } : {}) }, ctl, {
+      await runTurn({ texto, origem, sinais, consentimentoSinais: participacao.current, ...(configuracao ? { configuracao } : {}) }, ctl, {
         onAgentText: (text) => { patch({ resposta: text }); setLines((l) => [...l, { id: nextId("a"), from: "agente", text }]); },
         onMeta: (meta) => patch({ meta }),
         onScreen: (event, payload) => { terms.current = termsFromPlan(payload); setScreen({ event, payload }); },
@@ -171,5 +177,5 @@ export function useGuideVoice() {
   // Fala a saudação (o navegador só deixa tocar áudio depois de um gesto da pessoa: chame num clique).
   const falarSaudacao = () => voice.enqueue(greeting);
 
-  return { ...voice, stopSpeaking, nome, greeting, falarSaudacao, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
+  return { ...voice, consentimentoSinais, setConsentimentoSinais, stopSpeaking, nome, greeting, falarSaudacao, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
 }

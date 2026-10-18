@@ -1,6 +1,6 @@
 # src/data — Eventos de feedback, consentimento e armazenamento
 
-**Dono:** Kenzo. **Status:** não implementado.
+**Dono:** Kenzo. **Status:** parcial — sinais de demanda em `sinais.ts` (consentimento opcional por turno e rótulos fechados, ver D-020), `/api/sinais` e `/painel` (18/10, Malveste). Eventos `reacao` e `friccao` ainda não.
 
 **Responsabilidade:** estruturar o que a conversa produz e devolver **agregados** que o painel do iFood mostra.
 

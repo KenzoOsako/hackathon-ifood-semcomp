@@ -38,7 +38,7 @@ export interface TurnDeps {
   signal?: AbortSignal;
 }
 
-export type TurnInput = Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses" | "configuracao">;
+export type TurnInput = Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses" | "configuracao" | "consentimentoSinais">;
 
 export async function runTurn(input: TurnInput, ctl: TurnCtl, handlers: TurnHandlers, deps: TurnDeps): Promise<void> {
   const converse = deps.converse ?? converseTurn;
