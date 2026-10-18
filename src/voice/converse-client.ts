@@ -23,9 +23,12 @@ export function replyToEvents(reply: ReplyLike, turnId: string): ConverseEvent[]
 
 const GENERIC_ERROR = "Não consegui responder agora. Pode tentar de novo?";
 
-function errorEvent(code: string, reply?: unknown): ConverseEvent {
+// Só caminho relativo do próprio app ("/api/auth/login"); URL externa ou "//host" nunca vira link.
+const SAFE_LOGIN = /^\/(?!\/)[\w\-./?=&%]{0,199}$/;
+
+function errorEvent(code: string, reply?: unknown, loginUrl?: unknown): ConverseEvent {
   const text = typeof reply === "string" && reply.trim() ? reply.trim().slice(0, 300) : GENERIC_ERROR;
-  return { type: "error", code: code.slice(0, 40) || "ERRO", reply: text };
+  return { type: "error", code: code.slice(0, 40) || "ERRO", reply: text, ...(typeof loginUrl === "string" && SAFE_LOGIN.test(loginUrl) ? { loginUrl } : {}) };
 }
 
 export interface ConverseOptions {
@@ -59,9 +62,9 @@ export async function* converseTurn(input: Pick<ConverseInput, "texto" | "origem
 
   let body: unknown;
   try { body = await res.json(); } catch { yield errorEvent("RESPOSTA_INVALIDA"); return; }
-  const b = (body ?? {}) as Partial<AgentReply> & { code?: string; reply?: string; state?: string };
+  const b = (body ?? {}) as Partial<AgentReply> & { code?: string; reply?: string; state?: string; loginUrl?: string };
   if (!res.ok || b.state === "FALHA" || typeof b.resposta !== "string" || !b.resposta.trim()) {
-    yield errorEvent(b.code ?? `HTTP_${res.status}`, b.reply);
+    yield errorEvent(b.code ?? `HTTP_${res.status}`, b.reply, b.loginUrl);
     return;
   }
   yield* replyToEvents({ resposta: b.resposta, fraseEspera: b.fraseEspera, tela: b.tela }, turnId);
