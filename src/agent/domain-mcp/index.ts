@@ -7,6 +7,7 @@ import { brlToMoney } from "@/mcp/costs";
 import { normalizeCandidate, type NormalizedCandidate } from "@/mcp/normalize-candidate";
 import { compareEligibleCandidates } from "@/reco/rank-eligible";
 import { filterEligibleCandidates, type CandidateEligibilityResult } from "@/reco/eligibility";
+import { soOsEspecificos } from "../especificidade";
 import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
 
 // Porta mínima para o cliente MCP: o domínio não conhece transporte nem token.
@@ -144,7 +145,7 @@ export class McpDomain implements DomainPort {
       .filter((e) => e.candidate.available !== false)
       .sort((a: CandidateEligibilityResult, b: CandidateEligibilityResult) => compareEligibleCandidates(a, b))
       .slice(0, MAX_CANDIDATOS);
-    const candidatos: Candidato[] = elegiveis.map((e) => {
+    const todos: Candidato[] = elegiveis.map((e) => {
       const c = porId.get(e.candidate.itemId)!;
       const prazo = c.base.prazoMin;
       return {
@@ -157,6 +158,8 @@ export class McpDomain implements DomainPort {
         },
       };
     });
+    // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
+    const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
     // A primeira continua sendo a do ranking do domínio (custo, depois nota e prazo); o rótulo diz em que ela ganha.
     const opcoes = candidatos.map((c, i) => rotular(c, candidatos, i === 0 ? "mais_barata" : undefined));
     this.ultimaBusca.set(n.id, candidatos.map((c, i) => ({ ...c, opcao: opcoes[i] })));
@@ -219,7 +222,7 @@ function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { n
       continue;
     }
     const quantidade = quantidadePara(n, ocasiao);
-    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade, principal: principal.opcao, alternativas: resto.slice(0, 2).map((c) => c.opcao) });
+    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade, principal: principal.opcao, alternativas: resto.slice(0, 2).map((c) => c.opcao), ...(n.fonte === "inferido" ? { sugestao: true } : {}) });
     if (principal.minimoCents && principal.precoCents * quantidade < principal.minimoCents) {
       pendencias.push(`${principal.opcao.loja} tem pedido mínimo de ${reais(principal.minimoCents)}`);
     }

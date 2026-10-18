@@ -34,3 +34,8 @@ _(nenhum ainda)_
 - Sintoma: com `LLM_PROVIDER=google`, todas as evals falharam igual em ~600 ms, para qualquer modelo; o orquestrador devolvia a frase de falha.
 - Causa: o Gemini rejeita `exclusiveMinimum` no `response_schema` (gerado por `z.number().positive()`); o erro some no `catch` do orquestrador. Depois apareceram 429 da cota gratuita (~15 chamadas/min) e `gemini-2.5-flash` indisponível para chaves novas.
 - Correção: usar `min(...)` em vez de `positive()`/`gt()` nos schemas que vão ao LLM. Para depurar, envolver `llm.interpretar` e registrar o erro do provedor antes de concluir que é prompt ou modelo. Rodar evals reais em ritmo ou por cenário (`-t`).
+
+## E-007 — Gemini "dispara" num campo de texto curto e derruba o turno (18/10/2026)
+- Sintoma: no cenário do filho gripado, o 2º turno ("Pode escolher.") respondia "Não consegui entender" em ~2,7 s ou estourava o timeout de 8 s, nas 2 rodadas.
+- Causa: o `gemini-3.5-flash-lite` escreveu uma frase sem espaços de ~250 letras em `ocasiao.tipo` (campo de enfeite, máx. 60). A validação estrita recusava a resposta inteira; quando o modelo seguia escrevendo, o turno estourava o tempo.
+- Correção: `.describe()` nos campos curtos (vai ao modelo junto com o schema), teto de saída de 600 tokens e `includeRaw` com saneamento (`src/agent/llm/sanear.ts`) que descarta só campos opcionais fora do formato; necessidades e restrições seguem validadas à risca. O orquestrador passa a registrar o tipo da falha (sem conteúdo). Resultado: o cenário passou nas 2 rodadas seguintes. Uma falha intermitente no churrasco não se repetiu em 3 tentativas e ficou sem causa conhecida.

@@ -46,6 +46,24 @@ Itens originais da Fase 0:
 
 O que cada um testa sozinho: Felipe com o agente por regras ou o JSON gravado; Hyago com `/api/converse` direto (texto + `sinais` simulados) e as evals.
 
+### Fase 1 do Hyago: passos e critério de sucesso (18/10 ~01h30)
+Ordem pensada para medir antes de mexer e deixar o mais arriscado (LLM) por último. H1 (`frases.ts`) já entrou no PR #22.
+
+| # | Passo | Pronto quando (verificável) | Tempo |
+|---|---|---|---|
+| H2 | **Medição do backend**: script que roda a jornada do aniversário N vezes contra o servidor, descarta o 1º turno e calcula p50/p95 de `interpretar`, `dominio`, `responder` e `total` | Com Gemini + MCP real em `next start -p 8080`, 5 rodadas geram uma tabela p50/p95 por etapa, registrada no `estado-atual.md` como linha de base | ~40 min |
+| H3 | **Pressa por sinais** | Testes: `interrompeu` sem pergunta pendente → L0 e nenhuma pergunta; "sim"/"pode" (1 palavra) respondendo a uma pergunta → **não** vira L0; a regex de pressa continua valendo; evals por regras sem regressão | ~30 min |
+| H4 | **Confirmação por confiança** | Testes: `confianca` 0,72 num pedido → o Guide confirma o que entendeu e **não** chama o domínio; "sim" em seguida → busca; a confirmação não conta no teto de 3 perguntas; ≥ 0,85 ou ausente → fluxo normal; < 0,6 (se chegar) → pede para repetir, sem LLM | ~40 min |
+| H5 | **Privacidade da fala** | Testes: resposta do LLM com telefone, CEP ou endereço com número → cai no texto pronto; preço ("R$ 39,90"), tempo ("25 min") e distância ("1,2 km") **não** disparam | ~30 min |
+| H6 | **Inferência rotulada** | `Necessidade.fonte` = `dito`/`inferido`; no máximo 2 inferidas; a fala chama de "sugestão"; recusada não volta na sessão; aceita vira `dito`; nunca contraria restrição dita. C6 passa com Gemini em 3 de 3 rodadas; evals reais sem regressão nos outros cenários | ~1h30 |
+| — | **Fechamento** | `typecheck`, `lint`, `test`, `build` verdes; evals reais rodadas em ritmo; `estado-atual.md` com os números; PR aberto | ~20 min |
+
+**Status 18/10 ~03h (branch `feat/hyago-agente-fase1`):** H2 a H6 implementados e testados offline (308 testes). Decisão do Hyago: sugestões **sem cota própria** (o teto é o do plano, 5 itens); sugestão não gasta pergunta. Falta: evals com Gemini (em ritmo) e a medição com iFood real (precisa de login).
+
+**Sucesso da Fase 1 como um todo:** o agente decide sozinho quando perguntar, confirmar, sugerir ou ir direto, com teste provando cada regra, e temos a linha de base de tempo do backend para comparar na Fase 2.
+**Cota do Gemini (decisão do Hyago): ficar dentro do limite gratuito.** H3, H4 e H5 são regras em código testadas offline, sem Gemini. H2 e H6 rodam em ritmo de no máximo ~8 chamadas por minuto (cada turno faz 2), com pausa entre turnos no script; uma jornada de 4 turnos leva ~1 min.
+**Depende de:** login iFood no servidor da medição (H2).
+
 ## Fase 2 — Integração e medição (juntos, ~45 min)
 1. Branch local `integ/voz-agente` = `main` + as duas branches da Fase 1 (não vai para o GitHub).
 2. `npm run build && MCP_MODE=real npx next start -p 8080`, login iFood, `/voz`.

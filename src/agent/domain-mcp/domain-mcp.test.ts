@@ -81,11 +81,12 @@ describe("McpDomain com respostas reais gravadas", () => {
     const s = novaSessao("sujeito-real");
     const deps = { llm: new RuleBasedLlm(), domain: new McpDomain(new ToolsGravadas(), local) };
     await executarTurno(s, { texto: "Hoje é aniversário de um amigo, vamos comer pizza em casa e ver um filme.", origem: "texto" }, deps);
-    await executarTurno(s, { texto: "Umas seis.", origem: "texto" }, deps);
+    // Presente sugerido não gasta pergunta: o plano já é falado no 2º turno; o 3º só encaminha.
+    const falado = await executarTurno(s, { texto: "Umas seis.", origem: "texto" }, deps);
     const r = await executarTurno(s, { texto: "Pode escolher.", origem: "texto" }, deps);
     expect(r.origem).toBe("real");
     expect(r.tela?.plano.blocos.map((b) => b.categoria)).toEqual(expect.arrayContaining(["pizza", "pipoca"]));
     expect(r.tela?.plano.naoAtendidas.map((n) => n.categoria)).toContain("presente");
-    expect(r.resposta).toMatch(/Ainda não tenho opção para presente/);
+    expect(falado.resposta).toMatch(/Ainda não tenho opção para presente/);
   });
 });
