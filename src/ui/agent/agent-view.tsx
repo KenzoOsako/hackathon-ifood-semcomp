@@ -134,7 +134,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
                 <div className="mt-2 flex flex-col gap-1"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
               )}
               {!searching && p.view === "options" && (
-                <ul className="mt-2 flex flex-col gap-1">
+                <ul className="mt-2 flex flex-col divide-y divide-border">
                   {p.options.map((option, i) => (
                     <motion.li
                       className="min-w-0"
