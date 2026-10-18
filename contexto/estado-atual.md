@@ -1,3 +1,11 @@
+## Complementos por item e guardas — 18/10/2026 (Kenzo)
+
+- Branch local feat/kenzo-complementos, base origin/main d0a688c. Implementados detalhe getItem, grupos/seleções por item, UI, fluxo texto/voz, recálculo de adicionais, revisão e sacola. Detalhes: docs/COMPLEMENTOS_ITENS.md.
+- Corrigidos aprovação negativa/condicional, versão não explícita, voz de baixa confiança, perda de restrições e ref de outra necessidade. Plano anterior é invalidado por nova restrição; versões não reiniciam nesse caminho. Rascunho não salvo impede revisão e reinicia por planoId/versão.
+- Validação final: lint, typecheck, 424 testes em 48 arquivos e build passaram. git diff --check sem erros de whitespace. Revisões independentes funcional e de segurança realizadas; correções incorporadas, sem vulnerabilidade nova confirmada.
+- Navegador :3002 com Gemini e catálogo simulado: maionese + guardanapo + queijo, salvar v2, revisar e aprovar sacola. R$24,90 + R$4,50 de adicionais + R$4,99 de frete = R$34,39. Screenshot local outputs/complementos-sacola.png (fora do Git). Servidor temporário encerrado.
+- Pendente: consulta getItem autenticada e teste com catálogo real; adapter segue exemplo oficial, payload desconhecido/falha bloqueia aprovação. Composição não confirmada de adicional para restrição é bloqueada e explicada. Sem merge, deploy, carrinho ou pedido remoto. Preparação de PR em andamento; teste autenticado de getItem permanece como gate de aceite real.
+
 ## Imagens reais — validação autenticada em 18/10/2026
 
 - Kenzo: MCP real + Gemini local, fotos/logos oficiais carregados no plano/revisão/sacola; texto e fala “Prefiro a opção mais rápida” verificados. Sacola é simulação e nenhuma compra ocorreu.

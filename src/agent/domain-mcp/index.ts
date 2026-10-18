@@ -11,6 +11,7 @@ import { soOsEspecificos } from "../especificidade";
 import { descricaoDe } from "../descricao";
 import { urlDoIfood } from "../guardas-fala";
 import { MAX_CONSULTAS } from "../limites";
+import { normalizarComplementos } from "../complementos";
 import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
 
 // Porta mínima para o cliente MCP: o domínio não conhece transporte nem token.
@@ -156,6 +157,23 @@ export class McpDomain implements DomainPort {
     private readonly planos: Map<string, PlanoGuardado> = new Map(),
     private readonly eventos: (subjectRef: string, e: EventoFeedback) => void = () => undefined,
   ) {}
+
+  async detalharItem(opcao: OpcaoPlano): Promise<OpcaoPlano> {
+    // IDs são os da opção elegível no plano, nunca um nome ou ID inventado pelo modelo.
+    const [merchantId, itemId, extra] = opcao.ref.split(":");
+    try {
+      if (extra || !itemId || merchantId !== opcao.lojaId) throw new Error("ITEM_INVALIDO");
+      const raw = await this.tools.callTool("getItem", { merchantId, itemId, userLocation: { latitude: this.local.latitude, longitude: this.local.longitude } });
+      const detalhe = raw as { merchantId?: unknown; unitPrice?: unknown; promotionalUnitPrice?: unknown; available?: unknown };
+      if (!detalhe || detalhe.merchantId !== merchantId || detalhe.available === false || typeof detalhe.unitPrice !== "number") throw new Error("DETALHE_INVALIDO");
+      const base = brlToMoney(detalhe.unitPrice).cents;
+      const promo = detalhe.promotionalUnitPrice == null ? base : typeof detalhe.promotionalUnitPrice === "number" ? brlToMoney(detalhe.promotionalUnitPrice).cents : NaN;
+      if (!Number.isSafeInteger(promo)) throw new Error("PRECO_INVALIDO");
+      return { ...opcao, precoCents: Math.min(base, promo), complementos: { status: "verificado", grupos: normalizarComplementos(raw, itemId), selecoes: [] } };
+    } catch {
+      return { ...opcao, complementos: { status: "indisponivel", grupos: [], selecoes: [] } };
+    }
+  }
 
   async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);

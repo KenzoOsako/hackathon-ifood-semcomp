@@ -65,7 +65,7 @@ export function AgentScreen() {
       <section aria-label="Resultados" className={cn("flex min-h-0 flex-col overflow-hidden transition-[flex-grow,opacity] duration-500", hasView ? "min-h-[280px] grow opacity-100" : "grow-0 basis-0 opacity-0")}>
         {tela?.tipo === "mostrar_opcoes" && <OpcoesView plano={tela.plano} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />}
         {(tela?.tipo === "mostrar_plano" || tela?.tipo === "plano_atualizado") && (
-          <PlanoView plano={tela.plano} atualizado={tela.tipo === "plano_atualizado"} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />
+          <PlanoView key={`${tela.plano.planoId}-${tela.plano.versao}`} plano={tela.plano} atualizado={tela.tipo === "plano_atualizado"} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />
         )}
         {tela?.tipo === "aguardando_aprovacao" && <RevisaoView plano={tela.plano} busy={g.busy} onSend={g.sendText} onAdjust={adjust} />}
         {tela?.tipo === "sacola" && <SacolaView plano={tela.plano} />}

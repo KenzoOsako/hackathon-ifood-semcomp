@@ -15,6 +15,9 @@ import { fromCents } from "./format";
 import type { OpcaoPlano } from "@/agent/types";
 import { paraOption, porLoja, type PlanoTela } from "./plano-tela";
 import { ResultCard } from "./result-card";
+import type { ConfiguracaoItem } from "@/agent/types";
+import { impedimentosPlano, precoConfigurado } from "@/agent/complementos";
+import { ComplementosItem, ComplementosResumo } from "./complementos-item";
 
 // Frases que os botões mandam. "pode" leva à revisão; só a frase explícita aprova (regra do agente), e ela cita
 // a versão exibida: se o plano mudou no servidor depois, o agente recusa em vez de aprovar a versão nova.
@@ -26,7 +29,7 @@ export const fraseTrocar = (categoria: string, o: OpcaoPlano) => `troca ${catego
 
 const CRITERIO: Record<string, string> = { melhor_avaliada: "melhor avaliadas primeiro", mais_barata: "mais baratas primeiro", mais_rapida: "mais rápidas primeiro" };
 
-type Base = { plano: PlanoTela; busy: boolean; onSend: (texto: string) => void; onAdjust: () => void };
+type Base = { plano: PlanoTela; busy: boolean; onSend: (texto: string, configuracao?: ConfiguracaoItem) => void; onAdjust: () => void };
 
 function Avisos({ plano }: Readonly<{ plano: PlanoTela }>) {
   const avisos = [...plano.naoAtendidas.map((n) => `${n.categoria}: ${n.motivo}`), ...plano.pendencias];
@@ -84,6 +87,8 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
   const reduceMotion = useReducedMotion();
   const [aberto, setAberto] = useState<string | null>(null);
   const [mais, setMais] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState<{ versao: number; itens: string[] }>({ versao: plano.versao, itens: [] });
+  const naoSalvo = rascunho.versao === plano.versao && rascunho.itens.length > 0;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mt-1 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-4 pt-4">
@@ -105,6 +110,7 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
                 {/* A escolhida não tem "Selecionar"; as alternativas sim: tocar troca o item no plano (pelo atendente). */}
                 <ResultCard option={option} tag={tag} media={media} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
                   onToggle={() => setAberto(aberto === b.necessidadeId ? null : b.necessidadeId)} onAdjust={onAdjust} />
+                <ComplementosItem key={`${plano.planoId}-${plano.versao}-${b.principal.ref}`} bloco={b} planoId={plano.planoId} versao={plano.versao} busy={busy || (naoSalvo && !rascunho.itens.includes(b.necessidadeId))} onSend={onSend} onDirtyChange={dirty => setRascunho(atual => ({ versao: plano.versao, itens: [...(atual.versao === plano.versao ? atual.itens : []).filter(id => id !== b.necessidadeId), ...(dirty ? [b.necessidadeId] : [])] }))} />
                 {b.alternativas.length > 0 && (
                   <Button variant="ghost" size="sm" className="ml-1" aria-expanded={mais === b.necessidadeId} onClick={() => setMais(mais === b.necessidadeId ? null : b.necessidadeId)}>
                     {mais === b.necessidadeId ? <ChevronUp /> : <ChevronDown />}
@@ -118,7 +124,7 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
                       return (
                         <li key={o.ref} className="min-w-0">
                           <ResultCard option={alt.option} tag={alt.tag} media={alt.media} first={false} expanded={aberto === o.ref} disabled={busy}
-                            onToggle={() => setAberto(aberto === o.ref ? null : o.ref)} onSelect={() => onSend(fraseTrocar(b.categoria, o))} onAdjust={onAdjust} />
+                            onToggle={() => setAberto(aberto === o.ref ? null : o.ref)} onSelect={naoSalvo ? undefined : () => onSend(fraseTrocar(b.categoria, o))} onAdjust={onAdjust} />
                         </li>
                       );
                     })}
@@ -129,11 +135,12 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
           })}
         </ul>
         <Avisos plano={plano} />
+        {naoSalvo && <p role="status" className="mt-2 text-sm">Salve os complementos alterados antes de revisar o plano.</p>}
         <p className="mt-3 text-center text-xs text-muted-foreground">Preço de cada unidade. O total aparece na sacola; o valor final é o do iFood.</p>
       </div>
       <div className="grid grid-cols-2 gap-2 bg-card px-4 pb-3">
         <Button variant="outline" onClick={onAdjust}>Ajustar</Button>
-        <Button disabled={busy} onClick={() => onSend(FRASE_REVISAR)}>Revisar e aprovar</Button>
+        <Button disabled={busy || naoSalvo || impedimentosPlano(plano).length > 0} onClick={() => onSend(FRASE_REVISAR)}>Revisar e aprovar</Button>
       </div>
     </div>
   );
@@ -154,8 +161,8 @@ export function RevisaoView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
             <ul className="divide-y divide-border">
               {l.itens.map(({ bloco: b }) => (
                 <li key={b.necessidadeId} className="flex justify-between gap-3 p-3 text-sm">
-                  <span className="flex items-center gap-2"><ItemPhoto src={paraOption(b.principal).media.photo} />{b.quantidade}× {b.principal.item}{b.sugestao && <Badge className="ml-2">Sugestão</Badge>}</span>
-                  <span className="font-semibold">{fromCents(b.principal.precoCents)}{b.quantidade > 1 && <span className="font-normal text-muted-foreground"> cada</span>}</span>
+                  <span className="flex items-center gap-2"><ItemPhoto src={paraOption(b.principal).media.photo} /><span>{b.quantidade}× {b.principal.item}<ComplementosResumo bloco={b} /></span>{b.sugestao && <Badge className="ml-2">Sugestão</Badge>}</span>
+                  <span className="font-semibold">{fromCents(precoConfigurado(b.principal))}{b.quantidade > 1 && <span className="font-normal text-muted-foreground"> cada</span>}</span>
                 </li>
               ))}
             </ul>
@@ -168,7 +175,7 @@ export function RevisaoView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
       </main>
       <div className="grid grid-cols-2 gap-2 px-4 pb-3">
         <Button variant="outline" onClick={onAdjust}>Ajustar</Button>
-        <Button disabled={busy} onClick={() => onSend(fraseAprovar(plano.versao))}>Aprovar versão {plano.versao}</Button>
+        <Button disabled={busy || impedimentosPlano(plano).length > 0} onClick={() => onSend(fraseAprovar(plano.versao))}>Aprovar versão {plano.versao}</Button>
       </div>
     </div>
   );
@@ -199,7 +206,7 @@ export function SacolaView({ plano }: Readonly<{ plano: PlanoTela }>) {
             <ul className="divide-y divide-border">
               {l.itens.map((it, i) => (
                 <li key={`${it.ref}-${i}`} className="flex justify-between gap-3 p-3 text-sm">
-                  <span className="flex items-center gap-2"><ItemPhoto src={opcao(l.lojaId, it.ref) ? paraOption(opcao(l.lojaId, it.ref)!).media.photo : undefined} />{it.quantidade}× {it.item}</span>
+                  <span className="flex items-center gap-2"><ItemPhoto src={opcao(l.lojaId, it.ref) ? paraOption(opcao(l.lojaId, it.ref)!).media.photo : undefined} /><span>{it.quantidade}× {it.item}{it.complementos?.length ? <span className="mt-1 block text-xs text-muted-foreground">{it.complementos.join(" · ")}</span> : null}</span></span>
                   <span className="font-semibold">{fromCents(it.subtotalCents)}</span>
                 </li>
               ))}

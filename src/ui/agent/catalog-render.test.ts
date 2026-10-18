@@ -9,7 +9,7 @@ import { RevisaoView, SacolaView } from "./guide-telas";
 const photo = "https://static.ifood-static.com.br/image/upload/t_medium/photo.jpg";
 const logo = "https://static.ifood-static.com.br/image/upload/t_thumbnail/logo.jpg";
 const plano: PlanoSnapshot = { planoId: "p", versao: 1, origem: "real", pendencias: [], naoAtendidas: [], blocos: [
-  { necessidadeId: "n", vertical: "RESTAURANT", categoria: "pizza", quantidade: 1, alternativas: [], principal: { ref: "i", lojaId: "l", loja: "Loja", item: "Pizza", precoCents: 1000, rotulo: "mais barata", motivo: "Preço", origem: "real", imagemUrl: photo, logoUrl: logo } },
+  { necessidadeId: "n", vertical: "RESTAURANT", categoria: "pizza", quantidade: 1, alternativas: [], principal: { ref: "i", lojaId: "l", loja: "Loja", item: "Pizza", precoCents: 1000, rotulo: "mais barata", motivo: "Preço", origem: "real", imagemUrl: photo, logoUrl: logo, complementos: { status: "verificado", grupos: [], selecoes: [] } } },
 ] };
 it("renderiza foto e logo na revisão", () => {
   const html = renderToStaticMarkup(createElement(RevisaoView, { plano, busy: false, onSend() {}, onAdjust() {} }));

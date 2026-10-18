@@ -7,8 +7,9 @@ import { AIMessage, HumanMessage, SystemMessage, ToolMessage, type BaseMessage }
 import { tool } from "@langchain/core/tools";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { z } from "zod";
-import { FRASES } from "../frases";
-import { sanearPlano } from "../guardas-fala";
+import { FRASES, LIMIARES_CONFIANCA } from "../frases";
+import { sanearPlano, limparNome } from "../guardas-fala";
+import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } from "../complementos";
 import { temDadoPessoal } from "../privacidade";
 import { montarSacola } from "../sacola";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, GrupoOpcoes, Necessidade, OpcaoPlano, PlanoSnapshot } from "../types";
@@ -21,7 +22,7 @@ const OPCOES_NA_TELA = 3;     // por busca: a tela é de voz, não um catálogo
 const GRUPOS_NA_TELA = 3;
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const APROVACAO_EXPLICITA = /\b(aprovo|confirmo)( o)? plano\b/;
+const APROVACAO_EXPLICITA = /^(aprovo|confirmo)( o)? plano(?: versao \d+)?$/;
 const VERSAO_CITADA = /\bversao (\d+)\b/;
 const FECHAR = /^(pode|pode fechar|fecha|fechou|fechado|fecha assim|pode ser|isso|isso mesmo|ok|beleza|sim|bora|vamos fechar|quero fechar|fechar)$/;
 const ALCOOL = /cerveja|vinho|vodka|whisky|cacha[cç]a|gin\b|licor|drink|chopp|alco[oó]l/i;
@@ -58,7 +59,7 @@ export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; doma
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
 // grupoDe: cada opção aponta para a lista da busca em que apareceu (as que a pessoa viu juntas na tela).
-type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, OpcaoPlano[]>; resumoBuscas: string[] };
+type Memoria = { opcoes: Map<string, OpcaoPlano>; grupoDe: Map<string, { categoria: string; itens: OpcaoPlano[] }>; resumoBuscas: string[] };
 const g = globalThis as unknown as { __guideAtendente?: Map<string, Memoria> };
 const memorias = (g.__guideAtendente ??= new Map());
 function memoriaDe(subjectRef: string): Memoria {
@@ -73,10 +74,13 @@ const reais = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ","
 const linhaOpcao = (o: OpcaoPlano) => [`ref=${o.ref}`, o.item, `loja ${o.loja}`, reais(o.precoCents), o.nota !== undefined ? `nota ${o.nota}` : "", o.prazo ?? "", o.freteCents !== undefined ? (o.freteCents === 0 ? "frete grátis" : `frete ${reais(o.freteCents)}`) : ""].filter(Boolean).join(" | ");
 
 const VerticalArg = z.enum(["RESTAURANT", "GROCERIES", "SHOPPING"]).describe("RESTAURANT = comida pronta; GROCERIES = mercado; SHOPPING = presente");
+const restricoesArg = z.array(z.string().min(1).max(60)).max(10).optional().describe("Restrições alimentares rígidas explicitamente ditas, como lactose, gluten, amendoim. Nunca remova restrições anteriores.");
 const buscarSchema = z.object({
   categoria: z.string().min(1).max(60).describe("Prato ou produto concreto. Ex.: sushi, pizza margherita, comida árabe, pipoca"),
   consultas: z.array(z.string().min(1).max(80)).max(3).optional().describe("Até 3 termos de busca concretos para o mesmo item (sinônimos). Ex.: sushi → sushi, temaki, combinado"),
   vertical: VerticalArg,
+  restricoes: restricoesArg,
+  orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
   ordenar: z.enum(["relevancia", "melhor_avaliada", "mais_barata", "mais_rapida"]).optional(),
 });
 const mostrarSchema = z.object({
@@ -85,12 +89,16 @@ const mostrarSchema = z.object({
     categoria: z.string().min(1).max(60),
     consultas: z.array(z.string().min(1).max(80)).max(3).optional(),
     vertical: VerticalArg,
+    restricoes: restricoesArg,
+    orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
     ref: z.string().max(200).optional().describe("ref da opção escolhida, vinda de buscar_no_ifood"),
     sugestao: z.boolean().optional().describe("true se foi você quem sugeriu este item, não a pessoa"),
   })).min(1).max(8),
 });
 
+const configurarSchema = z.object({ necessidadeId: z.string(), ref: z.string(), versao: z.number().int().min(1), selecoes: z.array(z.object({ grupoId: z.string(), opcaoId: z.string(), quantidade: z.number().int().min(1).max(99) })).max(100) });
 const ferramentas = [
+  tool(async () => "", { name: "configurar_complementos", description: "Salva as escolhas de complementos do item no plano. Use somente IDs de grupo e opção da situação atual. Não invente escolhas, confirme ambiguidades. Envie a seleção completa do item; array vazio recusa todos os opcionais.", schema: configurarSchema }),
   tool(async () => "", { name: "buscar_no_ifood", description: "Busca no iFood, perto da pessoa e em lojas abertas, opções reais de um prato ou produto. Devolve loja, prato, preço, nota, prazo e frete. Use para descobrir o que existe, comparar ou escolher.", schema: buscarSchema }),
   tool(async () => "", { name: "mostrar_plano", description: "Mostra na tela o plano com os itens decididos (substitui o plano anterior). Use quando já souber o que a pessoa quer.", schema: mostrarSchema }),
   tool(async () => "", { name: "pedir_revisao", description: "Leva o plano mostrado para a tela de revisão e aprovação, quando a pessoa concordar em fechar.", schema: z.object({}) }),
@@ -109,8 +117,15 @@ const ordenar = (lista: OpcaoPlano[], criterio?: string) => {
 };
 
 let seqNecessidade = 0;
-const necessidadeDe = (a: { categoria: string; consultas?: string[]; vertical: Necessidade["vertical"]; sugestao?: boolean }): Necessidade =>
-  ({ id: `a${++seqNecessidade}`, vertical: a.vertical, categoria: a.categoria, restricoes: [], ...(a.consultas?.length ? { consultas: a.consultas } : {}), ...(a.sugestao ? { fonte: "inferido" as const } : {}) });
+function acumularRestricoes(s: AgentSession, novas: string[]) {
+  const unidas = [...new Set([...s.restricoes, ...novas.map(r => limparNome(r)).filter(Boolean)])];
+  if (unidas.some(r => !s.restricoes.includes(r))) { s.ultimaVersaoPlano = Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0); s.plano = undefined; s.estado = "S1"; s.encaminhado = false; }
+  s.restricoes = unidas;
+}
+const necessidadeDe = (a: { categoria: string; consultas?: string[]; vertical: Necessidade["vertical"]; sugestao?: boolean; restricoes?: string[]; orcamento?: Necessidade["orcamento"] }, s: AgentSession): Necessidade => {
+  acumularRestricoes(s, a.restricoes ?? []);
+  return { id: `a${++seqNecessidade}`, vertical: a.vertical, categoria: a.categoria, restricoes: [...s.restricoes], ...(a.orcamento ? { orcamento: a.orcamento } : {}), ...(a.consultas?.length ? { consultas: a.consultas } : {}), ...(a.sugestao ? { fonte: "inferido" as const } : {}) };
+};
 
 export async function executarAtendente(s: AgentSession, input: ConverseInput, deps: AtendenteDeps): Promise<AgentReply> {
   const now = deps.now ?? (() => performance.now());
@@ -130,22 +145,50 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
   };
 
   // Guardas determinísticas (antes do modelo): aprovação e revisão não dependem de interpretação.
+  if (input.origem === "voz" && input.sinais?.confianca !== undefined && input.sinais.confianca < LIMIARES_CONFIANCA.confirmar) return fim("Não entendi com segurança. Repita ou digite sua escolha antes de continuar.");
+  // Restrições explícitas comuns persistem mesmo se o modelo esquecer de transmiti-las.
+  const ditas = [...texto.matchAll(/\b(?:sem|alergi\w* a|intoleran\w* a)\s+(lactose|gluten|amendoim|leite|ovo|ovos|castanha|acucar)\b/g)].map(m => m[1]);
+  if (ditas.some(r => !s.restricoes.includes(r))) {
+    acumularRestricoes(s, ditas);
+    // Um plano anterior não foi filtrado para a nova restrição.
+    s.plano = undefined; s.estado = "S1"; s.encaminhado = false;
+  }
+  if (input.configuracao) {
+    if (!s.plano) return fim(FRASES.semPlano);
+    try {
+      if (s.restricoes.length && input.configuracao.selecoes.length) return fim("Não consigo confirmar a composição dos complementos para suas restrições. Peça uma opção com composição verificada.");
+      s.plano = configurarItem(s.plano, input.configuracao);
+      s.ultimaVersaoPlano = s.plano.versao;
+      s.estado = "S4"; s.encaminhado = false;
+      tela = { tipo: "plano_atualizado", plano: s.plano };
+      return fim("Complementos salvos. Confira o plano atualizado antes de aprovar.");
+    } catch {
+      tela = { tipo: "plano_atualizado", plano: s.plano };
+      return fim("Não salvei as escolhas. Confira a versão atual, as opções disponíveis e os limites de cada grupo.");
+    }
+  }
   if (APROVACAO_EXPLICITA.test(texto)) {
     if (!s.plano) return fim(FRASES.semPlano);
     const citada = texto.match(VERSAO_CITADA)?.[1];
+    if (!citada) return fim("Para aprovar, confira a tela e informe a versão do plano.");
     if (citada && Number(citada) !== s.plano.versao) { tela = { tipo: "aguardando_aprovacao", plano: s.plano }; return fim(FRASES.versaoMudou); }
+    const bloqueios = impedimentosPlano(s.plano);
+    if (bloqueios.length) { tela = { tipo: "plano_atualizado", plano: s.plano }; return fim(`Ainda falta configurar os itens. ${bloqueios[0]}`); }
     s.estado = "S5"; s.encaminhado = true;
     aprovacao = { planoId: s.plano.planoId, versao: s.plano.versao };
     tela = { tipo: "sacola", plano: { ...s.plano, sacola: montarSacola(s.plano) } };
     return fim(FRASES.aprovacaoEnviada);
   }
   if (s.plano && FECHAR.test(texto)) {
+    if (impedimentosPlano(s.plano).length) { tela = { tipo: "plano_atualizado", plano: s.plano }; return fim("Complete e salve os complementos obrigatórios antes de revisar."); }
     s.estado = "S5"; s.encaminhado = true;
     tela = { tipo: "aguardando_aprovacao", plano: s.plano };
     return fim("Confere na tela e, se estiver tudo certo, é só aprovar.");
   }
 
   const contexto = [
+    `Restrições rígidas da sessão: ${s.restricoes.join(", ") || "nenhuma informada"}. Preserve todas em cada busca.`,
+    s.plano ? `Complementos por item (seleções são por unidade; IDs somente para ferramentas): ${JSON.stringify(s.plano.blocos.map(b => ({ necessidadeId: b.necessidadeId, ref: b.principal.ref, versao: s.plano!.versao, complementos: b.principal.complementos })))}` : "",
     deps.nome ? `O primeiro nome da pessoa é ${deps.nome}.` : "",
     s.plano ? `Plano na tela agora (versão ${s.plano.versao}): ${s.plano.blocos.map(descreverBloco).join("; ")}.` : "Ainda não há plano na tela.",
     mem.resumoBuscas.length ? `Buscas que você já fez nesta conversa:\n${mem.resumoBuscas.slice(-4).join("\n")}` : "",
@@ -197,11 +240,21 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
 type Saida = { texto: string; tela?: AgentReply["tela"]; grupo?: GrupoOpcoes };
 
 async function executarFerramenta(nome: string, args: unknown, s: AgentSession, mem: Memoria, deps: AtendenteDeps): Promise<Saida> {
+  if (nome === "configurar_complementos") {
+    if (!s.plano) return { texto: "Monte um plano primeiro." };
+    const a = configurarSchema.parse(args);
+    if (s.restricoes.length && a.selecoes.length) return { texto: "Composição dos complementos não verificada para as restrições. Não salve nem afirme segurança." };
+    s.plano = configurarItem(s.plano, { ...a, planoId: s.plano.planoId });
+    s.ultimaVersaoPlano = s.plano.versao;
+    s.estado = "S4"; s.encaminhado = false;
+    return { texto: "Complementos salvos; a versão atual precisa de nova revisão.", tela: { tipo: "plano_atualizado", plano: s.plano } };
+  }
   if (nome === "buscar_no_ifood") {
     const a = buscarSchema.parse(args);
     if (ALCOOL.test(a.categoria)) return { texto: "Não busco bebida alcoólica. Ofereça outra coisa." };
-    const opcoes = ordenar(await deps.domain.buscarNecessidade(necessidadeDe(a), s.ocasiao), a.ordenar).slice(0, OPCOES_POR_BUSCA);
-    for (const o of opcoes) { mem.opcoes.set(o.ref, o); mem.grupoDe.set(o.ref, opcoes); }
+    const opcoes = ordenar(await deps.domain.buscarNecessidade(necessidadeDe(a, s), s.ocasiao), a.ordenar).slice(0, OPCOES_POR_BUSCA);
+    const grupo = { categoria: a.categoria, itens: opcoes };
+    for (const o of opcoes) { mem.opcoes.set(o.ref, o); mem.grupoDe.set(o.ref, grupo); }
     const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora.`;
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
     if (mem.resumoBuscas.length > 8) mem.resumoBuscas.shift();
@@ -212,17 +265,24 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const a = mostrarSchema.parse(args);
     if (a.itens.some((i) => ALCOOL.test(i.categoria))) return { texto: "Plano não montado: bebida alcoólica não entra. Tire esse item." };
     if (a.pessoas) s.ocasiao = { ...s.ocasiao, pessoas: a.pessoas };
-    const necessidades = a.itens.map(necessidadeDe);
+    // Acumula antes de buscar para todas as necessidades receberem as mesmas restrições rígidas.
+    acumularRestricoes(s, a.itens.flatMap(i => i.restricoes ?? []));
+    const necessidades = a.itens.map(i => necessidadeDe(i, s));
     // O domínio real monta o plano a partir da busca de cada necessidade; por isso busca de novo aqui.
     const itens = await Promise.all(necessidades.map(async (n) => ({ necessidade: n, opcoes: await deps.domain.buscarNecessidade(n, s.ocasiao) })));
     const base = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
     // Nomes de loja e item vêm do catálogo: limpos antes de ir à tela e à fala.
-    const plano: PlanoSnapshot = { ...sanearPlano(base), versao: (s.plano?.versao ?? 0) + 1, blocos: sanearPlano(base).blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem)) };
+    const escolhido: PlanoSnapshot = { ...base, versao: Math.max(s.ultimaVersaoPlano ?? 0, s.plano?.versao ?? 0) + 1, blocos: base.blocos.map((b) => escolher(b, a.itens[necessidades.findIndex((n) => n.id === b.necessidadeId)]?.ref, mem)) };
+    const plano = sanearPlano(await detalharPlano(escolhido, deps.domain.detalharItem?.bind(deps.domain)));
+    if (s.restricoes.length) for (const b of plano.blocos) {
+      if (b.principal.complementos?.grupos.length) b.principal.complementos.composicaoNaoVerificada = true;
+    }
     for (const b of plano.blocos) for (const o of [b.principal, ...b.alternativas]) mem.opcoes.set(o.ref, o);
     const atualizado = Boolean(s.plano);
     s.plano = plano; s.necessidades = necessidades; s.estado = atualizado ? "S4" : "S3"; s.encaminhado = false;
+    s.ultimaVersaoPlano = plano.versao;
     console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=${plano.blocos.length} naoAtendidas=${plano.naoAtendidas.length} versao=${plano.versao}`);
-    const resumo = plano.blocos.map(descreverBloco).join("; ");
+    const resumo = plano.blocos.map((b) => `${descreverBloco(b)}; complementos: ${resumoComplementos(b.principal).join(", ") || "a configurar se houver"}`).join("; ");
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");
     return {
       texto: `Plano versão ${plano.versao} na tela: ${resumo || "nenhum item encontrado"}.${faltas ? ` Sem opção agora para: ${faltas}.` : ""}`,
@@ -231,6 +291,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
   }
   if (nome === "pedir_revisao") {
     if (!s.plano) return { texto: "Não há plano na tela ainda. Monte com mostrar_plano primeiro." };
+    if (impedimentosPlano(s.plano).length) return { texto: "Complete os complementos obrigatórios ou verifique os detalhes antes de revisar.", tela: { tipo: "plano_atualizado", plano: s.plano } };
     s.estado = "S5"; s.encaminhado = true;
     return { texto: "Revisão aberta na tela. Diga para a pessoa conferir e dizer \"aprovo o plano\".", tela: { tipo: "aguardando_aprovacao", plano: s.plano } };
   }
@@ -242,12 +303,18 @@ const descreverBloco = (b: PlanoSnapshot["blocos"][number]) => `${b.categoria} (
 
 const planoVazio = (): PlanoSnapshot => ({ planoId: "", versao: 0, blocos: [], naoAtendidas: [], pendencias: [], origem: "real" });
 
-// A opção que a pessoa escolheu (ref de uma busca) vira a principal do bloco; a anterior vira alternativa. As outras
-// opções da mesma busca (que a pessoa viu na tela) também ficam como alternativas, para trocar tocando.
+// A opção que a pessoa escolheu vira a principal do bloco; a anterior vira alternativa. Vale uma alternativa do bloco ou
+// uma opção que a pessoa viu numa busca da MESMA categoria; opção de outra necessidade é recusada. As outras opções
+// dessa busca também ficam como alternativas, para trocar tocando.
 function escolher(b: PlanoSnapshot["blocos"][number], ref: string | undefined, mem: Memoria): PlanoSnapshot["blocos"][number] {
-  const escolhida = ref ? (b.principal.ref === ref ? b.principal : b.alternativas.find((o) => o.ref === ref) ?? mem.opcoes.get(ref)) : undefined;
-  const principal = escolhida ?? b.principal;
-  const vistas = (ref && mem.grupoDe.get(ref)) || mem.grupoDe.get(principal.ref) || [];
+  const mesmaCategoria = (r: string) => { const g = mem.grupoDe.get(r); return g && norm(g.categoria) === norm(b.categoria) ? g : undefined; };
+  let principal = b.principal;
+  if (ref && ref !== b.principal.ref) {
+    const escolhida = b.alternativas.find((o) => o.ref === ref) ?? (mesmaCategoria(ref) ? mem.opcoes.get(ref) : undefined);
+    if (!escolhida) throw new Error("OPCAO_FORA_DA_NECESSIDADE");
+    principal = escolhida;
+  }
+  const vistas = (ref && mesmaCategoria(ref)?.itens) || mesmaCategoria(principal.ref)?.itens || [];
   const unicas = new Map<string, OpcaoPlano>();
   for (const o of [b.principal, ...b.alternativas, ...vistas]) if (o.ref !== principal.ref && !unicas.has(o.ref)) unicas.set(o.ref, o);
   return { ...b, principal, alternativas: [...unicas.values()].slice(0, MAX_ALTERNATIVAS) };
