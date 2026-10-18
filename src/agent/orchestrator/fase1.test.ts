@@ -1,7 +1,7 @@
 // Fase 1 do agente (docs/PLANO_INTEGRACAO_VOZ_AGENTE.md): confirmação por confiança, sugestões e privacidade.
 import { describe, expect, it } from "vitest";
 import { FakeDomain } from "../domain-fake";
-import type { ConverseInput, LlmPort, Necessidade, ResponderInput, TurnoInterpretado } from "../types";
+import type { ConverseInput, InterpretarInput, LlmPort, Necessidade, ResponderInput, TurnoInterpretado } from "../types";
 import { FRASES, executarTurno, novaSessao, reiniciarSessao, sessaoDo } from ".";
 
 const pizza: Necessidade = { id: "n1", vertical: "RESTAURANT", categoria: "pizza calabresa", restricoes: [] };
@@ -11,9 +11,11 @@ const sug = (id: string, vertical: Necessidade["vertical"], categoria: string): 
 class Roteiro implements LlmPort {
   readonly nome = "roteiro";
   chamadas = 0;
+  readonly entradas: InterpretarInput[] = [];
   constructor(private readonly turnos: Partial<TurnoInterpretado>[], private readonly fala?: string) {}
-  async interpretar(): Promise<TurnoInterpretado> {
+  async interpretar(input: InterpretarInput): Promise<TurnoInterpretado> {
     this.chamadas += 1;
+    this.entradas.push(structuredClone(input));
     const t = this.turnos.shift();
     if (!t) throw new Error("roteiro acabou");
     return { intencao: "pedido", nivel: "L0", ocasiao: {}, necessidades: [], assumido: [], ...t };
@@ -79,6 +81,77 @@ describe("confirmação pela confiança da voz", () => {
     expect(r1.resposta).toBe(`Entendi que você quer aprovar a versão ${plano.versao} do plano. É isso?`);
     const r2 = await fale(voz("isso", 0.95));
     expect(r2.aprovacao).toEqual({ planoId: plano.planoId, versao: plano.versao });
+  });
+
+  // Regressões do review do Kenzo no PR #27.
+  describe("confiança baixa não consome a confirmação pendente", () => {
+    it("pedido: 'sim' mal ouvido não cria plano; o 'sim' bem ouvido depois cria", async () => {
+      const llm = new Roteiro([{ necessidades: [pizza] }]);
+      const { s, fale } = conversa(llm);
+      await fale(voz("quero pizza calabresa", 0.7));
+      const r = await fale(voz("sim", 0.2));
+      expect(r.resposta).toBe(FRASES.naoEntendi);
+      expect(s.plano).toBeUndefined();
+      expect(s.confirmacaoPendente).toBeDefined();
+      expect((await fale(voz("sim", 0.95))).tela?.tipo).toBe("mostrar_plano");
+      expect(llm.chamadas).toBe(1);
+    });
+
+    it("ajuste: 'sim' mal ouvido não muda a versão do plano", async () => {
+      const generica: Necessidade = { id: "n1", vertical: "RESTAURANT", categoria: "pizza", restricoes: [] };
+      const { s, fale } = conversa(new Roteiro([{ necessidades: [generica] }, { intencao: "ajustar", ajuste: { categoria: "pizza", criterio: "melhor_avaliada" } }]));
+      await fale("quero pizza");
+      const versao = s.plano!.versao;
+      await fale(voz("quero a mais bem avaliada", 0.7));
+      expect((await fale(voz("sim", 0.2))).resposta).toBe(FRASES.naoEntendi);
+      expect(s.plano!.versao).toBe(versao);
+      await fale(voz("sim", 0.95));
+      expect(s.plano!.versao).toBe(versao + 1);
+    });
+
+    it("aprovação: 'sim' mal ouvido não sinaliza aprovação", async () => {
+      const { fale } = conversa(new Roteiro([{ necessidades: [pizza] }, { intencao: "aprovar" }]));
+      const plano = (await fale("quero pizza calabresa")).tela!.plano;
+      await fale(voz("aprovo o plano", 0.75));
+      const r = await fale(voz("sim", 0.2));
+      expect(r.aprovacao).toBeUndefined();
+      expect(r.resposta).toBe(FRASES.naoEntendi);
+      expect((await fale(voz("sim", 0.95))).aprovacao).toEqual({ planoId: plano.planoId, versao: plano.versao });
+    });
+  });
+
+  describe("confirmação com complemento passa pela interpretação", () => {
+    it("pedido: 'sim, mas sem leite' registra a restrição antes de buscar", async () => {
+      const llm = new Roteiro([{ necessidades: [pizza] }, { intencao: "responder", necessidades: [{ ...pizza, restricoes: ["lactose"] }] }]);
+      const { s, fale } = conversa(llm);
+      await fale(voz("quero pizza calabresa", 0.7));
+      const r = await fale(voz("sim, mas sem leite", 0.95));
+      expect(llm.chamadas).toBe(2);
+      expect(llm.entradas[1].session.necessidades.map((n) => n.categoria)).toEqual(["pizza calabresa"]);
+      expect(s.restricoes).toContain("lactose");
+      // A única calabresa simulada tem lactose: nada é oferecido em vez de ignorar a restrição.
+      expect(r.tela?.plano.blocos.some((b) => /calabresa/i.test(b.principal.item)) ?? false).toBe(false);
+    });
+
+    it("aprovação: 'isso, mas troca pela mais barata' ajusta e não aprova", async () => {
+      const llm = new Roteiro([{ necessidades: [pizza] }, { intencao: "aprovar" }, { intencao: "ajustar", ajuste: { criterio: "mais_barata" } }]);
+      const { fale } = conversa(llm);
+      await fale("quero pizza calabresa");
+      await fale(voz("aprovo o plano", 0.75));
+      const r = await fale(voz("isso, mas troca pela mais barata", 0.95));
+      expect(r.aprovacao).toBeUndefined();
+      expect(llm.chamadas).toBe(3);
+    });
+
+    it("'não, quero hambúrguer' descarta o entendido e interpreta o pedido novo", async () => {
+      const burger: Necessidade = { id: "n1", vertical: "RESTAURANT", categoria: "hamburguer", restricoes: [] };
+      const llm = new Roteiro([{ necessidades: [pizza] }, { necessidades: [burger] }]);
+      const { fale } = conversa(llm);
+      await fale(voz("quero pizza calabresa", 0.7));
+      const r = await fale(voz("não, quero hambúrguer", 0.95));
+      expect(llm.entradas[1].session.necessidades).toEqual([]);
+      expect(r.tela?.plano.blocos.map((b) => b.categoria)).toEqual(["hamburguer"]);
+    });
   });
 
   it("ajuste com confiança média confirma o critério", async () => {

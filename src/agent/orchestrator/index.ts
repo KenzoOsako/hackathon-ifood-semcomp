@@ -55,8 +55,10 @@ async function comTimeout<T>(ms: number, fn: (signal: AbortSignal) => Promise<T>
   try { return await fn(ctrl.signal); } finally { clearTimeout(timer); }
 }
 
-const AFIRMA = /^(sim|isso|exato|exatamente|certo|correto|pode|ok|beleza|fechou|perfeito|e isso|e sim)\b/;
-const NEGA = /^(nao|negativo|errado|nada disso)\b/;
+// Confirmação simples: a fala inteira é só isso (depois de tirar pontuação). Complemento não entra.
+const AFIRMA = /^(sim|sim sim|isso|isso mesmo|isso ai|exato|exatamente|certo|correto|pode|pode sim|pode ser|ok|beleza|fechou|perfeito|e isso|e sim|confirmo)$/;
+const AFIRMA_INICIO = /^(sim|isso|exato|exatamente|certo|correto|pode|ok|beleza|fechou|perfeito|e isso|e sim)\b/;
+const NEGA = /^(nao|nao nao|negativo|errado|nada disso)$/;
 const CRITERIO_FALADO: Record<string, string> = { mais_barata: "pela opção mais barata", mais_rapida: "pela opção mais rápida", melhor_avaliada: "pela opção mais bem avaliada", favorita: "pela sua favorita", outra: "por outra opção" };
 
 // Texto montado em código (não pelo LLM) com o que vai ser feito; undefined = nada a confirmar.
@@ -102,17 +104,22 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   const pressa = PRESSA.test(texto) || pressaPelaVoz(s, input);
   s.turnos += 1;
 
-  // Resposta a uma confirmação pendente: "sim" segue com o que foi entendido, sem chamar o LLM de novo.
-  const pendente = s.confirmacaoPendente;
-  s.confirmacaoPendente = undefined;
-  if (pendente && NEGA.test(texto)) return fechar(s, input, deps, { resposta: FRASES.confirmacaoNegada }, tempos, t0);
-  if (pendente && AFIRMA.test(texto)) return despachar(s, input, deps, pendente.turno, pendente.texto, pendente.pressa, tempos, t0);
-
-  // Confiança baixa do STT: a voz já deveria ter pedido para repetir; defesa aqui, sem gastar LLM.
+  // Confiança baixa do STT vem antes de tudo, inclusive de uma confirmação pendente: um "sim" mal ouvido não
+  // pode criar plano, ajustar nem sinalizar aprovação. A pendência continua de pé para a pessoa repetir.
   const confianca = input.sinais?.origem === "voz" ? input.sinais.confianca : undefined;
   if (confianca !== undefined && confianca < LIMIARES_CONFIANCA.repetir) {
     return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
   }
+
+  // Resposta a uma confirmação pendente. Só "sim" ou "não" puros são consumidos direto, sem chamar o LLM.
+  // Com complemento ("sim, mas sem leite"), o entendido entra no estado e a fala nova passa pela interpretação,
+  // para a correção valer antes de agir. "Não, ..." descarta o entendido e interpreta o resto como pedido novo.
+  const pendente = s.confirmacaoPendente;
+  s.confirmacaoPendente = undefined;
+  const puro = texto.replace(/[.,!?;]/g, " ").replace(/\s+/g, " ").trim();
+  if (pendente && NEGA.test(puro)) return fechar(s, input, deps, { resposta: FRASES.confirmacaoNegada }, tempos, t0);
+  if (pendente && AFIRMA.test(puro)) return despachar(s, input, deps, pendente.turno, pendente.texto, pendente.pressa, tempos, t0);
+  if (pendente && AFIRMA_INICIO.test(puro)) aplicarEstado(s, pendente.turno);
 
   let turno: TurnoInterpretado;
   try {
@@ -128,9 +135,9 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   }
   tempos.interpretarMs = Math.round(now() - t0);
 
-  // Confiança média: confirmar o entendido antes de agir. Não conta no teto de perguntas.
-  // Quem acabou de responder a uma confirmação não é confirmado de novo (evita laço).
-  const resumo = !pendente && confianca !== undefined && confianca < LIMIARES_CONFIANCA.confirmar ? resumoParaConfirmar(s, turno, texto) : undefined;
+  // Confiança média: confirmar o entendido antes de agir. Não conta no teto de perguntas. Um complemento
+  // ouvido com confiança média também é confirmado; o "sim" puro que encerra a confirmação não chega aqui.
+  const resumo = confianca !== undefined && confianca < LIMIARES_CONFIANCA.confirmar ? resumoParaConfirmar(s, turno, texto) : undefined;
   if (resumo) {
     s.confirmacaoPendente = { turno, texto, pressa };
     return fechar(s, input, deps, { resposta: resumo }, tempos, t0);
