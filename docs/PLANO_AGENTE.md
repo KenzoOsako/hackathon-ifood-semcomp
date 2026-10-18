@@ -1,6 +1,8 @@
 # Plano de implementação — Agente Guide (backend)
 
-> Frente **System Prompt e Fluxo de Agentes** (dono: Hyago). Base: [briefing](BRIEFING_AGENTE.md), comportamento em [AGENTE_CONVERSA_E_FLUXO.md](AGENTE_CONVERSA_E_FLUXO.md), gates do [Plano V2](PLANO_V2_PAPEIS_E_CRONOGRAMA.md). Divisão entre **A = Hyago** e **B = parceiro [DECIDIR quem]**. Janela: sáb 17/10 ~20h30 → dom 12h30. Cada marco termina com algo rodando e uma prova. PR pequeno, um card por PR, merge pelo Kenzo.
+> Frente **System Prompt e Fluxo de Agentes** (dono: Hyago). Base: [briefing](BRIEFING_AGENTE.md), comportamento em [AGENTE_CONVERSA_E_FLUXO.md](AGENTE_CONVERSA_E_FLUXO.md), gates do [Plano V2](PLANO_V2_PAPEIS_E_CRONOGRAMA.md). Janela: sáb 17/10 ~20h30 → dom 12h30. Cada marco termina com algo rodando e uma prova. Merge pelo Kenzo.
+>
+> **Atualização 17/10 ~21h30:** Hyago está **100% na frente do agente** e faz as colunas A e B (não há parceiro dedicado; o integrador está com fila de PRs). Trello não está sendo seguido pelo time: não é critério de PR. Ver [Estado e próximos passos](#estado-e-próximos-passos-1710-21h30).
 
 ## Core do agente: definição de pronto
 
@@ -81,3 +83,43 @@ Ponto de contato: tipos do M0. Não tocar em `src/domain`, `src/mcp`, `src/contr
 
 ## Caminho crítico
 `M0 → domínio fake (B) → M1-A → G3`. Externas: **K-3/K-5** (Kenzo) para domínio real, **K-1 + M-1** para a aprovação aparecer na tela. A voz conecta depois, sem bloquear o agente. Se atrasarem, o agente segue por texto no domínio fake, rotulado como simulado.
+
+## Estado e próximos passos (17/10 ~21h30)
+
+### Onde estamos
+| Marco | Estado |
+|---|---|
+| M0 | ✅ tipos, prompts `interpretar`/`responder`, formato de eval. ⚠️ LangChain instalado, **sem chamada a LLM real** (nenhum provedor configurado) |
+| M1 | ✅ orquestrador S0–S7, domínio fake, `/api/converse`, runner de evals, tempos por etapa no log. ❌ evals com LLM real |
+| M2 | 🟡 eventos de feedback registrados; troca para domínio/MCP real em andamento (abaixo); eval de motivo só cobre números em dígitos |
+| M3/M4 | não iniciados |
+
+Entrega: PR #14 (`feat/hyago-agente`), aguardando revisão.
+
+### Trocar o mock pelo MCP real
+1. **Provar o acesso (fora do app).** OAuth PKCE S256 com o cliente pré-registrado (`id.ifood.com.br`; o recurso `consumer-mcp.ifood.com.br/marketplace` anuncia esse servidor em `/.well-known/oauth-protected-resource/marketplace`; sem registro dinâmico), depois `tools/list`, `listAddresses` e `searchOffers` por vertical (pizza/RESTAURANT, pipoca/GROCERIES, presente/SHOPPING). Resultado vai para `contexto/feedback-mcp.md`. Também responde o gate de verticais da V2.
+2. **Cliente MCP real com OAuth no app.** Transporte Streamable HTTP (`@modelcontextprotocol/sdk`, dependência a registrar), rotas `/api/auth/login` e `/api/auth/callback`, token só no servidor preso ao cookie de sessão, refresh com antecedência, `MCP_MODE=real` em `src/mcp/index.ts`, e o guarda `requireMockRequest` liberando real só com sessão autenticada. **Zona do Kenzo (D-012): precisa do aval dele ou ser feito por ele.**
+3. **`McpDomain` do agente** em `src/agent/domain-mcp/` (zona do Hyago), mesma interface do `FakeDomain`:
+   - `obterContexto` → `listAddresses` (um endereço: usar e informar; vários: perguntar — falta este passo no fluxo);
+   - `buscarNecessidade` → `searchOffers` (`query`=categoria, `userLocation`, `resultKind: ITEM`, `merchantType` por vertical, teto em `refinements`) → normalização, elegibilidade e ranking do Kenzo (PR #16) → até 3 `OpcaoPlano` com motivo real;
+   - `montarPlano`/`ajustarPlano` locais (generalizar o fake); `getItem`/`getMerchant` para frete e pedido mínimo;
+   - rota escolhe o domínio por `MCP_MODE`; orquestrador e prompts não mudam; `origem` passa a `real`.
+4. Plano B: se o acesso falhar, demo com domínio fake rotulado e integração mostrada à parte (G4).
+
+### Latência (voz + LLM)
+Ordem combinada: **medir antes de otimizar**.
+1. Medir 2–3 modelos **pequenos** (trocando só `LLM_PROVIDER`/`LLM_MODEL`): tempo de `interpretar` e `responder` no log + evals.
+2. Áudio **pré-gerado** para frases fixas (`FRASES` do orquestrador: encaminhar, recusar, repetir, espera).
+3. **Frase de espera** imediata quando o `interpretar` decide montar (já devolvida em `fraseEspera`).
+4. **Chunks no `responder`:** LLM em fluxo → corte por frase → checagem por frase contra o snapshot → TTS por frase. `/api/converse` passa a responder em fluxo (NDJSON: espera → frases → tela), alinhado ao contrato `resposta_parcial`/`evento_de_tela`/`resposta_final` e à branch `feat/felipe-voz-stt` do Felipe (fila de áudio, interrupção, NDJSON). O `interpretar` não ganha com fluxo: mantê-lo pequeno.
+5. STT em tempo real (Felipe) e cache de prompt do provedor.
+6. Reserva: ElevenLabs Agents com nosso endpoint como Custom LLM, só se o resto não bastar.
+
+### Resultado do passo 1 — acesso ao MCP comprovado (17/10 ~22h)
+- OAuth PKCE com o cliente pré-registrado + usuário de teste: **token OK** (2 h, com refresh). Escopos: `mcp.user.addresses.read`, `mcp.discovery.{search,browse,recommendation,details}.read` + `capability.only-test-agent`.
+- `tools/list`: **8 tools** (filtradas por escopo): listAddresses, searchOffers, browseOffers, getRecommendations, getMerchant, getItem, listVouchers, setVoucher.
+- `listAddresses`: **0 endereços** no usuário de teste → usar coordenadas fixas do local da demo (USP São Carlos) ou pedir escopo de escrita para `createAddress`.
+- `searchOffers` (ITEM) com RESTAURANT/GROCERIES/SHOPPING: **10 resultados reais em cada**. O item já traz `unitPrice`, `promotionalUnitPrice` e `merchant` com `isOpen`, `reviewRating`, `ratingCount`, `straightLineDistanceKm`, `minimumOrderAmount` e `deliveryMethod` (fee, promotionalFee, estimatedMinutes) → ranking sem `getMerchant` por opção.
+- **Latência medida:** conectar ~2,2 s; cada tool 1,5–2,3 s. O MCP pesa mais que o TTS. Implicações: cliente MCP aberto por sessão, buscas por necessidade em paralelo, frase de espera.
+- Cuidados para o `McpDomain`: filtrar `isOpen` e loja com método de entrega; "presente" é amplo e ruidoso (pede pergunta ou termo mais específico); combos com `optionGroups` obrigatórios viram pendência; nota vem como float (arredondar); `agentHints` do servidor são texto para modelo, não instrução para o nosso código.
+- Teste feito com script isolado (fora do repo); amostras de catálogo guardadas localmente para montar o adaptador.
