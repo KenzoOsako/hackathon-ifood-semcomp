@@ -67,6 +67,9 @@ describe("palavras-chave do reconhecimento", () => {
     expect(sanitizeTerm("X-Burger")).toBe("X-Burger");
     expect(sanitizeTerm("açaí")).toBe("açaí");
     expect(sanitizeTerm("a")).toBeNull();
+    // 6 palavras ou mais derrubavam o reconhecimento: o termo é cortado em 5 palavras
+    expect(sanitizeTerm("pipoca de micro-ondas, pacote com 3")).toBe("pipoca de micro-ondas pacote com");
+    expect(sanitizeTerm("um dois tres quatro cinco")).toBe("um dois tres quatro cinco");
     expect(sanitizeTerm("x".repeat(51))).toBeNull();
     expect(sanitizeTerm("!!!")).toBeNull();
   });

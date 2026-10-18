@@ -96,6 +96,36 @@ describe("rota /api/voice/stt", () => {
     expect((fetchMock.mock.calls[0][1].body as FormData).getAll("keyterms").length).toBeGreaterThan(0);
     expect((fetchMock.mock.calls[1][1].body as FormData).getAll("keyterms")).toHaveLength(0);
   });
+  it("provedor recusa o pedido COM palavras-chave (ex.: termo comprido demais): tenta uma vez SEM elas e a fala é reconhecida", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("palavra-chave invalida", { status: 400 }))
+      .mockResolvedValueOnce(Response.json(scribe({ text: "Pode escolher até R$ 100" })));
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await stt(req(audioBytes()));
+    expect(r.status).toBe(200);
+    expect((await r.json()).texto).toBe("Pode escolher até R$ 100");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((fetchMock.mock.calls[1][1].body as FormData).getAll("keyterms")).toHaveLength(0);
+  });
+  it("recusa COM palavras-chave e a tentativa SEM elas volta vazia: encerra como vazio, no máximo duas chamadas", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("palavra-chave invalida", { status: 400 }))
+      .mockResolvedValueOnce(Response.json(scribe({ text: "" })))
+      .mockResolvedValue(Response.json(scribe({ text: "não deveria chegar aqui" }))); // uma 3ª chamada devolveria texto: o teste a denunciaria
+    vi.stubGlobal("fetch", fetchMock);
+    const r = await stt(req(audioBytes()));
+    expect(r.status).toBe(422); // vazio
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((fetchMock.mock.calls[0][1].body as FormData).getAll("keyterms").length).toBeGreaterThan(0);
+    expect((fetchMock.mock.calls[1][1].body as FormData).getAll("keyterms")).toHaveLength(0);
+  });
+  it("recusa do provedor sem palavras-chave não gera nova tentativa (não há o que tirar)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("x", { status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { transcribe } = await import("./stt");
+    await expect(transcribe(audioBytes(), "audio/webm", { apiKey: "sk_teste", modelId: "scribe_v2" }, undefined, [])).rejects.toMatchObject({ code: "PROVIDER" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it("vazia mesmo sem palavras-chave responde 422, sem laço de tentativas", async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(Response.json(scribe({ text: "" }))));
     vi.stubGlobal("fetch", fetchMock);

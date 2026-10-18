@@ -2,6 +2,7 @@
 // Sem React e sem navegador: tudo que toca o mundo entra por `TurnDeps`, então dá para testar com relógio e rede falsos.
 import type { ConverseInput } from "@/agent/types";
 import { converseTurn } from "./converse-client";
+import type { AgentMeta } from "./conversation-export";
 import type { ConverseEvent } from "./converse-events";
 import type { Mark } from "./latency";
 import { LOGIN_PATH } from "./auth-status";
@@ -28,6 +29,7 @@ export interface TurnHandlers {
   onAgentText?(text: string): void; // o que o Guide disse (sem a frase de espera), para mostrar na tela
   onScreen?(event: string, payload: unknown): void;
   onLogin?(url: string, reply: string): void;
+  onMeta?(meta: AgentMeta): void; // metadados do agente neste turno (para observabilidade)
 }
 
 export interface TurnDeps {
@@ -53,7 +55,7 @@ export async function runTurn(input: TurnInput, ctl: TurnCtl, handlers: TurnHand
     : () => undefined;
 
   try {
-    for await (const ev of converse(input, { signal: deps.signal })) {
+    for await (const ev of converse(input, { signal: deps.signal, onMeta: (m) => { if (!aborted()) handlers.onMeta?.(m); } })) {
       if (aborted()) break;
       handle(ev);
     }

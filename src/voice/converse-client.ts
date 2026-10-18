@@ -5,6 +5,7 @@
 // Assim o Hyago pode migrar a rota para streaming sem mexer na voz, e a voz já fala o agente real hoje.
 import type { AgentReply, ConverseInput } from "@/agent/types";
 import { splitSpeechChunks } from "./chunker";
+import { metaFrom, type AgentMeta } from "./conversation-export";
 import { readConverseStream, type ConverseEvent } from "./converse-events";
 
 type ReplyLike = Pick<AgentReply, "resposta" | "fraseEspera" | "tela">;
@@ -35,6 +36,7 @@ export interface ConverseOptions {
   fetchImpl?: typeof fetch;
   signal?: AbortSignal;
   newTurnId?: () => string;
+  onMeta?: (meta: AgentMeta) => void; // quem respondeu e como (modelo, estado, nível, tempos); só no formato JSON atual
 }
 
 export async function* converseTurn(input: Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses">, opts: ConverseOptions = {}): AsyncGenerator<ConverseEvent> {
@@ -67,5 +69,7 @@ export async function* converseTurn(input: Pick<ConverseInput, "texto" | "origem
     yield errorEvent(b.code ?? `HTTP_${res.status}`, b.reply, b.loginUrl);
     return;
   }
+  const meta = metaFrom(body);
+  if (meta) opts.onMeta?.(meta);
   yield* replyToEvents({ resposta: b.resposta, fraseEspera: b.fraseEspera, tela: b.tela }, turnId);
 }
