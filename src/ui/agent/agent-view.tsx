@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, Search, Send } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, MicOff, Search, Send, X } from "lucide-react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
@@ -27,8 +27,10 @@ const STATE_LABEL: Record<OrbState, string> = {
 };
 
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
-const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
+const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 60"];
 // Sem resultado, estas frases só preenchem o campo; quem decide enviar é a pessoa.
+// Abas decorativas da busca (só cenário).
+const TABS = ["Todo o iFood", "Restaurantes", "Mercados", "Farmácias"];
 const EMPTY_HINTS = ["Quero gastar até R$ 60", "Pode ser outra comida"];
 
 export type AgentViewProps = {
@@ -59,7 +61,9 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
   const [showLog, setShowLog] = useState(false);
-  const [expanded, setExpanded] = useState(0);
+  // Nenhuma linha aberta por padrão (a lista fica como a busca do iFood); com uma só opção ela já vem aberta.
+  const [picked, setPicked] = useState<number | null>(null);
+  const expanded = picked ?? (p.options.length === 1 ? 0 : -1);
   // Primeira busca em andamento: abre a área de resultados com esqueletos.
   const searching = p.busy && p.view === null && p.query !== "";
   const hasView = p.view !== null || searching;
@@ -70,6 +74,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   const lastReply = [...p.msgs].reverse().find((m) => m.from === "agente")?.text;
   // Parado, mostra a última resposta do agente (no modo texto ela é a "fala"); nos demais estados, o estado.
   const spoken = orbState === "idle" || orbState === "speaking" ? (lastReply ?? STATE_LABEL.idle) : STATE_LABEL[orbState];
+  // O selo "Simulado" do cabeçalho já rotula o dado; o prefixo só poluiria a legenda visível.
+  const shown = spoken.replace(/^\[Simulado\]\s*/, "");
+  // Revisão e continuidade precisam de altura: o orbe vira uma bolinha ao lado da legenda.
+  const compact = p.view === "proposal" || p.view === "continue";
 
   function adjust() {
     inputRef.current?.focus();
@@ -80,8 +88,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   }
 
   const caption = (
-    <div className={cn("w-full px-6 text-center", hasView ? "max-h-24 overflow-y-auto pt-2 text-sm" : "pb-1 text-base")}>
-      <p role="status" aria-live="polite" className="whitespace-pre-wrap leading-snug text-[color:var(--agent-voice)]">{spoken}</p>
+    <div className={cn("w-full text-center", compact ? "min-w-0 flex-1 px-0 text-left text-sm" : hasView ? "px-6 pt-2 text-sm" : "px-6 pb-1 text-base")}>
+      {/* A legenda visível é curta (2 linhas); o leitor de tela sempre recebe o texto completo. */}
+      <p aria-hidden="true" className="line-clamp-2 leading-snug text-[color:var(--agent-voice)]">{shown}</p>
+      <p role="status" aria-live="polite" className="sr-only whitespace-pre-wrap">{spoken}</p>
       {p.error && (
         <Alert variant="destructive" className="mt-2 text-left">
           <AlertTriangle aria-hidden="true" />
@@ -109,24 +119,33 @@ export function AgentView(p: Readonly<AgentViewProps>) {
       >
         {(p.view === "options" || p.view === "empty" || searching) && (
           <>
-            <div className="flex items-center justify-between gap-2 px-4 pb-2">
-              <span className="flex min-w-0 items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-sm shadow-sm">
-                <Search className="size-3.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">{p.query}</span>
-              </span>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {p.view === "options" ? `${p.options.length} ${p.options.length === 1 ? "opção" : "opções"} · total na revisão` : ""}
-              </span>
+            <div className="px-4 pb-2">
+              <div className="flex h-11 items-center gap-2 rounded-full bg-card px-4 shadow-sm">
+                <Search className="size-5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate text-base">{p.query}</span>
+                <span aria-hidden="true" className="flex size-5 items-center justify-center rounded-full bg-muted-foreground text-background"><X className="size-3" /></span>
+              </div>
+              {/* Abas só de cenário, como na busca do iFood: não fazem nada. */}
+              <div aria-hidden="true" className="mt-2.5 flex gap-1 overflow-x-auto text-sm">
+                {TABS.map((tab) => (
+                  <span key={tab} className={cn("shrink-0 rounded-full px-3.5 py-2", tab === "Restaurantes" ? "bg-card font-semibold shadow-sm" : "text-muted-foreground")}>{tab}</span>
+                ))}
+              </div>
             </div>
-            {/* O fim da lista esmaece para indicar que há mais; o espaço extra deixa o último cartão sair da máscara. */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+            {/* Folha branca de cantos arredondados, como a lista do iFood; o fim esmaece para indicar que há mais. */}
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-10 pt-4 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="font-display text-2xl font-semibold">Para você</h2>
+                {p.view === "options" && <span className="text-xs text-muted-foreground">{p.options.length} {p.options.length === 1 ? "opção" : "opções"} · total na revisão</span>}
+              </div>
               {searching && (
-                <div className="grid gap-2.5"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
+                <div className="mt-2 flex flex-col gap-1"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
               )}
               {!searching && p.view === "options" && (
-                <ul className="grid gap-2.5">
+                <ul className="mt-2 flex flex-col gap-1">
                   {p.options.map((option, i) => (
                     <motion.li
+                      className="min-w-0"
                       key={option.candidate.itemId}
                       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -137,7 +156,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
                         first={i === 0}
                         expanded={expanded === i}
                         disabled={p.busy}
-                        onToggle={() => setExpanded(expanded === i ? -1 : i)}
+                        onToggle={() => setPicked(expanded === i ? -1 : i)}
                         onSelect={() => p.onSelect(i)}
                         onAdjust={adjust}
                       />
@@ -168,12 +187,12 @@ export function AgentView(p: Readonly<AgentViewProps>) {
         )}
       </section>
 
-      <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0" : "grow")}>
-        <div className={cn("flex min-h-0 flex-col items-center", hasView ? "" : "flex-1 justify-center overflow-y-auto text-center")}>
+      <section aria-label="Assistente" className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "shrink-0 grow-0" : "grow")}>
+        <div className={cn("flex min-h-0", compact ? "items-center gap-3 px-4 pt-2" : "flex-col items-center", !hasView && "flex-1 justify-center overflow-y-auto text-center")}>
           {!hasView && <h1 className="px-4 font-display text-balance text-3xl font-medium leading-tight">Qual a sua vibe de hoje?</h1>}
-          {hasView && caption}
-          <Orb size={hasView ? "strip" : "hero"} state={orbState} />
-          {!hasView && caption}
+          {hasView && !compact && caption}
+          <Orb size={compact ? "mini" : hasView ? "strip" : "hero"} state={orbState} />
+          {(compact || !hasView) && caption}
           {!hasView && p.msgs.length === 0 && (
             <ul className="flex flex-wrap justify-center gap-2 px-4" aria-label="Sugestões">
               {SUGGESTIONS.map((s) => (
@@ -184,7 +203,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
         </div>
 
         <footer className="relative px-3 pb-3">
-          {p.msgs.length > 0 && (
+          {p.msgs.length > 0 && !compact && (
             <>
               <Button variant="ghost" size="sm" aria-expanded={showLog} aria-controls="conversa" onClick={() => setShowLog((v) => !v)}>
                 {showLog ? <ChevronDown /> : <ChevronUp />}
@@ -214,9 +233,10 @@ export function AgentView(p: Readonly<AgentViewProps>) {
             }}
           >
             {/* Sem onMicClick a voz ainda não existe: o botão fica desabilitado e o texto é o caminho completo. */}
-            <Button type="button" variant={orbState === "listening" ? "default" : "secondary"} size="icon" disabled={!p.onMicClick} onClick={p.onMicClick}
+            <Button type="button" variant={orbState === "listening" ? "default" : "outline"} size="icon" disabled={!p.onMicClick} onClick={p.onMicClick}
+              className="disabled:border-dashed disabled:bg-transparent disabled:text-muted-foreground disabled:opacity-100"
               aria-label={p.onMicClick ? "Falar" : "Falar (voz em breve)"} title={p.onMicClick ? undefined : "Voz em breve"}>
-              <Mic />
+              {p.onMicClick ? <Mic /> : <MicOff />}
             </Button>
             <Input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} placeholder="Refine ou peça outra coisa…" aria-label="Mensagem" maxLength={4000} />
             <Button type="submit" size="icon" disabled={p.busy || !input.trim()} aria-label="Enviar"><Send /></Button>
