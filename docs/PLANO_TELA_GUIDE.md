@@ -32,36 +32,38 @@
 
 Estados especiais: pedido rápido (direto ao 3), voz em dúvida (Sim/Não), iFood não conectado (cartão "Conectar iFood"), nada encontrado (bloco "nenhuma loja aberta"), fora do escopo, erro com "Tentar de novo".
 
-## Contrato da tela (o que o `/api/converse` passa a devolver)
-O que já existe: `resposta` (fala), `fraseEspera`, `tela` com o plano (`PlanoSnapshot`: blocos por item com principal e até 2 alternativas, não encontrados, avisos, versão, origem), `estado`, `nivel`, `origem`. Entra:
-- `entendido`: ocasião e itens (categoria, tipo de loja, `sugestao`) **em todo turno**, não só quando há plano. Alimenta o cartão "O que eu entendi".
-- `respostasRapidas`: até 4 respostas curtas para a pergunta do turno, sempre com "Pode escolher"; "Sim"/"Não" quando é confirmação de voz. Validadas em código.
-- `BlocoPlano.subtotalCents` (quantidade × preço da principal) e o frete, calculados no servidor.
-- `tela.tipo = "sacola"` com a sacola montada do plano aprovado (lojas, itens, quantidades, subtotais, fretes, avisos, versão).
-- Rota `POST /api/plano/aprovar` `{ planoId, versao, interactionId }`: confere visitante, plano atual e versão; devolve a sacola. A frase "aprovo o plano" leva ao mesmo resultado.
+## Princípio: o agente é o maestro, a tela obedece
+A pessoa fala ou toca; o agente decide o que fazer; a resposta dele já diz **qual tela mostrar** (`tela.tipo`) e com quais dados. A interface não tem regra própria de fluxo: só troca de tela conforme o tipo. As confirmações (o que entendeu, "é isso?", aprovação explícita por versão) já acontecem na conversa e foram testadas no back.
 
-## Fatias
-Back (agente) e front (tela) andam em paralelo; o contrato acima é o ponto de encontro.
+| O agente decidiu | `tela.tipo` | A tela mostra (momento do storyboard) |
+|---|---|---|
+| Ainda conversando ou perguntando | sem `tela` | Orbe e legenda (1 e 2) |
+| Montou o plano | `mostrar_plano` | Plano por item (3) |
+| Ajustou | `plano_atualizado` | Plano com o bloco "atualizado" (4) |
+| A pessoa concordou ("pode", "fechou") | `aguardando_aprovacao` | Revisão por loja (5) |
+| A pessoa aprovou ("aprovo o plano") | `sacola` (**novo**) | Sacola simulada (6) |
 
-| # | Fatia | Lado | Arquivos principais | Depende | Pronto quando |
-|---|---|---|---|---|---|
-| B1 | `entendido` e `respostasRapidas` em todo turno | Back | `src/agent/types.ts`, `orchestrator`, `prompts/interpretar.ts` | — | Teste: turno de pergunta traz ocasião, itens com sugestão e respostas rápidas com "Pode escolher"; confirmação traz Sim/Não |
-| B2 | Subtotal e frete por bloco no plano | Back | `domain-fake`, `domain-mcp` | — | Teste: subtotal = quantidade × preço da principal, nos dois domínios |
-| B3 | Aprovar o plano → sacola | Back | `src/app/api/plano/aprovar/route.ts`, `orchestrator` | B2 | Testes: versão atual devolve a sacola; versão antiga, sem plano ou outro visitante são recusados; "aprovo o plano" dá o mesmo resultado; nada remoto é chamado |
-| B4 | Fala curta, sabendo que a tela mostra os detalhes | Back | `prompts/responder.ts` | — | Evals com Gemini sem regressão; fala do plano em até 2 frases |
-| F1 | Tela ligada ao agente e à voz | Front | `src/ui/agent/agent-context.tsx` (passa a usar `useGuideVoice`), `agent-screen.tsx` | — | Na `/agente`, falar ou digitar chega ao `/api/converse`; orbe mostra ouvindo/pensando/falando; cartão "Conectar iFood" em modo real sem login; selo Simulado/Real pela origem |
-| F2 | "O que eu entendi" e respostas rápidas | Front | `agent-view.tsx` | B1, F1 | A pergunta mostra o cartão e os botões; tocar num botão manda o mesmo texto da fala |
-| F3 | Plano por item | Front | novo `plan-view.tsx`, `result-card.tsx` (adaptador do plano para o cartão) | F1 | Aniversário mostra pizza, pipoca e presente com selo de sugestão, avisos e "Ver mais opções"; ajuste destaca o bloco que mudou e avisa o que mudou |
-| F4 | Revisão do plano por loja | Front | `proposal-view.tsx` (ou nova `plan-review.tsx`) | B2, F3 | Uma seção por loja com subtotal e frete do servidor; "Aprovar versão N" chama a rota |
-| F5 | Sacola (simulação do iFood) | Front | nova `cart-view.tsx`; `continue-view.tsx` vira reserva | B3, F4 | Plano aprovado aparece na sacola, rotulada "Simulação"; "Finalizar pedido" não envia nada |
-| F6 | Estados especiais | Front | `agent-view.tsx`, `plan-view.tsx` | F1–F5 | Pedido rápido, Sim/Não, login, nada encontrado, fora do escopo e erro aparecem como no storyboard |
-| V1 | Ensaio de ponta a ponta | Todos | `scripts/medir-agente.mjs`, prévia `/agente/previa` | tudo | Na `/agente`, jornada do storyboard falada em mock e em real (login iFood + Gemini), 5 rodadas medidas; prévia com os cenários do plano |
+**Um canal só:** os botões não têm rota própria. "Revisar e aprovar", "Aprovar" e "Pode escolher" mandam ao agente a mesma frase que a pessoa diria (`sendText`). Falar e tocar dão o mesmo resultado; a aprovação continua valendo só para a frase explícita, sobre a versão que está na tela.
 
-## Ordem sugerida (até o congelamento das 9h)
-1. **Agora:** B1, B2 e B3 no back, em paralelo com F1 na tela.
-2. **Em seguida:** F2 e F3 (o coração da demo), depois B4.
-3. **Depois:** F4 e F5 (aprovação e sacola).
-4. **Por fim:** F6 e V1, a tempo do congelamento.
+## Primeira versão: simples e palpável
+Objetivo: a jornada do storyboard funcionando de ponta a ponta na `/agente`, parecida com o pedido, mesmo sem os enfeites. Depois ajustamos.
+
+| # | Passo | Lado | Pronto quando |
+|---|---|---|---|
+| 1 | **Tela ligada ao agente.** `AgentProvider` passa a usar o `useGuideVoice` (fala, texto, estado do orbe, conversa, login) e escolhe a tela pelo `tela.tipo` | Front | Na `/agente`, falar ou digitar chega ao `/api/converse`; o orbe reage; em modo real sem login aparece "Conectar iFood" |
+| 2 | **Plano por item.** Blocos com o cartão de resultado do Malveste (adaptador simples do plano para o cartão), selo "Sugestão", avisos, botão "Revisar e aprovar" que manda "pode" | Front | A jornada do aniversário mostra pizza, pipoca e presente; "sem presente" e "a pizza mais bem avaliada" atualizam o plano |
+| 3 | **Sacola no back.** Aprovação explícita devolve `tela.tipo = "sacola"`, montada do plano aprovado com subtotal (quantidade × preço) e frete calculados no servidor | Back | 2 ou 3 testes: aprovação da versão atual gera a sacola; "sim" sozinho não gera; nada remoto é chamado |
+| 4 | **Revisão e sacola na tela.** Revisão por loja com o botão "Aprovar versão N" (manda "aprovo o plano"); sacola no formato do iFood, rotulada "Simulação", "Finalizar pedido" sem envio | Front | Da revisão, aprovar leva à sacola com as lojas do plano |
+| 5 | **Ensaio.** A jornada inteira na `/agente`, em mock e depois em real (login iFood + Gemini) | Todos | A jornada roda falada do começo à sacola; tempo de cada etapa anotado |
+
+**Verificação:** para a tela, a prova é usar: abrir a `/agente` e fazer a jornada. Antes de cada commit, `typecheck`, `lint`, `test` e `build` (a `main` continua rodando). Testes novos só na aprovação (passo 3).
+
+## Depois (ajustes)
+- Cartão "O que eu entendi" e respostas rápidas: o agente passa a mandar ocasião, itens e sugestões de resposta em todo turno.
+- Fala mais curta, sabendo que a tela mostra os detalhes.
+- Destaque "atualizado" e aviso do que mudou; "Ver mais opções" por bloco.
+- Estados especiais: pedido rápido, Sim/Não na voz em dúvida, nada encontrado, fora do escopo, erro.
+- Trocar de alternativa tocando.
 
 ## Coordenação
 - `src/ui/` é a pasta do Malveste: avisar que o Hyago vai mexer em `src/ui/agent/` para não haver edição ao mesmo tempo. Componentes base e home continuam com ele.
@@ -72,4 +74,4 @@ Back (agente) e front (tela) andam em paralelo; o contrato acima é o ponto de e
 - **Cota do Gemini** nos ensaios: ritmo nas evals; faturamento ativo para a demo.
 - **Login iFood só em memória:** reiniciar o servidor exige novo login antes da apresentação.
 - **Lojas fechadas** de madrugada: conferir pipoca e presente de manhã; o bloco "nenhuma loja aberta" cobre o caso.
-- **Variação do Gemini:** o "o que eu entendi" e as respostas rápidas são validados em código; sem eles a tela continua funcionando.
+- **Variação do Gemini:** a tela depende só do `tela.tipo` e do plano, que são validados em código; a fala pode variar sem quebrar a tela.
