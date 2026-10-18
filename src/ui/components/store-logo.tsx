@@ -16,17 +16,19 @@ type Props = {
   // Tom explícito (1 a 6) ou semente estável (ex.: merchantId), para a mesma loja ter sempre a mesma cor.
   tone?: number;
   seed?: string;
+  // round: círculo (home) · square: quadrado arredondado com borda, como o logo das lojas no iFood.
+  shape?: "round" | "square";
   className?: string;
 };
 
 // Logo redonda compartilhada pela home (cenário) e pelos resultados. Quando o contrato trouxer a categoria
 // da loja, basta passar o ícone certo; hoje os resultados usam o ícone neutro.
-export function StoreLogo({ icon: Icon = Utensils, tone, seed = "", className }: Readonly<Props>) {
+export function StoreLogo({ icon: Icon = Utensils, tone, seed = "", shape = "round", className }: Readonly<Props>) {
   const n = tone ?? toneFromSeed(seed);
   return (
     <span
       aria-hidden="true"
-      className={cn("flex size-12 shrink-0 items-center justify-center rounded-full", className)}
+      className={cn("flex size-12 shrink-0 items-center justify-center", shape === "round" ? "rounded-full" : "rounded-2xl border border-border", className)}
       style={{ background: `var(--cat-${n}-bg)`, color: `var(--cat-${n}-fg)` } as CSSProperties}
     >
       <Icon className="size-1/2" />

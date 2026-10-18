@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, MicOff, Search, Send } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, MicOff, Search, Send, X } from "lucide-react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
@@ -29,6 +29,8 @@ const STATE_LABEL: Record<OrbState, string> = {
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
 const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
 // Sem resultado, estas frases só preenchem o campo; quem decide enviar é a pessoa.
+// Abas decorativas da busca (só cenário).
+const TABS = ["Todo o iFood", "Restaurantes", "Mercados", "Farmácias"];
 const EMPTY_HINTS = ["Quero gastar até R$ 60", "Pode ser outra comida"];
 
 export type AgentViewProps = {
@@ -59,7 +61,9 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
   const [showLog, setShowLog] = useState(false);
-  const [expanded, setExpanded] = useState(0);
+  // Nenhuma linha aberta por padrão (a lista fica como a busca do iFood); com uma só opção ela já vem aberta.
+  const [picked, setPicked] = useState<number | null>(null);
+  const expanded = picked ?? (p.options.length === 1 ? 0 : -1);
   // Primeira busca em andamento: abre a área de resultados com esqueletos.
   const searching = p.busy && p.view === null && p.query !== "";
   const hasView = p.view !== null || searching;
@@ -115,24 +119,33 @@ export function AgentView(p: Readonly<AgentViewProps>) {
       >
         {(p.view === "options" || p.view === "empty" || searching) && (
           <>
-            <div className="flex items-center justify-between gap-2 px-4 pb-2">
-              <span className="flex min-w-0 items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-sm shadow-sm">
-                <Search className="size-3.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">{p.query}</span>
-              </span>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {p.view === "options" ? `${p.options.length} ${p.options.length === 1 ? "opção" : "opções"} · total na revisão` : ""}
-              </span>
+            <div className="px-4 pb-2">
+              <div className="flex h-11 items-center gap-2 rounded-full bg-card px-4 shadow-sm">
+                <Search className="size-5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate text-base">{p.query}</span>
+                <span aria-hidden="true" className="flex size-5 items-center justify-center rounded-full bg-muted-foreground text-background"><X className="size-3" /></span>
+              </div>
+              {/* Abas só de cenário, como na busca do iFood: não fazem nada. */}
+              <div aria-hidden="true" className="mt-2.5 flex gap-1 overflow-x-auto text-sm">
+                {TABS.map((tab) => (
+                  <span key={tab} className={cn("shrink-0 rounded-full px-3.5 py-2", tab === "Restaurantes" ? "bg-card font-semibold shadow-sm" : "text-muted-foreground")}>{tab}</span>
+                ))}
+              </div>
             </div>
-            {/* O fim da lista esmaece para indicar que há mais; o espaço extra deixa o último cartão sair da máscara. */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+            {/* Folha branca de cantos arredondados, como a lista do iFood; o fim esmaece para indicar que há mais. */}
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-10 pt-4 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="font-display text-2xl font-semibold">Para você</h2>
+                {p.view === "options" && <span className="text-xs text-muted-foreground">{p.options.length} {p.options.length === 1 ? "opção" : "opções"} · total na revisão</span>}
+              </div>
               {searching && (
-                <div className="divide-y divide-border overflow-hidden rounded-2xl bg-card shadow-sm"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
+                <div className="mt-2 flex flex-col gap-1"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
               )}
               {!searching && p.view === "options" && (
-                <ul className="divide-y divide-border overflow-hidden rounded-2xl bg-card shadow-sm">
+                <ul className="mt-2 flex flex-col gap-1">
                   {p.options.map((option, i) => (
                     <motion.li
+                      className="min-w-0"
                       key={option.candidate.itemId}
                       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -143,7 +156,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
                         first={i === 0}
                         expanded={expanded === i}
                         disabled={p.busy}
-                        onToggle={() => setExpanded(expanded === i ? -1 : i)}
+                        onToggle={() => setPicked(expanded === i ? -1 : i)}
                         onSelect={() => p.onSelect(i)}
                         onAdjust={adjust}
                       />
