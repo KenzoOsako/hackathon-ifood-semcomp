@@ -15,6 +15,7 @@ Atualizado em 17/10/2026, ~20h. Status: **canônico** (aprovado), **V2** (propos
 | [AUDITORIA-ALINHAMENTO-2026-10-17.md](AUDITORIA-ALINHAMENTO-2026-10-17.md) | canônico | O que existe de fato no código e as lacunas |
 | [VOZ_INTEGRACAO_BACKEND.md](VOZ_INTEGRACAO_BACKEND.md) | **V2** | Passagem da voz para o backend: como ouvir o agente falando, contrato de eventos, regras do texto falado |
 | [VOZ_PLANO_DE_QUALIDADE.md](VOZ_PLANO_DE_QUALIDADE.md) | **V2** | Matriz de qualidade da voz, checklist do painel ElevenLabs e roteiro de teste humano |
+| [DEMO_ROTEIRO_ANIVERSARIO.md](DEMO_ROTEIRO_ANIVERSARIO.md) | **V2** | DEMO-01: roteiro da demo do aniversário, real vs simulado, falhas, plano B e critérios de aceite |
 | [mcp-ifood-referencia.md](mcp-ifood-referencia.md) | referência | 24 ferramentas, OAuth, escopos, erros (documentação, não `tools/list` real) |
 | [entregaveis/](entregaveis/) | entregáveis | 01 a 06, um arquivo cada |
 | [produto-v1.md](produto-v1.md) | histórico | Rascunho anterior (copiloto só de refeições) |
