@@ -49,6 +49,26 @@ export const TurnoInterpretadoSchema = z.object({
 export type TurnoInterpretado = z.infer<typeof TurnoInterpretadoSchema>;
 
 // Entrada do /api/converse. Sinais e hipóteses chegam quando a voz for conectada.
+export const ConfiguracaoItemSchema = z.strictObject({
+  planoId: z.string().min(1).max(200),
+  versao: z.number().int().positive(),
+  necessidadeId: z.string().min(1).max(40),
+  ref: z.string().min(1).max(200),
+  selecoes: z.array(z.strictObject({ grupoId: z.string().min(1).max(200), opcaoId: z.string().min(1).max(200), quantidade: z.number().int().min(1).max(99) })).max(100),
+});
+export type ConfiguracaoItem = z.infer<typeof ConfiguracaoItemSchema>;
+
+export interface GrupoComplemento {
+  id: string; nome: string; minimo: number; maximo: number;
+  opcoes: { id: string; nome: string; precoCents: number; disponivel: boolean }[];
+}
+export interface ComplementosItem {
+  status: "verificado" | "indisponivel";
+  grupos: GrupoComplemento[];
+  selecoes: ConfiguracaoItem["selecoes"];
+  composicaoNaoVerificada?: boolean;
+}
+
 export const ConverseInputSchema = z.strictObject({
   texto: z.string().trim().min(1).max(2000),
   origem: z.enum(["voz", "texto"]).default("texto"),
@@ -56,6 +76,7 @@ export const ConverseInputSchema = z.strictObject({
   hipoteses: z.array(z.string().max(200)).max(5).optional(),
   // Começa uma conversa nova (zera o estado do agente; o login iFood continua).
   reiniciar: z.boolean().optional(),
+  configuracao: ConfiguracaoItemSchema.optional(),
 });
 export type ConverseInput = z.infer<typeof ConverseInputSchema>;
 
@@ -87,6 +108,7 @@ export interface OpcaoPlano {
   avaliacoes?: number;         // quantidade de avaliações por trás da nota
   pedidoMinimoCents?: number;
   precoOriginalCents?: number; // preço antes da promoção (quando há)
+  complementos?: ComplementosItem;
 }
 
 export interface BlocoPlano {
@@ -117,6 +139,7 @@ export type EventoFeedback =
 
 // Ferramentas do domínio que o agente pode chamar. Nenhuma compra, aprova ou paga.
 export interface DomainPort {
+  detalharItem?(opcao: OpcaoPlano): Promise<OpcaoPlano>;
   buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]>;
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot>;
   ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot>;
@@ -142,6 +165,7 @@ export interface AgentSession {
   ocasiao: Ocasiao;
   necessidades: Necessidade[];
   plano?: PlanoSnapshot;
+  ultimaVersaoPlano?: number;
   recusadas: string[];    // categorias sugeridas que o usuário recusou; não voltam na sessão
   nomeUsado?: boolean;
   ultimaIntencao?: string; // para a telemetria
@@ -154,7 +178,7 @@ export interface AgentSession {
 export interface SacolaLoja {
   lojaId: string;
   loja: string;
-  itens: { ref: string; item: string; categoria: string; quantidade: number; precoCents: number; subtotalCents: number }[];
+  itens: { ref: string; item: string; categoria: string; quantidade: number; precoCents: number; subtotalCents: number; complementos?: string[] }[];
   subtotalCents: number;
   freteCents?: number;
   totalCents: number; // subtotal + frete conhecido

@@ -83,3 +83,6 @@
 - **Decisão:** `src/agent/atendente`: uma chamada de LLM com ferramentas só de leitura (`buscar_no_ifood`, `mostrar_plano`, `pedir_revisao`) conduz a conversa, vê o histórico e pesquisa quando precisa. O código só guarda: aprovação pela frase explícita e versão (sacola), "fechou" leva à revisão, sem álcool, sem dado pessoal, sem "pedido feito", preço e loja só do iFood.
 - **Removido:** orquestrador, LLM por regras, prompts de interpretação/resposta/relevância, juiz de relevância, telemetria do orquestrador, evals e testes de qualidade (caos, invariantes, mutação) que só serviam a ele.
 - **Consequência:** sem LLM configurado o /api/converse responde 503 (não há mais modo por regras). `ATENDENTE_MODEL` permite um modelo maior só para o atendente. A latência do Terossi passa a mirar o atendente (1–2 chamadas ao modelo + busca por turno).
+
+## Complementos por item — 18/10/2026
+Escolhas vinculadas a planoId/versão/necessidade/ref; IDs e preços vêm do detalhe do catálogo. Adicionais são por unidade. Falha do detalhe, grupo obrigatório incompleto ou composição desconhecida de adicional para restrição não viram escolha confirmada. Sacola segue local e simulada. Implementação e validações: docs/COMPLEMENTOS_ITENS.md.

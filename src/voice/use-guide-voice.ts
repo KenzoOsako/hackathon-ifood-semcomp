@@ -17,6 +17,7 @@ import { buildConversationExport, type TurnLog } from "./conversation-export";
 import { summarizeRounds, type LatencySummary } from "./latency";
 import { termsFromPlan } from "./plan-terms";
 import type { VoiceSignals } from "./signals";
+import type { ConfiguracaoItem } from "@/agent/types";
 import { runTurn, type TurnCtl } from "./turn";
 import { useVoice, type Utterance } from "./use-voice";
 
@@ -90,7 +91,7 @@ export function useGuideVoice() {
     setBusy(false);
   }, []);
 
-  const run = useCallback(async (texto: string, origem: "voz" | "texto", sinais: VoiceSignals | undefined, ctl: TurnCtl) => {
+  const run = useCallback(async (texto: string, origem: "voz" | "texto", sinais: VoiceSignals | undefined, ctl: TurnCtl, configuracao?: ConfiguracaoItem) => {
     turnAbort.current?.abort();
     const ac = new AbortController();
     turnAbort.current = ac;
@@ -102,7 +103,7 @@ export function useGuideVoice() {
     const patch = (p: Partial<TurnLog>) => setTurns((all) => all.map((t) => (t.id === turnId ? { ...t, ...p } : t)));
     setTurns((all) => [...all, { id: turnId, usuario: texto, origem, ...(sinais?.confianca !== undefined ? { confianca: sinais.confianca } : {}) }]);
     try {
-      await runTurn({ texto, origem, sinais }, ctl, {
+      await runTurn({ texto, origem, sinais, ...(configuracao ? { configuracao } : {}) }, ctl, {
         onAgentText: (text) => { patch({ resposta: text }); setLines((l) => [...l, { id: nextId("a"), from: "agente", text }]); },
         onMeta: (meta) => patch({ meta }),
         onScreen: (event, payload) => { terms.current = termsFromPlan(payload); setScreen({ event, payload }); },
@@ -132,11 +133,11 @@ export function useGuideVoice() {
   // Interromper a fala também cancela o turno em andamento: nada do agente fala depois que a pessoa mandou parar.
   const voiceStopSpeaking = voice.stopSpeaking;
   const stopSpeaking = useCallback(() => { abortTurn(); voiceStopSpeaking(); }, [abortTurn, voiceStopSpeaking]);
-  const sendText = useCallback((texto: string) => {
+  const sendText = useCallback((texto: string, configuracao?: ConfiguracaoItem) => {
     const t = texto.trim();
     if (!t) return;
     voiceStopSpeaking(); // digitar por cima do Guide interrompe a fala, como falar por cima (o `run` cancela o turno anterior)
-    void run(t, "texto", undefined, { mark, enqueue: (x) => enqueue(x), done: turnDone, end: turnEnded, begin: beginTurn });
+    void run(t, "texto", undefined, { mark, enqueue: (x) => enqueue(x), done: turnDone, end: turnEnded, begin: beginTurn }, configuracao);
   }, [run, voiceStopSpeaking, mark, enqueue, turnDone, turnEnded, beginTurn]);
 
   const stats = useMemo(() => summarizeRounds(rounds, { skipFirst: skipFirstRound }), [rounds, skipFirstRound]);
