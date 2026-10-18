@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BargeInDetector, EndpointDetector, NoiseFloor } from "./endpoint";
-import { VoiceSession, type PlayerLike, type RecorderLike, type SessionDeps, type SessionEvents, type Utterance, type VoiceErrorCode } from "./session";
+import { LOW_CONFIDENCE, UNCLEAR_PHRASE, VoiceSession, type PlayerLike, type RecorderLike, type SessionDeps, type SessionEvents, type Utterance, type VoiceErrorCode } from "./session";
 
 // ---------- doubles ----------
 class Clock {
@@ -80,15 +80,15 @@ beforeEach(() => {
 
 // ---------- detectores puros ----------
 describe("fim de fala", () => {
-  it("fala normal termina depois de 1 s de silêncio; fala curta, depois de 700 ms", () => {
+  it("fala normal termina depois de 1,3 s de silêncio; fala curta, depois de 900 ms", () => {
     const longa = new EndpointDetector(0);
     for (let t = 0; t <= 3000; t += 50) expect(longa.feed(0.2, t)).toBe("continue");
-    expect(longa.feed(0, 3600)).toBe("continue");
-    expect(longa.feed(0, 4000)).toBe("end");
+    expect(longa.feed(0, 4000)).toBe("continue"); // 1 s pensando: ainda não corta
+    expect(longa.feed(0, 4300)).toBe("end");
     const curta = new EndpointDetector(0);
     for (let t = 0; t <= 600; t += 50) curta.feed(0.2, t);
-    expect(curta.feed(0, 1200)).toBe("continue");
-    expect(curta.feed(0, 1300)).toBe("end");
+    expect(curta.feed(0, 1400)).toBe("continue");
+    expect(curta.feed(0, 1500)).toBe("end");
   });
   it("pausa curta no meio da frase não corta a pessoa", () => {
     const d = new EndpointDetector(0);
@@ -275,7 +275,7 @@ describe("modo sem as mãos", () => {
   it("fala curta ('sim') termina mais rápido que fala longa", async () => {
     const s = makeSession();
     await s.setHandsFree(true);
-    level = 0.3; await clock.advance(500); level = 0; await clock.advance(800);
+    level = 0.3; await clock.advance(500); level = 0; await clock.advance(1100);
     expect(utterances).toHaveLength(1);
   });
   it("falar por cima do Guide interrompe a fala e já grava, marcando a interrupção", async () => {
@@ -341,5 +341,86 @@ describe("modo sem as mãos", () => {
     const before = recorders.length;
     await clock.advance(3000);
     expect(recorders).toHaveLength(before);
+  });
+});
+
+
+describe("cancelar a gravação", () => {
+  it("no manual descarta o áudio, não chama o reconhecimento e solta o microfone", async () => {
+    const s = makeSession();
+    await s.start();
+    level = 0.3; await clock.advance(800);
+    s.cancel(); await clock.advance(300);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(utterances).toHaveLength(0);
+    expect(s.state).toBe("idle");
+    expect(closes).toBe(1);
+  });
+  it("no modo sem as mãos descarta só esta fala e volta a ouvir", async () => {
+    const s = makeSession();
+    await s.setHandsFree(true);
+    level = 0.3; await clock.advance(800);
+    s.cancel();
+    level = 0; await clock.advance(1000);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(s.handsFree).toBe(true);
+    expect(s.state).toBe("listening"); // reabriu sozinho
+  });
+  it("sem gravação em andamento não faz nada", () => {
+    const s = makeSession();
+    s.cancel();
+    expect(s.state).toBe("idle");
+  });
+});
+
+describe("reconhecimento incerto", () => {
+  const unclearEvents: Array<[string, number]> = [];
+  const withUnclear = () => {
+    unclearEvents.length = 0;
+    const s = makeSession();
+    (s as unknown as { ev: { onUnclear?: (t: string, c: number) => void } }).ev.onUnclear = (t, c) => unclearEvents.push([t, c]);
+    return s;
+  };
+  const reply = (texto: string, confianca?: number) => Promise.resolve(Response.json({ texto, ...(confianca !== undefined ? { confianca } : {}), injecao: false, redacoes: [] }));
+  const say = async (s: VoiceSession) => { await s.start(); level = 0.3; await clock.advance(1200); level = 0; s.stop(); await clock.advance(300); };
+
+  it("confiança abaixo do limite NÃO vai ao agente: o Guide pede para repetir", async () => {
+    fetchMock.mockImplementation(() => reply("essa coisa de eu já conto que eu", 0.776));
+    const s = withUnclear();
+    await say(s);
+    expect(utterances).toHaveLength(0);
+    expect(player.spoken).toEqual([UNCLEAR_PHRASE]);
+    expect(unclearEvents).toEqual([["essa coisa de eu já conto que eu", 0.776]]);
+  });
+  it("confiança no limite ou acima segue normal e a confiança vai nos sinais", async () => {
+    fetchMock.mockImplementation(() => reply("quero uma pizza", LOW_CONFIDENCE));
+    const s = withUnclear();
+    await say(s);
+    expect(utterances).toHaveLength(1);
+    expect(utterances[0].sinais.confianca).toBe(LOW_CONFIDENCE);
+    expect(player.spoken).toEqual([]);
+  });
+  it("sem confiança informada não bloqueia", async () => {
+    fetchMock.mockImplementation(() => reply("oi"));
+    await say(withUnclear());
+    expect(utterances).toHaveLength(1);
+  });
+  it("três incertas seguidas desligam o modo sem as mãos e avisam (sem laço infinito)", async () => {
+    fetchMock.mockImplementation(() => reply("hmm", 0.3));
+    const s = withUnclear();
+    await s.setHandsFree(true);
+    for (let i = 0; i < 3; i++) { level = 0.3; await clock.advance(1200); level = 0; await clock.advance(1600); player.finish(); await clock.advance(800); }
+    expect(utterances).toHaveLength(0);
+    expect(s.handsFree).toBe(false);
+    expect(errors.at(-1)).toBe("stt_failed");
+  });
+  it("uma fala boa zera a contagem de incertas", async () => {
+    const answers = [0.3, 0.3, 0.95, 0.3, 0.3];
+    let i = 0;
+    fetchMock.mockImplementation(() => reply("pizza", answers[i++ % answers.length]));
+    const s = withUnclear();
+    for (let k = 0; k < 5; k++) await say(s);
+    expect(utterances).toHaveLength(1);
+    expect(errors.at(-1)).not.toBe("stt_failed");
   });
 });

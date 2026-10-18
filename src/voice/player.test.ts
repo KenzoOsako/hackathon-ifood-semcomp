@@ -129,3 +129,46 @@ describe("player de fala por pedaços", () => {
     expect(player.speaking).toBe(false);
   });
 });
+
+
+describe("frases fixas em cache", () => {
+  it("preload busca uma vez e a fala seguinte toca sem nova ida à rede", async () => {
+    player.preload(["Deixa eu ver as opções."]);
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    player.enqueue("Deixa eu ver as opções.");
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1); // usou o áudio guardado
+    expect(FakeAudio.all).toHaveLength(1);
+    expect(hooks.onTtsResponse).toHaveBeenCalledTimes(1); // a medida de latência continua funcionando
+    FakeAudio.all[0].finish();
+    await flush();
+  });
+  it("a mesma frase pode tocar de novo em outro turno (o áudio guardado é reutilizado)", async () => {
+    player.preload(["Já vejo isso para você."]);
+    await flush();
+    for (let i = 0; i < 2; i++) {
+      player.enqueue("Já vejo isso para você.");
+      await flush();
+      FakeAudio.all.at(-1)!.finish();
+      await flush();
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(FakeAudio.all).toHaveLength(2);
+  });
+  it("preload que falhou não fica em cache: a próxima fala busca de novo", async () => {
+    fetchMock.mockImplementationOnce(() => Promise.resolve(new Response("x", { status: 503 })));
+    player.preload(["Um instante, já te mostro."]);
+    await flush();
+    player.enqueue("Um instante, já te mostro.");
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(FakeAudio.all).toHaveLength(1);
+  });
+  it("preload repetido da mesma frase não busca duas vezes", async () => {
+    player.preload(["Oi."]);
+    player.preload(["Oi."]);
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

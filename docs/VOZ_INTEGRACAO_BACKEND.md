@@ -19,8 +19,9 @@ npm run dev -- -p 8080        # abra http://localhost:8080/voz no Chrome (8080 �
 
 **Entrada** (`ConverseInputSchema`, já é o seu): `{ texto, origem: "voz"|"texto", sinais?, hipoteses? }`.
 - `texto` já vem reconhecido e **com dados sensíveis mascarados** (CPF, CNPJ, cartão, e-mail).
-- `sinais` (`VoiceSignalsSchema`, `src/voice/signals.ts`): `origem`, `interrompeu`, `palavras`, `silencioMs`. Use para decidir L0/L1/L2 (fala curta e seca = pressa).
-- `hipoteses`: ainda não enviado. A confiança do reconhecimento (`confianca`, 0 a 1) está na `Utterance` e pode ir junto se você quiser usar.
+- `sinais` (`VoiceSignalsSchema`, `src/voice/signals.ts`): `origem`, `interrompeu`, `palavras`, `silencioMs`, `velocidadeFala` e **`confianca`** (0 a 1, opcional, campo novo e aditivo). Use para decidir L0/L1/L2. Cuidado: fala curta como "sim" ou "pode" responde a uma pergunta e não é pressa; combine com a regex de pressa do orquestrador.
+- **Confiança baixa já é tratada na voz:** abaixo de 0,8 (`LOW_CONFIDENCE`, em `session.ts`) a fala **nem chega ao agente**; o Guide diz "Não entendi bem. Pode repetir?". Entre 0,8 e ~0,9 a fala chega com `sinais.confianca` preenchido, e fica a seu critério o agente confirmar o que entendeu antes de buscar.
+- `hipoteses`: ainda não enviado.
 
 **Saída que a voz entende** (`src/voice/converse-events.ts`, NDJSON, um evento por linha):
 
@@ -30,7 +31,7 @@ npm run dev -- -p 8080        # abra http://localhost:8080/voz no Chrome (8080 �
 | `speech {seq, text, final?}` | um pedaço para falar, em ordem (`seq` de 0 em diante) | fala assim que chega, enquanto você processa o resto |
 | `screen {event, payload}` | plano para a tela | repassa à interface, não fala |
 | `done {turnId}` | fim do turno | libera o microfone (modo sem as mãos) |
-| `error {code, reply}` | falha | fala o `reply` (frase curta e segura) |
+| `error {code, reply, loginUrl?}` | falha | fala o `reply` (frase curta e segura). Com `loginUrl` (só caminho relativo, ex. `/api/auth/login`), a interface mostra o botão "Conectar iFood" |
 
 **Hoje o seu `/api/converse` devolve um JSON único** (`AgentReply`). Isso **já funciona sem você mudar nada**: `src/voice/converse-client.ts` converte o JSON nos eventos acima (`fraseEspera` vira `ack`, `resposta` vira `speech`, `tela` vira `screen`). Se um dia a rota responder `Content-Type: application/x-ndjson`, o mesmo cliente repassa os eventos direto.
 
@@ -39,7 +40,7 @@ O formato da resposta do `/api/converse` pode mudar. Se você migrar para NDJSON
 
 ## 3. Por que streaming vale a pena
 Orçamento de latência até a primeira palavra: STT ≤ 600 ms + 1º pedaço do backend ≤ 700 ms + 1º byte do TTS ≤ 450 ms ≤ **1800 ms**. Medido na máquina do Felipe (modo `dev`, após aquecer): STT 0,5 s, TTS 0,3 s, backend de regras 0,03 s, total cerca de 1,2 s.
-Quando o LLM entrar, o turno do orquestrador vai passar de 1 s. Com JSON único, a pessoa espera tudo. Com `ack` na hora e `speech` por frase, ela ouve algo em < 1 s. A voz só precisa que o pedaço seja **uma frase completa** (ela divide frases longas sozinha; ver `src/voice/chunker.ts`).
+**Frase de espera local (já implementada):** se o agente não responder em 700 ms, a voz fala sozinha uma frase fixa ("Deixa eu ver as opções.", "Um instante, já te mostro.", "Já vejo isso para você."). Essas frases são sintetizadas ao abrir a página e tocam sem ir à rede (`player.preload`). Se a espera local já foi falada, o `ack` do backend é descartado para não repetir. Quando o LLM entrar, o turno do orquestrador vai passar de 1 s. Com JSON único, a pessoa espera tudo. Com `ack` na hora e `speech` por frase, ela ouve algo em < 1 s. A voz só precisa que o pedaço seja **uma frase completa** (ela divide frases longas sozinha; ver `src/voice/chunker.ts`).
 
 ## 4. Regras para o texto que vai ser falado
 - Sem markdown, listas, `[` `]`, `*`, `#`: a voz remove, mas o texto fica estranho. Escreva como se fala.
@@ -53,7 +54,9 @@ Quando o LLM entrar, o turno do orquestrador vai passar de 1 s. Com JSON único,
 | Arquivo | Para quê |
 |---|---|
 | `src/voice/stt.ts`, `tts.ts`, `keyterms.ts` | ElevenLabs STT (Scribe) e TTS (Flash v2.5), palavras-chave para acertar nomes |
-| `src/voice/session.ts` + `use-voice.ts` | sessão de voz: gravar, fim de fala, interromper, modo sem as mãos (testada com peças falsas) |
+| **`src/voice/use-guide-voice.ts`** | **hook único para a interface**: microfone + agente + fala. Devolve `lines`, `screen`, `login`, `unclear`, `toggle`, `label`, `sendText`, `cancel`, `handsFree`. Exemplo de uso no topo do arquivo e em `src/app/voz/page.tsx` |
+| `src/voice/turn.ts` | um turno: manda ao `/api/converse`, fala o que voltar, frase de espera local, login (puro e testado) |
+| `src/voice/session.ts` + `use-voice.ts` | sessão de voz: gravar, cancelar (Esc), fim de fala (900 ms curta / 1,3 s normal), interromper, modo sem as mãos, confiança baixa (testada com peças falsas) |
 | `src/voice/player.ts`, `chunker.ts` | fila de fala em pedaços, pré-busca do próximo, interrupção |
 | `src/voice/converse-client.ts`, `converse-events.ts` | **ponte com o seu `/api/converse`** |
 | `src/voice/guard.ts`, `http-guard.ts`, `rate-limit.ts`, `budget.ts` | segurança: mascara dados, mesma origem, limites por visitante, orçamento de caracteres e segundos |
@@ -63,13 +66,17 @@ Quando o LLM entrar, o turno do orquestrador vai passar de 1 s. Com JSON único,
 
 ## 6. Como a gente trabalha
 - Cada frente na sua branch; o Kenzo integra. Acumulamos trabalho antes do PR para não sobrecarregá-lo.
-- Antes de subir: `npm run typecheck`, `npm run lint`, `npm test` (230 testes) e `npm run build`.
+- Antes de subir: `npm run typecheck`, `npm run lint`, `npm test` (267 testes) e `npm run build`.
 - Chaves só no `.env` local. Nunca no código nem em doc.
 - Mudou o contrato de eventos, o schema de entrada ou o comportamento de aprovação? Avise no grupo e atualize este arquivo.
 
-## 7. Pendências conhecidas
-- Reconhecimento de fala bom com microfone fraco, mas confiança baixa ainda não faz o Guide pedir para repetir (proposta pronta, aguardando decisão).
-- Fim de fala (700 ms / 1 s) e interrupção por voz precisam de ajuste fino com teste humano em Chrome.
-- Limites de abuso são por processo; para deploy público em várias instâncias é preciso armazenamento compartilhado.
-- O agente do painel da ElevenLabs está público (autenticação desligada). Ligar autenticação e allowlist de host antes de divulgar.
+## 7. Como ligar na interface (Malveste)
+`const g = useGuideVoice();` e use `g.toggle` no orb (um botão: falar, parar ou interromper), `g.label` como texto de apoio, `g.lines` para a conversa, `g.screen` para o plano e `g.login` para o botão "Conectar iFood". O texto sempre funciona (`g.sendText`). Esc descarta a gravação ou interrompe a fala.
+
+## 8. Pendências conhecidas
+- O limite de confiança (0,8) e os tempos de fim de fala (900 ms / 1,3 s) são pontos de partida: calibrar no teste humano em Chrome, junto com a interrupção por voz e o eco.
+- A rota `/api/converse` ainda não tem limite por visitante nem orçamento de tokens (a voz tem). Importa quando o LLM real entrar.
+- A fala não deve repetir endereço completo (só "Casa"/"Trabalho"): o texto falado vai para a ElevenLabs. A política de retenção do TTS da nossa conta não foi verificada.
+- Os limites de abuso da voz são por processo. A demo roda local (sem deploy público); se isso mudar, é preciso armazenamento compartilhado.
+- Painel ElevenLabs travado em 17/10 (autenticação, origem obrigatória, duração máxima 180 s, silêncio 20 s, retenção 7 dias, áudio não armazenado). Falta conferir os overrides abaixo de "System prompt".
 - Rotacionar as chaves da ElevenLabs e do iFood antes de tornar o repositório público.

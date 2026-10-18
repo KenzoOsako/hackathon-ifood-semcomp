@@ -52,6 +52,8 @@ export class SpeechPlayer {
   private reportedResponse = false;
   private reportedAudio = false;
   private idleWaiters: Array<() => void> = [];
+  // Frases fixas ("Deixa eu ver as opções.") já sintetizadas: tocam sem esperar a rede.
+  private readonly cache = new Map<string, Promise<Blob | null>>();
 
   constructor(private readonly onChange?: (speaking: boolean) => void, private readonly hooks: PlayerHooks = {}, private readonly deps: PlayerDeps = {}) {}
 
@@ -62,7 +64,13 @@ export class SpeechPlayer {
     }
   }
 
-  private fetchBlob(text: string, previousText: string | undefined, nextText: string | undefined, signal: AbortSignal): Promise<Blob | null> {
+  private reportResponse() {
+    if (this.reportedResponse) return;
+    this.reportedResponse = true;
+    this.hooks.onTtsResponse?.();
+  }
+
+  private fetchBlob(text: string, previousText: string | undefined, nextText: string | undefined, signal?: AbortSignal, silent = false): Promise<Blob | null> {
     const doFetch = this.deps.fetchImpl ?? fetch;
     return doFetch("/api/voice/tts", {
       method: "POST",
@@ -72,13 +80,21 @@ export class SpeechPlayer {
     })
       .then(async (res) => {
         if (!res.ok) return null;
-        if (!this.reportedResponse) {
-          this.reportedResponse = true;
-          this.hooks.onTtsResponse?.();
-        }
+        if (!silent) this.reportResponse();
         return await res.blob();
       })
       .catch(() => null);
+  }
+
+  // Sintetiza frases fixas antecipadamente (sem pedaço anterior/seguinte, para o áudio servir em qualquer contexto).
+  // Falha não fica em cache: a próxima fala tenta de novo pela rede.
+  preload(texts: string[]): void {
+    for (const raw of texts) {
+      const t = raw.trim();
+      if (!t || this.cache.has(t)) continue;
+      const p = this.fetchBlob(t, undefined, undefined, undefined, true).then((b) => { if (!b) this.cache.delete(t); return b; });
+      this.cache.set(t, p);
+    }
   }
 
   // Coloca um pedaço na fila. O áudio dele começa a ser buscado AGORA, sem esperar a vez.
@@ -86,7 +102,11 @@ export class SpeechPlayer {
     const t = text.trim();
     if (!t) return;
     this.ctrl ??= new AbortController();
-    this.queue.push({ text: t, blob: this.fetchBlob(t, this.lastText, opts.nextText, this.ctrl.signal) });
+    const cached = this.cache.get(t);
+    const blob = cached
+      ? cached.then((b) => (b ? (this.reportResponse(), b) : this.fetchBlob(t, this.lastText, opts.nextText, this.ctrl?.signal)))
+      : this.fetchBlob(t, this.lastText, opts.nextText, this.ctrl.signal);
+    this.queue.push({ text: t, blob });
     this.lastText = t;
     void this.run();
   }

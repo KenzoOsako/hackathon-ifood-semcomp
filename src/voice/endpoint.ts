@@ -13,8 +13,8 @@ export interface EndpointOptions {
 
 export const DEFAULT_ENDPOINT: EndpointOptions = {
   threshold: 0.02,
-  silenceMs: 1000,
-  shortSilenceMs: 700,
+  silenceMs: 1300,
+  shortSilenceMs: 900,
   shortSpeechMs: 1500,
   minSpeechMs: 250,
   noSpeechMs: 7000,

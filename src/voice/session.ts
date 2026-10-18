@@ -80,7 +80,13 @@ export interface SessionEvents {
   onHandsFree(on: boolean): void;
   onUtterance(u: Utterance, api: VoiceApi): void;
   onLatency?(s: LatencySummary): void;
+  // Reconhecimento incerto: a fala NÃO foi ao agente; o Guide pede para repetir. A tela pode mostrar o que ouviu.
+  onUnclear?(texto: string, confianca: number): void;
 }
+
+// Abaixo disso o texto reconhecido é duvidoso demais para virar busca (ex.: 0,78 numa frase truncada). Calibrar no teste humano.
+export const LOW_CONFIDENCE = 0.8;
+export const UNCLEAR_PHRASE = "Não entendi bem. Pode repetir?";
 
 const TICK_MS = 50;
 const COOLDOWN_AFTER_SPEECH_MS = 500; // não reabre o microfone na cauda da fala do Guide (eco)
@@ -106,6 +112,7 @@ export class VoiceSession {
   private interrupted = false;
   private cooldownUntil = 0;
   private silentRounds = 0;
+  private unclearRounds = 0;
   private wasSpeaking = false;
   private finalizing = false;
   private destroyed = false;
@@ -123,6 +130,15 @@ export class VoiceSession {
 
   stop(): void {
     if (this.state === "listening") this.finalize();
+  }
+
+  // Descarta o que está sendo gravado, sem enviar. No modo sem as mãos o microfone reabre logo em seguida.
+  cancel(): void {
+    if (this.state !== "listening") return;
+    this.cancelListening();
+    this.ev.onError(null);
+    if (this.handsFree) this.cooldownUntil = this.d.now() + 300;
+    else this.releaseMic();
   }
 
   async setHandsFree(on: boolean): Promise<void> {
@@ -354,7 +370,9 @@ export class VoiceSession {
       if (!res.ok) return this.afterFailure("stt_failed");
       const data = (await res.json()) as { texto: string; confianca?: number; injecao: boolean; redacoes: string[] };
       this.trace.mark("stt_done", this.d.now());
-      const sinais = computeSignals({ transcript: data.texto, micOpenedAt: this.micOpenedAt, firstWordAt: this.tracker?.firstWordAt, lastWordAt: this.tracker?.lastWordAt, interrupted: this.interrupted });
+      if (data.confianca !== undefined && data.confianca < LOW_CONFIDENCE) return this.afterUnclear(data.texto, data.confianca);
+      this.unclearRounds = 0;
+      const sinais = computeSignals({ transcript: data.texto, micOpenedAt: this.micOpenedAt, firstWordAt: this.tracker?.firstWordAt, lastWordAt: this.tracker?.lastWordAt, interrupted: this.interrupted, confianca: data.confianca });
       this.setState("idle");
       if (this.handsFree) this.awaitReply();
       const player = this.d.player;
@@ -367,6 +385,15 @@ export class VoiceSession {
       this.ev.onDiag?.(this.diag);
       this.afterFailure("stt_failed");
     }
+  }
+
+  // Texto duvidoso: não vai ao agente. O Guide pede para repetir; depois de 3 seguidas, desiste e avisa (sem laço infinito).
+  private afterUnclear(texto: string, confianca: number) {
+    this.setState("idle");
+    this.unclearRounds++;
+    if (this.unclearRounds >= MAX_SILENT_ROUNDS) { this.unclearRounds = 0; return this.afterFailure("stt_failed"); }
+    this.ev.onUnclear?.(texto, confianca);
+    this.d.player.enqueue(UNCLEAR_PHRASE);
   }
 
   // Sem fala ou áudio curto: no modo sem as mãos reabre quieto; no manual, avisa.

@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserDeps } from "./browser-deps";
 import type { LatencySummary, Mark } from "./latency";
 import { SpeechPlayer } from "./player";
-import { VoiceSession, type Utterance, type VoiceApi, type VoiceDiag, type VoiceErrorCode, type VoiceState } from "./session";
+import { FILLERS } from "./turn";
+import { UNCLEAR_PHRASE, VoiceSession, type Utterance, type VoiceApi, type VoiceDiag, type VoiceErrorCode, type VoiceState } from "./session";
 
 export type { Utterance, VoiceApi, VoiceErrorCode, VoiceState };
 
@@ -22,6 +23,8 @@ const MESSAGES: Record<VoiceErrorCode, string> = {
 export interface VoiceOptions {
   // Palavras que estão na tela agora (lojas, itens). Ajudam o reconhecimento a acertar os nomes.
   getTerms?: () => string[];
+  // Reconhecimento incerto: a fala não foi ao agente e o Guide pediu para repetir.
+  onUnclear?: (texto: string, confianca: number) => void;
 }
 
 export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, options: VoiceOptions = {}) {
@@ -35,7 +38,8 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const player = useRef<SpeechPlayer | null>(null);
   const onUtt = useRef(onUtterance);
   const termsFn = useRef(options.getTerms);
-  useEffect(() => { onUtt.current = onUtterance; termsFn.current = options.getTerms; }, [onUtterance, options.getTerms]);
+  const unclearFn = useRef(options.onUnclear);
+  useEffect(() => { onUtt.current = onUtterance; termsFn.current = options.getTerms; unclearFn.current = options.onUnclear; }, [onUtterance, options.getTerms, options.onUnclear]);
 
   useEffect(() => {
     const p = new SpeechPlayer(undefined, {
@@ -43,12 +47,14 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
       onAudioStart: () => session.current?.speakingStarted(),
     });
     player.current = p;
+    p.preload([...FILLERS, UNCLEAR_PHRASE]); // frases fixas prontas: tocam sem esperar a rede
     const s = new VoiceSession(createBrowserDeps(p, () => termsFn.current?.() ?? []), {
       onState: setState,
       onError: setError,
       onLevel: (l) => setLevel(Math.min(1, l * 8)),
       onHandsFree: setHandsFreeState,
       onUtterance: (u, api) => onUtt.current(u, api),
+      onUnclear: (t, c) => unclearFn.current?.(t, c),
       onLatency: setLatency,
       onDiag: setDiag,
     });
@@ -58,6 +64,7 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
 
   const start = useCallback(() => session.current?.start(), []);
   const stop = useCallback(() => session.current?.stop(), []);
+  const cancel = useCallback(() => session.current?.cancel(), []);
   const setHandsFree = useCallback((on: boolean) => session.current?.setHandsFree(on), []);
   const speak = useCallback((text: string) => player.current?.speak(text), []);
   const enqueue = useCallback((chunk: string, nextText?: string) => player.current?.enqueue(chunk, { nextText }), []);
@@ -66,5 +73,5 @@ export function useVoice(onUtterance: (u: Utterance, api: VoiceApi) => void, opt
   const turnDone = useCallback(() => session.current?.turnDone(), []);
   const stopSpeaking = useCallback(() => session.current?.stopSpeaking(), []);
 
-  return { state, error, errorMessage: error ? MESSAGES[error] : null, level, handsFree: handsFreeState, latency, diag, start, stop, setHandsFree, speak, enqueue, mark, beginTurn, turnDone, stopSpeaking };
+  return { state, error, errorMessage: error ? MESSAGES[error] : null, level, handsFree: handsFreeState, latency, diag, start, stop, cancel, setHandsFree, speak, enqueue, mark, beginTurn, turnDone, stopSpeaking };
 }
