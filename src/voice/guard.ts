@@ -65,7 +65,7 @@ const NUMBER_WORDS: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, 
 
 export function detectApprovalIntent(text: string): ApprovalIntent {
   const t = text.toLowerCase().normalize("NFC");
-  const verb = /\b(aprovo|aprovar|aprovado|confirmo|pode aprovar|pode confirmar)\b/.test(t);
+  const verb = /\b(aprov(o|a|e|ar|ado|ada)|confirm(o|a|e|ar)|pode aprovar|pode confirmar)\b/.test(t);
   const object = /\b(plano|proposta|pedido|vers[aã]o)\b/.test(t);
   if (!verb || !object) return { intent: "none" };
   const m = t.match(/vers[aã]o\s+(\d+|um|uma|dois|duas|tr[eê]s|quatro|cinco)\b/);

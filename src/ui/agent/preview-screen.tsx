@@ -3,67 +3,125 @@ import { useState } from "react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Button } from "@/ui/components/button";
 import { useNow } from "@/ui/lib/use-now";
-import { ProposalView } from "./proposal-view";
+import { AgentView } from "./agent-view";
 
-// Prévia de design com dados fixos. O mock do servidor ainda não gera proposta com total confirmado
-// (toda proposta nasce com pendências), então esta tela é a única forma de ver o estado aprovável.
-// Nada daqui chama a API; é só para revisar o visual dos estados.
-const OPTION: Option = {
-  label: "MAIS_BARATA",
-  candidate: { merchantId: "m1", merchantName: "Cantina da Praça", itemId: "i1", itemName: "Pizza calabresa grande", price: 39.9 },
-  reasons: [{ kind: "price", value: 39.9, text: "Dentro do orçamento informado" }],
-};
+// Prévia da tela única do agente com dados fixos e inventados (nenhuma loja ou preço é real). O mock do servidor tem
+// poucas lojas e toda proposta nasce com pendências, então esta tela é a forma de ver como ficaria com
+// mais variedade e com o estado aprovável. Nada daqui chama a API.
+const OPTIONS: Option[] = [
+  {
+    label: "MAIS_BARATA",
+    candidate: { merchantId: "m1", merchantName: "Açaí Tropical", itemId: "a1", itemName: "Açaí 500 ml com 3 acompanhamentos", price: 18.9, deliveryFee: 3.99, rating: 4.6, deliveryTimeMinutes: 25, distanceKm: 1.2 },
+    reasons: [
+      { kind: "price", value: 18.9, text: "R$ 18,90 no item" },
+      { kind: "rating", value: 4.6, text: "nota 4,6" },
+      { kind: "delivery_time", value: 25, text: "entrega em cerca de 25 min" },
+      { kind: "distance", value: 1.2, text: "a 1,2 km de você" },
+    ],
+  },
+  {
+    label: "MAIS_RAPIDA",
+    candidate: { merchantId: "m2", merchantName: "Burger do Bairro", itemId: "b1", itemName: "Combo smash duplo com batata", price: 32.5, deliveryFee: 2.99, rating: 4.4, deliveryTimeMinutes: 15, distanceKm: 0.8 },
+    reasons: [
+      { kind: "delivery_time", value: 15, text: "entrega em cerca de 15 min" },
+      { kind: "distance", value: 0.8, text: "a 800 m de você" },
+      { kind: "times_ordered", value: 3, text: "você já pediu aqui 3 vezes" },
+    ],
+  },
+  {
+    label: "MELHOR_AVALIADA",
+    candidate: { merchantId: "m3", merchantName: "Sushi Hana", itemId: "s1", itemName: "Combo 20 peças variadas", price: 54.9, promotionalPrice: 49.9, deliveryFee: 5.9, rating: 4.9, deliveryTimeMinutes: 40, distanceKm: 2.6 },
+    reasons: [
+      { kind: "rating", value: 4.9, text: "nota 4,9" },
+      { kind: "promo", value: true, text: "em promoção hoje" },
+      { kind: "new_for_you", value: true, text: "você ainda não pediu aqui" },
+    ],
+  },
+];
 
+// Proposta com vários itens da mesma loja; os nomes vêm de um mapa porque o snapshot só traz a referência.
+const ITEM_NAMES = { i1: "Pizza calabresa grande", i2: "Refrigerante 2 L", i3: "Brownie com sorvete" };
 const BASE: PublicProposal = {
   id: "prévia-1",
   version: 1,
   state: "awaiting_approval",
-  items: [{ ref: "i1", quantity: 1, unitPrice: { currency: "BRL", cents: 3990 } }],
-  cost: { items: { currency: "BRL", cents: 3990 }, delivery: { currency: "BRL", cents: 499 }, fees: { currency: "BRL", cents: 150 }, total: { currency: "BRL", cents: 5639 }, status: "confirmed" },
+  items: [
+    { ref: "i1", quantity: 1, unitPrice: { currency: "BRL", cents: 3990 } },
+    { ref: "i2", quantity: 1, unitPrice: { currency: "BRL", cents: 1200 } },
+    { ref: "i3", quantity: 2, unitPrice: { currency: "BRL", cents: 950 } },
+  ],
+  cost: { items: { currency: "BRL", cents: 7090 }, delivery: { currency: "BRL", cents: 499 }, fees: { currency: "BRL", cents: 150 }, total: { currency: "BRL", cents: 7739 }, status: "confirmed" },
   unresolved: [],
   expiresAt: "",
 };
+const STORE: Option = {
+  label: "SEU_FAVORITO",
+  candidate: { merchantId: "m4", merchantName: "Cantina da Praça", itemId: "i1", itemName: ITEM_NAMES.i1, price: 39.9 },
+  reasons: [{ kind: "times_ordered", value: 5, text: "você já pediu aqui 5 vezes" }],
+};
 
-type Scenario = "aprovavel" | "pendente" | "expirada" | "aprovada";
+type Scenario = "inicio" | "carregando" | "opcoes" | "uma" | "zero" | "erro" | "aprovavel" | "pendente" | "expirada" | "aprovada";
 const SCENARIOS: { id: Scenario; label: string }[] = [
-  { id: "aprovavel", label: "Aprovável" },
-  { id: "pendente", label: "Com pendências" },
+  { id: "inicio", label: "Início" },
+  { id: "carregando", label: "Carregando" },
+  { id: "opcoes", label: "3 lojas" },
+  { id: "uma", label: "1 opção" },
+  { id: "zero", label: "0 opções" },
+  { id: "erro", label: "Erro" },
+  { id: "aprovavel", label: "Proposta" },
+  { id: "pendente", label: "Pendências" },
   { id: "expirada", label: "Expirada" },
   { id: "aprovada", label: "Aprovada" },
 ];
+const VIEW = {
+  inicio: null, carregando: null, opcoes: "options", uma: "options", zero: "empty", erro: "options",
+  aprovavel: "proposal", pendente: "proposal", expirada: "proposal", aprovada: "continue",
+} as const;
+type ProposalScenario = "aprovavel" | "pendente" | "expirada" | "aprovada";
+const isProposal = (s: Scenario): s is ProposalScenario => ["aprovavel", "pendente", "expirada", "aprovada"].includes(s);
 
 export function PreviewScreen() {
-  const [scenario, setScenario] = useState<Scenario>("aprovavel");
+  const [scenario, setScenario] = useState<Scenario>("inicio");
   const now = useNow(60_000);
   if (now === null) return null;
   const soon = new Date(now + 5 * 60_000).toISOString();
 
-  const PROPOSALS: Record<Scenario, PublicProposal> = {
+  const PROPOSALS: Record<ProposalScenario, PublicProposal> = {
     aprovavel: { ...BASE, expiresAt: soon },
     pendente: { ...BASE, expiresAt: soon, cost: { items: BASE.cost.items, status: "unknown" }, unresolved: ["Taxas e total não confirmados", "Frete desconhecido"] },
     expirada: { ...BASE, expiresAt: "2000-01-01T00:00:00.000Z" },
     aprovada: { ...BASE, state: "approved", expiresAt: soon },
   };
-  const proposal = PROPOSALS[scenario];
+  const proposal = isProposal(scenario) ? PROPOSALS[scenario] : undefined;
+  const options = scenario === "uma" ? OPTIONS.slice(0, 1) : OPTIONS;
+  const msgs = scenario === "inicio" ? [] : [{ id: 0, from: "agente" as const, text: scenario === "zero" ? "Não achei nada nesse limite. Quer subir o orçamento?" : "Encontrei 3 opções perto de você. Toque em uma para revisar." }];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <fieldset aria-label="Cenário da prévia" className="flex flex-wrap gap-1.5 border-0 bg-muted px-3 py-2">
+      <div role="group" aria-label="Cenário da prévia" className="flex flex-wrap gap-1.5 bg-muted px-3 py-2">
         {SCENARIOS.map((s) => (
           <Button key={s.id} size="sm" variant={scenario === s.id ? "default" : "outline"} aria-pressed={scenario === s.id} onClick={() => setScenario(s.id)}>
             {s.label}
           </Button>
         ))}
-      </fieldset>
-      <ProposalView
+      </div>
+      <AgentView
+        view={VIEW[scenario]}
+        options={options}
         proposal={proposal}
-        option={OPTION}
-        busy={false}
-        error={null}
-        approvedReply="Confira os itens e finalize a compra no iFood."
+        selected={STORE}
+        itemNames={ITEM_NAMES}
+        msgs={msgs}
+        query={scenario === "inicio" ? "" : "Pizza até R$ 45"}
+        busy={scenario === "carregando"}
+        error={scenario === "erro" ? "Sem conexão com o servidor. Confira sua internet e tente de novo." : null}
+        onSend={() => setScenario("opcoes")}
+        onSelect={() => setScenario("aprovavel")}
         onApprove={() => setScenario("aprovada")}
-        onCancel={() => {}}
-        onRetry={() => {}}
+        onCancel={() => setScenario("inicio")}
+        onEditOrder={() => setScenario("opcoes")}
+        onRetry={() => setScenario("opcoes")}
+        onNewSearch={() => setScenario("inicio")}
       />
     </div>
   );

@@ -72,6 +72,30 @@ describe("rotas seguras do fluxo mock", () => {
     expect((await confirm(req("confirm", { ...request, interactionId: "another" }, cookie))).status).toBe(409);
     expect(client.createCart).not.toHaveBeenCalled(); expect(client.submitOrder).not.toHaveBeenCalled();
   });
+  it("conclui fluxo de busca, seleção e aprovação via /api/confirm quando o candidato possui encargos confirmados", async () => {
+    const searchRes = await chat(req("chat", { message: "pizza" }));
+    expect(searchRes.status).toBe(200);
+    const cookie = cookieOf(searchRes);
+    const selectedRes = await chat(req("chat", { message: "1" }, cookie));
+    expect(selectedRes.status).toBe(200);
+    const selectedTurn = await selectedRes.json();
+    expect(selectedTurn.proposal).toMatchObject({
+      state: "awaiting_approval",
+      cost: { status: "confirmed", total: { currency: "BRL", cents: 4580 } },
+      unresolved: [],
+    });
+    const confirmRes = await confirm(
+      req("confirm", { proposalId: selectedTurn.proposal.id, version: selectedTurn.proposal.version, interactionId: "btn-pizza-1", channel: "button" }, cookie),
+    );
+    expect(confirmRes.status).toBe(200);
+    const approvedTurn = await confirmRes.json();
+    expect(approvedTurn.state).toBe("PROPOSTA_APROVADA");
+    expect(approvedTurn.proposal.state).toBe("approved");
+    expect(approvedTurn.reply).toContain("RESUMO MANUAL DO PEDIDO");
+    expect(approvedTurn.reply).toContain("Forno & Cia");
+    expect(client.createCart).not.toHaveBeenCalled();
+    expect(client.submitOrder).not.toHaveBeenCalled();
+  });
   it("nega origem cruzada/ausente, payload malformado e corpo excessivo", async () => {
     const foreign = req("chat", { message: "fome" }); foreign.headers.set("origin", "https://evil.invalid");
     expect((await chat(foreign)).status).toBe(403);

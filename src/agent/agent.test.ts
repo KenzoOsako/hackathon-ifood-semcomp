@@ -31,4 +31,34 @@ describe("orquestrador somente leitura", () => {
     await expect(handleMessage(c, "1", port)).rejects.toThrow();
     expect(c.options).toEqual([]);
   });
+  it("gera proposta aprovável quando frete e taxas são conhecidos no mock e aprova com resumo manual", async () => {
+    const c = createConversation("s1"); const port = createMockMcp();
+    const searchTurn = await handleMessage(c, "pizza", port);
+    expect(searchTurn.state).toBe("ESCOLHENDO_OPCAO");
+    const proposalTurn = await handleMessage(c, "1", port);
+    expect(proposalTurn.state).toBe("AGUARDANDO_CONFIRMACAO");
+    expect(proposalTurn.proposal).toMatchObject({
+      state: "awaiting_approval",
+      cost: {
+        items: { currency: "BRL", cents: 3990 },
+        delivery: { currency: "BRL", cents: 590 },
+        fees: { currency: "BRL", cents: 0 },
+        total: { currency: "BRL", cents: 4580 },
+        status: "confirmed",
+      },
+      unresolved: [],
+    });
+    const approvedTurn = await handleMessage(c, `aprovar ${proposalTurn.proposal!.id} v${proposalTurn.proposal!.version}`, port);
+    expect(approvedTurn.state).toBe("PROPOSTA_APROVADA");
+    expect(approvedTurn.proposal?.state).toBe("approved");
+    expect(approvedTurn.reply).toContain("RESUMO MANUAL DO PEDIDO");
+    expect(approvedTurn.reply).toContain("Pizza calabresa");
+  });
+  it("aplica teto rígido sobre o total com encargos e restrição de alergia na busca", async () => {
+    const c = createConversation("s1"); const port = createMockMcp();
+    const turn = await handleMessage(c, "pizza sem lactose até R$ 50", port);
+    expect(turn.state).toBe("ESCOLHENDO_OPCAO");
+    expect(turn.options).toHaveLength(1);
+    expect(turn.options![0].candidate.merchantId).toBe("m-5");
+  });
 });

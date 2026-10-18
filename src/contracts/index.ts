@@ -32,6 +32,14 @@ export const CandidateSchema = z.object({
   distanceKm: z.number().optional(),
   deliveryTimeMinutes: z.number().optional(),
   deliveryFee: z.number().optional(),
+  fees: z.number().optional(),
+  costStatus: z.enum(["confirmed", "estimated", "unknown"]).optional(),
+  composition: z
+    .object({
+      ingredients: z.array(z.string()).optional(),
+      allergens: z.array(z.string()).optional(),
+    })
+    .optional(),
   itemId: z.string(),
   itemName: z.string(),
   price: z.number(), // BRL decimal (32.9), nunca centavos
