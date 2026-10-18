@@ -106,3 +106,55 @@ describe("criarRelevancia (camadas)", () => {
     expect(julgar).not.toHaveBeenCalled();
   });
 });
+
+// Testes que MATAM mutantes sobreviventes da primeira medição (18/10, placar 77,3%): cada um prende uma fronteira.
+describe("fronteiras do plural (palavras)", () => {
+  it("oes/aes/ais viram singular, e só a partir do tamanho certo", () => {
+    expect(palavras("pioes")).toEqual(["piao"]); // 5 letras: já vale a regra de "oes"
+    expect(palavras("boes")).toEqual(["boe"]); // 4 letras: não vale (cai na regra do "s")
+    expect(palavras("jornais")).toEqual(["jornal"]);
+    expect(palavras("reais")).toEqual(["real"]); // 5 letras: vale a regra de "ais"
+    expect(palavras("mais")).toEqual(["mai"]); // 4 letras: não vale
+  });
+  it("palavra de 3 letras não perde o 's' (gás ≠ gá)", () => {
+    expect(palavras("gás")).toEqual(["gas"]);
+  });
+});
+
+describe("prefixo entre palavras (bate)", () => {
+  it("variação por prefixo casa (calabres/calabresa), mas só a partir de 5 letras", () => {
+    expect(vereditoLexico(nec("calabres"), "Pizza Calabresa")).toBe("serve"); // o pedido é prefixo do item
+    expect(vereditoLexico(nec("calabresa"), "Pizza Calabres")).toBe("serve"); // o item é prefixo do pedido
+    expect(vereditoLexico(nec("ovo"), "Ovomaltine 400g")).toBe("nao_serve"); // 3 letras: sem prefixo
+    expect(vereditoLexico(nec("pizza"), "Pizzaria Italiana")).toBe("serve"); // exatamente 5 letras: vale
+  });
+  it("prefixo vale só no início da palavra, não no fim", () => {
+    expect(vereditoLexico(nec("resa"), "Pizza Calabresa")).toBe("nao_serve");
+  });
+});
+
+describe("alternativas do pedido", () => {
+  it("consulta que só tinha palavra descartável não faz tudo 'servir'", () => {
+    expect(vereditoLexico(nec("pizza", ["de"]), "Pudim")).toBe("nao_serve");
+  });
+  it("pedido de 3 palavras casando 1 é só 'nao_serve' (1/3 < metade)", () => {
+    expect(vereditoLexico(nec("pizza calabresa especial"), "Pizza Margherita")).toBe("nao_serve");
+    expect(vereditoLexico(nec("pizza calabresa"), "Pizza Margherita")).toBe("proximo"); // 1/2 = metade
+  });
+});
+
+describe("atalho do texto e timer do juiz", () => {
+  it("o atalho usa a consulta MAIS específica: 2+ palavras em qualquer uma dispensa o juiz", async () => {
+    const julgar = vi.fn();
+    await criarRelevancia({ julgar }).julgar(nec("pizza calabresa", ["pizza"]), [cand("a", "Pizza Calabresa")]);
+    expect(julgar).not.toHaveBeenCalled();
+  });
+  it("o timer do juiz é limpo ao terminar (sem timer pendente)", async () => {
+    vi.useFakeTimers();
+    try {
+      const p = criarRelevancia({ julgar: async () => ({ a: "serve" as Veredito }) }).julgar(nec("leite"), [cand("a", "Leite")]);
+      await p;
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+});
