@@ -41,7 +41,7 @@ O que dá para inferir: o de sempre (item e loja mais pedidos no mesmo dia/turno
 Limites honestos: a contagem por dia/turno é por **tipo de loja**, não por prato; conta de teste pode vir **sem histórico** (a própria referência avisa), então a demo precisa de dados de histórico simulados.
 
 Proposta (encaixa no que já existe):
-1. **Auditoria dos dados** (45 min): rota só de desenvolvimento (`localhost` + `TELEMETRIA=1`) que chama as ferramentas de leitura da sessão conectada e devolve **só o esquema** (campos, tipos, quantidades; nunca valores). Resultado documentado em `docs/DADOS_MCP.md`.
+1. **Auditoria dos dados**: **feita a ferramenta** (`GET /api/mcp/explorar`, só leitura, só formato, só no seu computador; testada) e o catálogo das 24 ferramentas em `docs/DADOS_MCP.md`. **Falta rodá-la com a conta conectada** (§6 daquele doc) para trocar [doc] por [real].
 2. **`src/agent/habitos.ts`** (puro, testável): resposta crua → `PerfilDeHabitos`; `sugerirDeSempre(perfil, agora)`.
 3. **Porta de domínio** `lerHabitos(subjectRef)`: `McpDomain` com `listAddresses` + `RECENT_ORDERS`/`FAVORITE_MERCHANTS` (cache ~10 min); `FakeDomain` com histórico de exemplo.
 4. **Intenções** `o_de_sempre` e `repetir_ultimo` no interpretador, **resolvidas em código** (o modelo só reconhece a intenção; quem escolhe o item é o hábito, não o palpite do LLM).

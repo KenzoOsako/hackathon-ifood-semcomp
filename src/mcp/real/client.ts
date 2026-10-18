@@ -53,3 +53,18 @@ export function mcpToolsDo(subjectRef: string): McpTools {
     },
   };
 }
+
+// Ferramentas que o MCP ao vivo expõe (tools/list), para conferir a documentação com a realidade. Só nomes e esquema de entrada.
+export async function listarFerramentas(subjectRef: string) {
+  const client = await clienteDo(subjectRef);
+  const r = await client.listTools(undefined, { timeout: TIMEOUT_MS });
+  return r.tools.map((t) => {
+    const schema = (t.inputSchema ?? {}) as { required?: string[]; properties?: Record<string, { type?: string; enum?: unknown[] }> };
+    return {
+      name: t.name,
+      description: (t.description ?? "").slice(0, 400),
+      obrigatorios: schema.required ?? [],
+      parametros: Object.fromEntries(Object.entries(schema.properties ?? {}).map(([k, v]) => [k, v.enum ? "enum" : (v.type ?? "?")])),
+    };
+  });
+}

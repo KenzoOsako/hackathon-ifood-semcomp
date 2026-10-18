@@ -13,6 +13,7 @@ Atualizado em 17/10/2026, ~20h. Status: **canônico** (aprovado), **V2** (propos
 | [PROPOSTA_DE_NEGOCIO_FOODPILOT.md](PROPOSTA_DE_NEGOCIO_FOODPILOT.md) | canônico | Decisões 1–39. A V2 propõe alterar o escopo (decisões 1 e 19) e o diferencial |
 | [PLANO_EXECUCAO_EQUIPE_FOODPILOT.md](PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) | canônico (donos podem mudar pela V2) | Tarefas FP-01 a FP-24, aceites AC-01 a AC-15, fluxo de PR |
 | [AUDITORIA-ALINHAMENTO-2026-10-17.md](AUDITORIA-ALINHAMENTO-2026-10-17.md) | canônico | O que existe de fato no código e as lacunas |
+| [DADOS_MCP.md](DADOS_MCP.md) | **V2** | Catálogo do que o MCP expõe (24 ferramentas), o que dá para inferir (hábitos, o de sempre) e o que isso muda nos testes; como rodar a varredura ao vivo |
 | [HANDOFF_AGENTE.md](HANDOFF_AGENTE.md) | **V2** | Estado do agente, números medidos, direção (dados do MCP e hábitos), análise crítica e plano até a entrega; ponto de partida para o Hyago e para uma sessão nova |
 | [CONTRATO_CARTOES_E_SAUDACAO.md](CONTRATO_CARTOES_E_SAUDACAO.md) | **V2** | Campos do cartão de sugestão e da saudação com o nome (agente → interface) |
 | [PLANO_BLINDAGEM.md](PLANO_BLINDAGEM.md) | **V2** | Medidas corretivas do agente, fluxo e segurança: causas raiz, medidas P0/P1/P2, matriz de cenários, critérios de aceite e ordem de execução |
