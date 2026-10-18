@@ -30,19 +30,20 @@ const CHIP_DEFAULT = "bg-[var(--cat-5-bg)] text-[color:var(--cat-5-fg)]";
 
 type Props = {
   option: Option;
+  tag?: string; // rótulo vindo do servidor (plano do Guide); sem ele, o do `label`
   first: boolean;
   expanded: boolean;
   disabled: boolean;
   onToggle: () => void;
-  onSelect: () => void;
+  onSelect?: () => void; // sem ele, o painel só tem "Ajustar"
   onAdjust: () => void;
 };
 
 // Linha no formato da busca do iFood: tag acima do nome, logo quadrado, nome, "★ nota • tempo • frete", o
 // produto recomendado com o preço e chips. Só a linha tocada expande; selecionar e aprovar são eventos
 // diferentes (aprovar só existe na revisão da proposta).
-export function ResultCard({ option, expanded, disabled, onToggle, onSelect, onAdjust }: Readonly<Props>) {
-  const { title } = LABELS[option.label];
+export function ResultCard({ option, tag, expanded, disabled, onToggle, onSelect, onAdjust }: Readonly<Props>) {
+  const title = tag ?? LABELS[option.label].title;
   const c = option.candidate;
   const price = c.promotionalPrice ?? c.price;
   const panelId = `acoes-${c.itemId}`;
@@ -107,9 +108,9 @@ export function ResultCard({ option, expanded, disabled, onToggle, onSelect, onA
       </button>
 
       {expanded && (
-        <div id={panelId} className="grid grid-cols-2 gap-2 px-2 pb-3">
+        <div id={panelId} className={cn("grid gap-2 px-2 pb-3", onSelect && "grid-cols-2")}>
           <Button variant="outline" onClick={onAdjust}>Ajustar</Button>
-          <Button disabled={disabled} onClick={onSelect}>Selecionar</Button>
+          {onSelect && <Button disabled={disabled} onClick={onSelect}>Selecionar</Button>}
         </div>
       )}
     </div>

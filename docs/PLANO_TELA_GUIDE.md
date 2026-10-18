@@ -56,6 +56,8 @@ Objetivo: a jornada do storyboard funcionando de ponta a ponta na `/agente`, par
 | 4 | **Revisão e sacola na tela.** Revisão por loja com o botão "Aprovar versão N" (manda "aprovo o plano"); sacola no formato do iFood, rotulada "Simulação", "Finalizar pedido" sem envio | Front | Da revisão, aprovar leva à sacola com as lojas do plano |
 | 5 | **Ensaio.** A jornada inteira na `/agente`, em mock e depois em real (login iFood + Gemini) | Todos | A jornada roda falada do começo à sacola; tempo de cada etapa anotado |
 
+**Status (18/10, ~01h45):** passos 1 a 4 feitos na branch feat/hyago-tela-guide (ver contexto/estado-atual.md); falta o 5 (ensaio com Gemini e iFood real).
+
 **Verificação:** para a tela, a prova é usar: abrir a `/agente` e fazer a jornada. Antes de cada commit, `typecheck`, `lint`, `test` e `build` (a `main` continua rodando). Testes novos só na aprovação (passo 3).
 
 ## Depois (ajustes)

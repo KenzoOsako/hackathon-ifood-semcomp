@@ -6,6 +6,7 @@ import { falaRespeitaSnapshot, respostaTemplate } from "@/prompts/responder";
 import { FRASES, LIMIARES_CONFIANCA } from "../frases";
 import { PRESSA, rebaixar } from "../llm/rules";
 import { temDadoPessoal } from "../privacidade";
+import { montarSacola } from "../sacola";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, EventoFeedback, LlmPort, Necessidade, Nivel, PlanoSnapshot, TurnoInterpretado } from "../types";
 
 export const MAX_PERGUNTAS = 3;
@@ -48,6 +49,7 @@ export function reiniciarSessao(subjectRef: string): AgentSession {
 
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const APROVACAO_EXPLICITA = /\b(aprovo|confirmo)( o)? plano\b/;
+const VERSAO_CITADA = /\bversao (\d+)\b/;
 
 async function comTimeout<T>(ms: number, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const ctrl = new AbortController();
@@ -193,8 +195,15 @@ function processarAprovar(s: AgentSession, input: ConverseInput, deps: Deps, tur
   // O agente só devolve planoId + versão; quem valida e aprova é o domínio.
   if (!APROVACAO_EXPLICITA.test(texto)) return consentir(s, input, deps, turno, tempos, t0);
   if (!s.plano) return fechar(s, input, deps, { resposta: FRASES.semPlano }, tempos, t0);
+  // O botão da tela cita a versão que a pessoa viu; se o plano mudou depois, não aprova a versão nova às cegas.
+  const citada = texto.match(VERSAO_CITADA)?.[1];
+  if (citada && Number(citada) !== s.plano.versao) {
+    return fechar(s, input, deps, { resposta: FRASES.versaoMudou, tela: { tipo: "aguardando_aprovacao", plano: s.plano } }, tempos, t0);
+  }
   s.estado = "S5"; s.encaminhado = true;
-  return fechar(s, input, deps, { resposta: FRASES.aprovacaoEnviada, aprovacao: { planoId: s.plano.planoId, versao: s.plano.versao }, tela: { tipo: "aguardando_aprovacao", plano: s.plano } }, tempos, t0);
+  // A sacola é só a conta do plano aprovado para a tela; não há carrinho remoto nem pedido.
+  const plano = { ...s.plano, sacola: montarSacola(s.plano) };
+  return fechar(s, input, deps, { resposta: FRASES.aprovacaoEnviada, aprovacao: { planoId: s.plano.planoId, versao: s.plano.versao }, tela: { tipo: "sacola", plano } }, tempos, t0);
 }
 
 function processarPedidoOuResposta(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, pressa: boolean, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> | AgentReply {
@@ -282,6 +291,8 @@ async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: 
     plano = await deps.domain.montarPlano({ subjectRef: s.subjectRef, ocasiao: s.ocasiao, itens });
   } catch {
     tempos.dominioMs = Math.round(now() - td);
+    // Sem plano válido o estado não pode seguir dizendo que há plano: a tela esconde o plano antigo pelo estado.
+    if (!s.plano) s.estado = "S1";
     return fechar(s, input, deps, { resposta: FRASES.erroFerramenta }, tempos, t0);
   }
   tempos.dominioMs = Math.round(now() - td);
