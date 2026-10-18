@@ -25,7 +25,7 @@ Comandos: `npm test` · `CAOS_N=6000 npx vitest run src/qualidade/caos.test.ts` 
 - **Voz + agente real** (3 testes falados): 1º som ~0,6 a 1,0 s; resposta útil ~2,2 s sem busca e ~5 s com busca real (interpretar 1,4 s + MCP 2 s + responder 0,7 s). Ver `docs/EXEMPLOS_TESTE_FALADO.md`.
 
 ## 4. Direção nova: dados do MCP e hábitos
-Fonte: `docs/mcp-ifood-referencia.md` (**lido, ainda não testado com dados reais**).
+Fonte: `docs/mcp-ifood-referencia.md` + **varredura real** (`quality/mcp-formas.json`). Achados reais: o MCP ao vivo expõe só **8 ferramentas de leitura** (não 24); a conta de teste **não tem endereços nem histórico**; há erros `INTERNAL` intermitentes do iFood; a busca traz foto, logo, nota, distância, prazo, frete e mínimo (preços em reais); o nome da pessoa não vem sem escopo extra.
 
 Já disponível com os escopos que o login pede hoje:
 - `listAddresses` → `results[]` com indicadores de uso, incluindo `ordersByMerchantTypeWeekdayAndShift` (contagens, como **string**): pedidos por tipo de loja × dia da semana × turno.
@@ -41,7 +41,7 @@ O que dá para inferir: o de sempre (item e loja mais pedidos no mesmo dia/turno
 Limites honestos: a contagem por dia/turno é por **tipo de loja**, não por prato; conta de teste pode vir **sem histórico** (a própria referência avisa), então a demo precisa de dados de histórico simulados.
 
 Proposta (encaixa no que já existe):
-1. **Auditoria dos dados**: **feita a ferramenta** (`GET /api/mcp/explorar`, só leitura, só formato, só no seu computador; testada) e o catálogo das 24 ferramentas em `docs/DADOS_MCP.md`. **Falta rodá-la com a conta conectada** (§6 daquele doc) para trocar [doc] por [real].
+1. **Auditoria dos dados**: **feita a ferramenta** (`GET /api/mcp/explorar`, só leitura, só formato, só no seu computador; testada) e o catálogo das 24 ferramentas em `docs/DADOS_MCP.md`. **Rodada uma vez** com a conta conectada; falta rodar de novo as sondas novas (termos abstratos, facets, promoção, repetição dos `INTERNAL`).
 2. **`src/agent/habitos.ts`** (puro, testável): resposta crua → `PerfilDeHabitos`; `sugerirDeSempre(perfil, agora)`.
 3. **Porta de domínio** `lerHabitos(subjectRef)`: `McpDomain` com `listAddresses` + `RECENT_ORDERS`/`FAVORITE_MERCHANTS` (cache ~10 min); `FakeDomain` com histórico de exemplo.
 4. **Intenções** `o_de_sempre` e `repetir_ultimo` no interpretador, **resolvidas em código** (o modelo só reconhece a intenção; quem escolhe o item é o hábito, não o palpite do LLM).

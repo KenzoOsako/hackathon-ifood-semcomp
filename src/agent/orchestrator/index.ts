@@ -248,7 +248,7 @@ async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turn
 
 const COMIDA = (n: Necessidade) => n.vertical !== "SHOPPING";
 const ordenarStrings = (lista: string[]) => [...lista].sort((a, b) => a.localeCompare(b));
-const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), ordenarStrings(n.restricoes), n.orcamento ?? null, n.fonte ?? "dito"])]);
+const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), ordenarStrings(n.restricoes), n.orcamento ?? null, n.fonte ?? "dito", ordenarStrings((n.consultas ?? []).map(norm))])]);
 const chave = (n: Necessidade) => norm(n.categoria).split(" ")[0];
 const NAO_SUGERIR = /cerveja|vinho|vodka|whisky|cachaca|alcool|destilad|remedio|medic|farmacia/;
 

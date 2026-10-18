@@ -39,7 +39,7 @@ export function limparNome(texto: string, max = 60): string {
 const ou = (s: string, vazio: string, max?: number) => limparNome(s, max) || vazio;
 
 function sanearOpcao(o: OpcaoPlano): OpcaoPlano {
-  const out: OpcaoPlano = { ...o, loja: ou(o.loja, "essa loja", 50), item: ou(o.item, "esse item", 70), rotulo: ou(o.rotulo, "opção", 30), motivo: ou(o.motivo, "opção disponível", 120), precoCents: Number.isFinite(o.precoCents) ? Math.max(0, Math.round(o.precoCents)) : 0 };
+  const out: OpcaoPlano = { ...o, loja: ou(o.loja, "essa loja", 50), item: ou(o.item, "esse item", 70), rotulo: ou(o.rotulo, "opção", 30), motivo: ou(o.motivo, "opção disponível", 120), precoCents: Math.round(o.precoCents) };
   if (o.freteCents !== undefined) { if (Number.isFinite(o.freteCents) && o.freteCents >= 0) out.freteCents = Math.round(o.freteCents); else delete out.freteCents; }
   if (o.nota !== undefined && !(Number.isFinite(o.nota) && o.nota >= 0 && o.nota <= 5)) delete out.nota;
   if (o.prazo !== undefined) { const p = limparNome(o.prazo, 40); if (p) out.prazo = p; else delete out.prazo; }
@@ -54,11 +54,22 @@ function sanearOpcao(o: OpcaoPlano): OpcaoPlano {
 
 // O plano que o domínio devolveu, limpo. Vale para qualquer domínio (simulado, MCP real ou hostil): a fala e a tela só
 // veem o plano saneado.
+// Preço desconhecido não vira "grátis": candidato com preço inválido (NaN, infinito, negativo) é descartado. Zero informado
+// pela origem é um valor válido e fica. Se não sobra candidato, a categoria vira "não atendida" (e não entra na aprovação).
+const precoValido = (o: OpcaoPlano) => typeof o.precoCents === "number" && Number.isFinite(o.precoCents) && o.precoCents >= 0;
+
 export function sanearPlano(p: PlanoSnapshot): PlanoSnapshot {
+  const semPreco: { categoria: string; motivo: string }[] = [];
+  const blocos: PlanoSnapshot["blocos"] = [];
+  for (const b of p.blocos) {
+    const [principal, ...alternativas] = [b.principal, ...b.alternativas].filter(precoValido);
+    if (!principal) { semPreco.push({ categoria: ou(b.categoria, "esse pedido", 60), motivo: "sem preço confiável" }); continue; }
+    blocos.push({ ...b, categoria: ou(b.categoria, "item", 60), quantidade: Math.min(99, Math.max(1, Math.round(Number.isFinite(b.quantidade) ? b.quantidade : 1))), principal: sanearOpcao(principal), alternativas: alternativas.map(sanearOpcao) });
+  }
   return {
     ...p,
-    blocos: p.blocos.map((b) => ({ ...b, categoria: ou(b.categoria, "item", 60), quantidade: Math.min(99, Math.max(1, Math.round(Number.isFinite(b.quantidade) ? b.quantidade : 1))), principal: sanearOpcao(b.principal), alternativas: b.alternativas.map(sanearOpcao) })),
-    naoAtendidas: p.naoAtendidas.map((n) => ({ ...n, categoria: ou(n.categoria, "esse pedido", 60) })),
+    blocos,
+    naoAtendidas: [...p.naoAtendidas.map((n) => ({ ...n, categoria: ou(n.categoria, "esse pedido", 60) })), ...semPreco],
     pendencias: p.pendencias.map((x) => limparNome(x, 140)).filter(Boolean),
   };
 }

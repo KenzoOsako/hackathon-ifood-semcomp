@@ -2,7 +2,9 @@
 
 18/10/2026. Fonte: `docs/mcp-ifood-referencia.md` (leitura da documentação) **+ varredura ao vivo** (`GET /api/mcp/explorar`, ver §6). Tudo marcado **[doc]** vem da documentação e ainda **não foi conferido** com a conta real; marcado **[real]** foi medido. O objetivo é decidir o que o agente pode **saber**, o que pode **inferir** e o que cada fato **muda nos testes**.
 
-## 1. As 24 ferramentas (4 domínios)
+> **[real] 18/10/2026:** a varredura ao vivo mostrou só 8 ferramentas de leitura expostas, conta de teste sem endereços nem pedidos e erros `INTERNAL` intermitentes. As tabelas abaixo descrevem a documentação; use `quality/mcp-formas.json` como verdade.
+
+## 1. As 24 ferramentas (4 domínios, segundo a documentação)
 | Domínio | Ferramenta | Efeito | Escopo | Uso no Guide |
 |---|---|---|---|---|
 | Usuário | `getUser` | leitura | BASIC `mcp.user.basic.read` (nome, e-mail, telefone); BEHAVIOR `mcp.user.behavior.read` (`hasClub`, `userBehaviorDescription`) | nome na saudação (opcional, escopo extra) |
