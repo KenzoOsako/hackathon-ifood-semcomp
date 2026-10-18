@@ -193,6 +193,30 @@
   100% { transform: scale(1.5); opacity: 0; }
 }
 
+/* Campo de ondas do painel inferior: linhas finas que correm devagar, como o mar do desenho.
+   Cada linha é um seno periódico (400 unidades) repetido duas vezes; deslizar 50% fecha o ciclo sem emenda. */
+.wave-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.wave-line {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 200%;
+  height: 74%;
+  animation: wave-slide linear infinite;
+}
+.wave-field[data-state="listening"] .wave-line { animation-duration: 6s !important; }
+.wave-field[data-state="speaking"] .wave-line { animation-duration: 4s !important; }
+.wave-field[data-state="thinking"] .wave-line { animation-duration: 5s !important; }
+.wave-field[data-state="error"] .wave-line { animation-play-state: paused; filter: grayscale(1); }
+@keyframes wave-slide {
+  to { transform: translateX(-50%); }
+}
+
 @layer base {
   html {
     color-scheme: light;

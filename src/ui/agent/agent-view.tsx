@@ -15,6 +15,7 @@ import { ContinueView } from "./continue-view";
 import { OrbStage } from "./orb-stage";
 import { ProposalView } from "./proposal-view";
 import { ResultRow } from "./result-row";
+import { WaveField } from "./wave-field";
 
 // Estados vindos da voz (Felipe). Enquanto não houver voz, a UI só usa idle/thinking/error.
 export type VoiceState = "idle" | "listening" | "speaking" | "error";
@@ -120,11 +121,10 @@ export function AgentView(p: AgentViewProps) {
 
       <section
         aria-label="Assistente"
-        className={cn(
-          "agent-bg flex min-h-0 flex-col transition-[flex-grow] duration-500",
-          hasView ? "grow-0 overflow-hidden rounded-t-3xl shadow-[0_-8px_24px_rgb(0_0_0/0.08)]" : "grow",
-        )}
+        className={cn("relative flex min-h-0 flex-col transition-[flex-grow] duration-500", hasView ? "grow-0 bg-gradient-to-t from-accent/70 to-background" : "agent-bg grow")}
       >
+        {/* Com resultados na tela, o fundo do assistente vira um campo de ondas e o orbe flutua no canto. */}
+        {hasView && <WaveField state={orbState} />}
         {!hasView && (
           <header className="flex items-center gap-2 px-3 py-2">
             <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
@@ -133,10 +133,10 @@ export function AgentView(p: AgentViewProps) {
           </header>
         )}
 
-        <div className={cn("flex min-h-0 gap-3 px-4", hasView ? "items-center py-3" : "flex-1 flex-col items-center overflow-y-auto py-2 text-center")}>
+        <div className={cn("relative flex min-h-0 gap-3 px-4", hasView ? "flex-row-reverse items-end pt-2" : "flex-1 flex-col items-center overflow-y-auto py-2 text-center")}>
           {!hasView && <h1 className="font-display text-balance text-3xl font-bold leading-tight">Qual a sua vibe de hoje?</h1>}
           <OrbStage state={orbState} compact={hasView} />
-          <div className={cn("min-w-0", hasView ? "flex-1" : "grid justify-items-center gap-3")}>
+          <div className={cn("min-w-0", hasView ? "flex-1 pb-3" : "grid justify-items-center gap-3")}>
             <p role="status" aria-live="polite" className="text-sm font-semibold text-muted-foreground">{STATE_LABEL[orbState]}</p>
             {lastReply && (
               <p className={cn("whitespace-pre-wrap text-sm leading-snug", hasView ? "mt-1 line-clamp-3" : "text-base")}>{lastReply}</p>
@@ -160,7 +160,7 @@ export function AgentView(p: AgentViewProps) {
           </div>
         </div>
 
-        <footer className="px-3 pb-3">
+        <footer className="relative px-3 pb-3">
           {p.msgs.length > 0 && (
             <>
               <Button variant="ghost" size="sm" aria-expanded={showLog} aria-controls="conversa" onClick={() => setShowLog((v) => !v)}>
@@ -168,7 +168,7 @@ export function AgentView(p: AgentViewProps) {
                 {showLog ? "Esconder conversa" : `Ver conversa (${p.msgs.length})`}
               </Button>
               {showLog && (
-                <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-36 gap-2 overflow-y-auto">
+                <ul id="conversa" role="log" aria-label="Conversa" className="mb-2 grid max-h-36 gap-2 overflow-y-auto rounded-2xl bg-background/90 p-2">
                   {p.msgs.map((m) => (
                     <li
                       key={m.id}

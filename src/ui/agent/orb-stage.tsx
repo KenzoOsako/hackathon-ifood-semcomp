@@ -7,7 +7,7 @@ import { Orb, type OrbState } from "@/ui/components/orb";
 // `compact` encolhe o palco (o tamanho anima por CSS) quando o orbe desce para o painel da conversa.
 export function OrbStage({ state, compact = false }: { state: OrbState; compact?: boolean }) {
   return (
-    <div className="orb-stage" data-state={state} aria-hidden="true" style={{ "--stage": compact ? "8.5rem" : "18rem" } as CSSProperties}>
+    <div className="orb-stage" data-state={state} aria-hidden="true" style={{ "--stage": compact ? "7.5rem" : "18rem" } as CSSProperties}>
       <div className="orb-halo" />
       <div className="orb-contour" />
       <div className="orb-contour" />
