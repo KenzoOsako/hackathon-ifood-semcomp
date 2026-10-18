@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { catalogImage } from "./catalog-media";
 import { paraOption } from "../agent/plano-tela";
 import type { OpcaoPlano } from "@/agent/types";
+import { McpDomain } from "@/agent/domain-mcp";
+import recorded from "@/agent/domain-mcp/__fixtures__/search-sao-carlos.json";
 
 const url = "https://static.ifood-static.com.br/image/upload/t_medium/item.jpg";
 describe("mídia do catálogo", () => {
@@ -22,5 +24,20 @@ describe("mídia do catálogo", () => {
   it("mantém mídia de demonstração somente na origem simulada", () => {
     expect(paraOption({ ...option, lojaId: "m-8", origem: "simulado" }).media.photo).toBe("/exemplos/bolo-chocolate.webp");
     expect(paraOption({ ...option, lojaId: "m-8", imagemUrl: undefined, logoUrl: undefined }).media.photo).toBeUndefined();
+  });
+  it("preserva a associação da resposta MCP até a mídia do cartão", async () => {
+    // Resposta gravada + mídia de fixture: comprova transporte, não disponibilidade ao vivo.
+    const results = recorded.pizza.results.map((item, i) => ({ ...item,
+      itemImageUrl: `https://static.ifood-static.com.br/image/upload/t_medium/item-${i}.jpg`,
+      merchant: { ...item.merchant, merchantLogoUrl: `https://static.ifood-static.com.br/image/upload/t_thumbnail/loja-${i}.jpg` },
+    }));
+    const domain = new McpDomain({ async callTool() { return { results }; } }, { latitude: -22.0087, longitude: -47.8909, fonte: "fixa" });
+    const options = await domain.buscarNecessidade({ id: "pizza", vertical: "RESTAURANT", categoria: "pizza", restricoes: [] }, {});
+    expect(options.length).toBeGreaterThan(0);
+    for (const option of options) {
+      const source = results.find(item => `${item.merchant.merchantId}:${item.itemId}` === option.ref && item.merchant.merchantId === option.lojaId);
+      expect(source).toBeDefined();
+      expect(paraOption(option).media).toEqual({ photo: source!.itemImageUrl, logo: source!.merchant.merchantLogoUrl });
+    }
   });
 });

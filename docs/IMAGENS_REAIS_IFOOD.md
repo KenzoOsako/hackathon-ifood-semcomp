@@ -41,3 +41,9 @@ next.config.ts libera somente HTTPS static.ifood-static.com.br/image/upload/** e
 Configurar client ID, client secret e redirect local pelos mecanismos existentes, sem enviar segredos por chat/Git. Reabrir login e concluir teste autenticado de texto/voz, revisão e sacola antes do PR. Não ampliar allowlist para contornar falha. Sem merge ou deploy nesta etapa.
 
 **NÃO APTO PARA ABRIR PR:** gates de MCP real, voz e evidência visual real ainda pendentes conforme §11–13 do plano.
+
+## Retomada em modo real — 18/10/2026
+
+Configuração local fornecida pelo usuário carregada, sem valores em documentação/Git. Servidor de produção iniciado com override MCP_MODE=real na porta 8080; .env original permanece em mock conforme solicitado. /api/auth/login redirecionou para id.ifood.com.br e exibiu login por telefone/e-mail. Bloqueio de configuração local resolvido; sessão autenticada ainda aguardando conclusão humana. Nenhum escopo ampliado nesta retomada.
+
+Teste adicional percorre McpDomain → OpcaoPlano → paraOption.media com resposta gravada e imagens de fixture, conferindo merchantId:itemId e lojaId; não equivale a consulta ao vivo. Teste focal: 14 aprovados. Próximo gate: usuário conclui login na aba oficial, retorna ao app e então inicia busca real para observar CDN, ajustes e revisão/sacola.
