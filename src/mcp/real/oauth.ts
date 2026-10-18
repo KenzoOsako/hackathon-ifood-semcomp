@@ -7,6 +7,12 @@ const AUTH_URL = "https://id.ifood.com.br/authorize";
 const TOKEN_URL = "https://id.ifood.com.br/token";
 // Só leitura: o agente não tem carrinho nem checkout (compra final no iFood).
 export const ESCOPOS = ["mcp.user.addresses.read", "mcp.discovery.search.read", "mcp.discovery.browse.read", "mcp.discovery.recommendation.read", "mcp.discovery.details.read"];
+// Extras opcionais, separados por espaço ou vírgula (ex.: IFOOD_SCOPES_EXTRA=mcp.user.basic.read para o nome da conta).
+// Só entram se pedidos de propósito: um escopo que o portal não aprovou faz o login falhar com invalid_scope.
+export function escoposDoLogin(env: NodeJS.ProcessEnv = process.env): string[] {
+  const extras = (env.IFOOD_SCOPES_EXTRA ?? "").split(/[\s,]+/).filter((e) => /^mcp\.[a-z.]+$/.test(e));
+  return [...new Set([...ESCOPOS, ...extras])];
+}
 const PENDENTE_TTL_MS = 10 * 60_000;
 const RENOVAR_ANTES_MS = 5 * 60_000;
 const MAX_ENTRADAS = 1000;
@@ -41,7 +47,7 @@ export function iniciarLogin(subjectRef: string, now = Date.now()): string {
   limitar(store.pendentes);
   const url = new URL(AUTH_URL);
   url.search = new URLSearchParams({
-    response_type: "code", client_id: c.clientId, redirect_uri: c.redirectUri, scope: ESCOPOS.join(" "), state,
+    response_type: "code", client_id: c.clientId, redirect_uri: c.redirectUri, scope: escoposDoLogin().join(" "), state,
     code_challenge: b64url(createHash("sha256").update(verifier).digest()), code_challenge_method: "S256",
   }).toString();
   return url.toString();

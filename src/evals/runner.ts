@@ -2,6 +2,7 @@ import { FakeDomain } from "@/agent/domain-fake";
 import { executarTurno, novaSessao } from "@/agent/orchestrator";
 import type { AgentReply, AgentSession, LlmPort } from "@/agent/types";
 import { falaRespeitaSnapshot } from "@/prompts/responder";
+import { checarInvariantes } from "@/qualidade/invariantes";
 import type { Cenario } from "./cenarios";
 
 export interface ResultadoTurno { usuario: string; resposta: string; falhas: string[]; totalMs: number }
@@ -49,6 +50,9 @@ export async function rodarCenario(c: Cenario, llm: LlmPort, pausaMs = 0): Promi
     const falhas: string[] = [];
     checarEstadoENivel(r, s, t.esperado, falhas);
     checarPlanoEFala(r, t.esperado, falhas);
+    // Invariantes (src/qualidade): regras que valem em TODO turno, além do que o cenário pede. É isto que impede uma
+    // falha já vista (verbo de carrinho, nome inventado, resposta repetida...) de voltar sem teste algum reclamar.
+    for (const v of checarInvariantes({ texto: t.usuario, reply: r, sessao: s, anterior: acc.at(-1)?.resposta })) falhas.push(`invariante ${v.id}: ${v.detalhe}`);
     acc.push({ usuario: t.usuario, resposta: r.resposta, falhas, totalMs: r.tempos.totalMs });
     return acc;
   }, Promise.resolve([]));

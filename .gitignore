@@ -15,3 +15,7 @@ __pycache__/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Mutation testing (Stryker)
+.stryker-tmp/
+reports/

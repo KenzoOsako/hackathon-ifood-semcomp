@@ -1,0 +1,3497 @@
+{
+  "geradoEm": "2026-10-18T05:14:41.945Z",
+  "localizacao": "fixa (USP São Carlos)",
+  "ferramentas": [
+    {
+      "name": "listAddresses",
+      "description": "Returns all active delivery addresses on the user's account with usage analytics. **Always call this FIRST in any purchase flow** — it determines whether to confirm an existing address, let the user choose among saved addresses, or collect a new one. The chosen address must be the **exact** place where delivery should occur. Use the behavioral fields on each address (isLastUsedAddress, isMostUsedAddress30d, topMerchantTypes, topWeekDayShift, ordersByMerchantTypeWeekdayAndShift) to infer the most likely delivery address when multiple addresses are saved. When only one address is saved, use it directly and inform the user — no confirmation needed. When multiple addresses are saved, confirm briefly with the user (e.g., 'Entregar na Casa?') instead of listing all saved addresses. Only present the full list when behavioral data is unavailable, when signals are ambiguous, or when the user rejects or asks for alternatives. When an address has an alias (\"Casa\" or \"Trabalho\"), prefer presenting it by alias rather than the full street address. If no address is returned, guide the user to provide a new delivery address and use `createAddress` to save it. Do not construct or guess an addressId from address text. Only use the addressId values returned by this tool or by `createAddress`. Do **not** use this tool to search for new places or to save new addresses (use `createAddress`).",
+      "esquema": "{\"type\":\"object\",\"properties\":{},\"required\":[]}",
+      "obrigatorios": [],
+      "parametros": {}
+    },
+    {
+      "name": "browseOffers",
+      "description": "Browse what is available in an iFood business unit for the user's location. Use when the user wants to see what exists nearby, navigate the inventory, or discover available categories (e.g.: 'what's near me?', 'show me pet shop options', 'I want Japanese restaurants', 'show me desserts'). If there is a specific descriptive term (item, brand, attributes), prefer `searchOffers`. If the intent is personalised (favourites, reorder, recommendations), prefer `getRecommendations`. Canonical pattern: (1) open call with only merchantType + resultKind to get the full taxonomy tree in facets.itemTaxonomy; (2) drill-down with refinements.itemTaxonomy using canonical IDs from facets — never invent taxonomy IDs. Side effects: none (read-only).",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"includeFacets\":{\"default\":false,\"description\":\"When true, includes refinement buckets in facets (price, distance, taxonomy, etc.). Defaults to false.\",\"type\":\"boolean\"},\"merchantType\":{\"description\":\"iFood business unit to browse. Required — without it the tool cannot scope the inventory. If the user has not stated a vertical, ask before calling.\",\"enum\":[\"RESTAURANT\",\"GROCERIES\",\"LIQUORSTORE\",\"DRUGSTORE\",\"PETSTORE\",\"SHOPPING\"],\"type\":\"string\"},\"nextPageToken\":{\"description\":\"Opaque token from the previous response to fetch the next page. Do not invent tokens.\",\"type\":\"string\"},\"pageSize\":{\"default\":10,\"description\":\"Number of results per page. Default 10, maximum 25.\",\"type\":\"number\"},\"refinements\":{\"description\":\"Semantic filters and ordering. All fields are optional. For taxonomy drill-down, pass refinements.itemTaxonomy with canonical IDs received from facets.itemTaxonomy in a previous open call. Conversational mapping: 'cheap' → maxItemPrice + sort:PRICE; 'nearby' → maxDistanceKm + sort:DISTANCE; 'free delivery' → maxDeliveryFee:0 + sort:DELIVERY_FEE; 'fast' → sort:DELIVERY_TIME; 'well-rated' → minRating + sort:RATING; 'open now' → onlyOpen:true; 'with promotion / on sale' → onlyWithPromotion:true.\",\"properties\":{\"itemRestrictions\":{\"description\":\"Dietary/nutritional item restrictions (AND semantics). For resultKind=ITEM only. Conversational mapping: 'vegan' → VEGAN; 'lactose-free' → LAC_FREE; 'gluten-free' → GLUTEN_FREE.\",\"items\":{\"enum\":[\"LAC_FREE\",\"SUGAR_FREE\",\"VEGAN\",\"VEGETARIAN\",\"ORGANIC\",\"GLUTEN_FREE\"],\"type\":\"string\"},\"type\":\"array\"},\"itemTaxonomy\":{\"description\":\"Optional drill-down. String array of taxonomy ids taken from facets.itemTaxonomy; do not invent values. Each string is either a single level-2 id (no slash) or parent/child as \\\"level2/level3\\\" with exactly one slash. Several slash-free ids mean results may match any of those level-2 categories. Strings with more than one slash are skipped.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"maxDeliveryFee\":{\"description\":\"Maximum delivery fee (BRL).\",\"type\":\"number\"},\"maxDeliveryTimeMinutes\":{\"description\":\"Maximum delivery time, in minutes.\",\"type\":\"integer\"},\"maxDistanceKm\":{\"description\":\"Maximum geodesic distance to the merchant (km).\",\"type\":\"number\"},\"maxItemPrice\":{\"description\":\"Maximum item price (BRL). For resultKind=MERCHANT, returns merchants with at least one item within this limit.\",\"type\":\"number\"},\"maxMinimumOrderAmount\":{\"description\":\"Ceiling for the merchant's minimum order amount (BRL), zero or greater. Keeps merchants whose minimum is at or below this value; a merchant that reports no minimum always passes. Independent of maxItemPrice and maxDeliveryFee — each caps its own value, none caps their sum.\",\"minimum\":0,\"type\":\"number\"},\"merchantId\":{\"description\":\"UUID v4. Restricts results to this merchant. The merchant must belong to the merchantType provided; otherwise the tool fails with an actionable error. For resultKind=ITEM, this is the canonical path for browsing a single merchant's catalog.\",\"type\":\"string\"},\"minRating\":{\"description\":\"Minimum rating score (0–5).\",\"type\":\"number\"},\"onlyOpen\":{\"description\":\"If true, returns only merchants that are currently open.\",\"type\":\"boolean\"},\"onlyWithPromotion\":{\"description\":\"If true, returns only promotional content. With resultKind=MERCHANT, merchants with an active voucher; with resultKind=ITEM, items with a promotional price.\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Ordering: RELEVANCE (default), DELIVERY_FEE, DELIVERY_TIME, DISTANCE, PRICE.\",\"enum\":[\"RELEVANCE\",\"DELIVERY_FEE\",\"DELIVERY_TIME\",\"DISTANCE\",\"PRICE\"],\"type\":\"string\"}},\"type\":\"object\"},\"resultKind\":{\"description\":\"Desired result type: MERCHANT (stores) or ITEM (items/products). Defaults to MERCHANT when omitted.\",\"enum\":[\"MERCHANT\",\"ITEM\"],\"type\":\"string\"},\"userLocation\":{\"description\":\"User coordinates: { \\\"latitude\\\": float, \\\"longitude\\\": float }.\",\"properties\":{\"latitude\":{\"description\":\"Latitude in [-90, 90].\",\"type\":\"number\"},\"longitude\":{\"description\":\"Longitude in [-180, 180].\",\"type\":\"number\"}},\"type\":\"object\"}},\"required\":[\"userLocation\",\"merchantType\"]}",
+      "obrigatorios": [
+        "userLocation",
+        "merchantType"
+      ],
+      "parametros": {
+        "includeFacets": "boolean",
+        "merchantType": "enum",
+        "nextPageToken": "string",
+        "pageSize": "number",
+        "refinements": "object",
+        "resultKind": "enum",
+        "userLocation": "object"
+      }
+    },
+    {
+      "name": "getItem",
+      "description": "Returns the full detail of a specific item: variants and complements (`customizations`), curated attributes (dietary, allergens, descriptors), promotions at item level, and a summary of the merchant that sells it. Use after the user has chosen or confirmed a specific item from a listing result. Do not use this tool to list or search items — use `browseOffers` or `searchOffers` for that. Items currently unavailable are not returned; an invalid or unavailable `itemId` yields an actionable error. Side effects: none (read-only).",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"itemId\":{\"description\":\"UUID v4 of the item to retrieve. Must come from an itemId returned by a previous listing call with resultKind=ITEM, or from the `featuredItems` of `getMerchant`. Do not invent or guess item IDs.\",\"type\":\"string\"},\"merchantId\":{\"description\":\"UUID v4 of the merchant that owns the item. Must come from a merchantId returned by a previous listing call (browseOffers, searchOffers, or getRecommendations) or from `getMerchant`. Do not invent or guess merchant IDs.\",\"type\":\"string\"},\"userLocation\":{\"description\":\"User coordinates: { \\\"latitude\\\": float, \\\"longitude\\\": float }.\",\"properties\":{\"latitude\":{\"description\":\"Latitude in [-90, 90].\",\"type\":\"number\"},\"longitude\":{\"description\":\"Longitude in [-180, 180].\",\"type\":\"number\"}},\"type\":\"object\"}},\"required\":[\"userLocation\",\"merchantId\",\"itemId\"]}",
+      "obrigatorios": [
+        "userLocation",
+        "merchantId",
+        "itemId"
+      ],
+      "parametros": {
+        "itemId": "string",
+        "merchantId": "string",
+        "userLocation": "object"
+      }
+    },
+    {
+      "name": "getMerchant",
+      "description": "Returns the full operational detail of a specific merchant: operating hours, all available delivery methods, supported payment methods, minimum order amount, rating, catalogue summary, and optionally featured items. Use after the user has chosen or confirmed a merchant from a listing result. Do not use this tool to list or search merchants — use `browseOffers` or `searchOffers` for that. Side effects: none (read-only).",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"merchantId\":{\"description\":\"UUID v4 of the merchant to retrieve. Must come from a merchantId returned by a previous listing call (browseOffers, searchOffers, or getRecommendations). Do not invent or guess merchant IDs.\",\"type\":\"string\"},\"userLocation\":{\"description\":\"User coordinates: { \\\"latitude\\\": float, \\\"longitude\\\": float }.\",\"properties\":{\"latitude\":{\"description\":\"Latitude in [-90, 90].\",\"type\":\"number\"},\"longitude\":{\"description\":\"Longitude in [-180, 180].\",\"type\":\"number\"}},\"type\":\"object\"}},\"required\":[\"userLocation\",\"merchantId\"]}",
+      "obrigatorios": [
+        "userLocation",
+        "merchantId"
+      ],
+      "parametros": {
+        "merchantId": "string",
+        "userLocation": "object"
+      }
+    },
+    {
+      "name": "getRecommendations",
+      "description": "Return pre-curated lists based on user history, recommendations, or editorial selection with geo context. Use when the user wants to reorder, see favorites, check deals, browse recommendations, or discover featured local spots (e.g.: 'reorder my usual', 'what's on sale', 'my favorites', 'what do you recommend'). Do not use when the user has a specific search term — prefer `searchOffers`. Do not use for generic browsing — prefer `browseOffers`. Side effects: none (read-only).",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"contentMode\":{\"description\":\"Curated list source: RECOMMENDED (personalized), RECENT_ORDERS (reorder), FAVORITE_MERCHANTS (favorited stores), BEST_DEALS (active promotions), FEATURED_LOCAL (editorial local highlights).\",\"enum\":[\"RECOMMENDED\",\"RECENT_ORDERS\",\"FAVORITE_MERCHANTS\",\"BEST_DEALS\",\"FEATURED_LOCAL\"],\"type\":\"string\"},\"merchantType\":{\"description\":\"Optional vertical filter. When absent, results may cross verticals.\",\"enum\":[\"RESTAURANT\",\"GROCERIES\",\"LIQUORSTORE\",\"DRUGSTORE\",\"PETSTORE\",\"SHOPPING\"],\"type\":\"string\"},\"nextPageToken\":{\"description\":\"Opaque token from the previous response to fetch the next page. Do not invent tokens.\",\"type\":\"string\"},\"pageSize\":{\"default\":10,\"description\":\"Number of results per page. Default 10, maximum 25.\",\"type\":\"number\"},\"refinements\":{\"description\":\"Semantic filters and ordering. All fields are optional. Conversational mapping: 'cheap' → maxItemPrice + sort:PRICE; 'nearby' → maxDistanceKm + sort:DISTANCE; 'fast' → maxDeliveryTimeMinutes + sort:DELIVERY_TIME; 'well-rated' → minRating + sort:RATING; 'open now' → onlyOpen:true; 'with promotion / on sale' → onlyWithPromotion:true.\",\"properties\":{\"itemRestrictions\":{\"description\":\"Dietary/nutritional item restrictions (AND semantics). For resultKind=ITEM only. Conversational mapping: 'vegan' → VEGAN; 'lactose-free' → LAC_FREE; 'gluten-free' → GLUTEN_FREE.\",\"items\":{\"enum\":[\"LAC_FREE\",\"SUGAR_FREE\",\"VEGAN\",\"VEGETARIAN\",\"ORGANIC\",\"GLUTEN_FREE\"],\"type\":\"string\"},\"type\":\"array\"},\"itemTaxonomy\":{\"description\":\"Optional. String array of taxonomy ids from facets in a prior response; do not invent values. Each string is either a single level-2 id (no slash) or parent/child as \\\"level2/level3\\\" with exactly one slash.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"maxDeliveryFee\":{\"description\":\"Maximum delivery fee (BRL).\",\"type\":\"number\"},\"maxDeliveryTimeMinutes\":{\"description\":\"Maximum delivery time, in minutes.\",\"type\":\"integer\"},\"maxDistanceKm\":{\"description\":\"Maximum geodesic distance to the merchant (km).\",\"type\":\"number\"},\"maxItemPrice\":{\"description\":\"Maximum item price (BRL).\",\"type\":\"number\"},\"maxMinimumOrderAmount\":{\"description\":\"Ceiling for the merchant's minimum order amount (BRL), zero or greater. Keeps merchants whose minimum is at or below this value; a merchant that reports no minimum always passes. Independent of maxItemPrice and maxDeliveryFee — each caps its own value, none caps their sum.\",\"minimum\":0,\"type\":\"number\"},\"minRating\":{\"description\":\"Minimum rating score (0–5).\",\"type\":\"number\"},\"onlyOpen\":{\"description\":\"If true, returns only merchants that are currently open.\",\"type\":\"boolean\"},\"onlyWithPromotion\":{\"description\":\"If true, returns only promotional content. With resultKind=MERCHANT, merchants with an active voucher; with resultKind=ITEM, items with a promotional price.\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Ordering: RELEVANCE (default), DELIVERY_FEE, DELIVERY_TIME, DISTANCE, PRICE.\",\"enum\":[\"RELEVANCE\",\"DELIVERY_FEE\",\"DELIVERY_TIME\",\"DISTANCE\",\"PRICE\"],\"type\":\"string\"}},\"type\":\"object\"},\"resultKind\":{\"description\":\"Desired result type: MERCHANT (stores) or ITEM (items/products). Defaults to MERCHANT when omitted. Must be compatible with contentMode.\",\"enum\":[\"MERCHANT\",\"ITEM\"],\"type\":\"string\"},\"userLocation\":{\"description\":\"User coordinates: { \\\"latitude\\\": float, \\\"longitude\\\": float }.\",\"properties\":{\"latitude\":{\"description\":\"Latitude in [-90, 90].\",\"type\":\"number\"},\"longitude\":{\"description\":\"Longitude in [-180, 180].\",\"type\":\"number\"}},\"type\":\"object\"}},\"required\":[\"userLocation\",\"contentMode\"]}",
+      "obrigatorios": [
+        "userLocation",
+        "contentMode"
+      ],
+      "parametros": {
+        "contentMode": "enum",
+        "merchantType": "enum",
+        "nextPageToken": "string",
+        "pageSize": "number",
+        "refinements": "object",
+        "resultKind": "enum",
+        "userLocation": "object"
+      }
+    },
+    {
+      "name": "searchOffers",
+      "description": "Text search for merchants or items on iFood. Use when the user describes what they are looking for in natural language (e.g.: 'vegetarian pizza', 'Madero burger'). Decompose the utterance: the descriptive part goes in `query`; qualifiers like price, distance, fee, or rating go in `refinements`. Do not use this tool if there is no descriptive text — prefer `browseOffers` (browsing) or `getRecommendations` (personalization). Side effects: none (read-only).",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"experiment\":{\"description\":\"Optional A/B experiment identifier that selects which search pipeline should be used for this request.\",\"type\":\"string\"},\"includeFacets\":{\"default\":false,\"description\":\"When true, includes refinement buckets in facets (price, distance, taxonomy, etc.). Defaults to false.\",\"type\":\"boolean\"},\"intention\":{\"description\":\"Optional intention to guide search results. When omitted, derived from resultKind (MERCHANT → 'merchant', ITEM → 'product').\",\"enum\":[\"merchant\",\"product\",\"merchant_exact\",\"product_exact\"],\"type\":\"string\"},\"merchantType\":{\"description\":\"Restricts the search to an iFood business unit. When absent, the search crosses all verticals.\",\"enum\":[\"RESTAURANT\",\"GROCERIES\",\"LIQUORSTORE\",\"DRUGSTORE\",\"PETSTORE\",\"SHOPPING\"],\"type\":\"string\"},\"nextPageToken\":{\"description\":\"Opaque token from the previous response to fetch the next page. Do not invent tokens.\",\"type\":\"string\"},\"pageSize\":{\"default\":10,\"description\":\"Number of results per page. Default 10, maximum 25.\",\"type\":\"number\"},\"query\":{\"description\":\"Free-text user intent — only the descriptive/content part. Qualifiers (price, distance, etc.) go in `refinements`.\",\"type\":\"string\"},\"refinements\":{\"description\":\"Semantic filters and ordering. All fields are optional. Conversational mapping: 'cheap' → maxItemPrice + sort:PRICE; 'nearby' → maxDistanceKm + sort:DISTANCE; 'free delivery' → maxDeliveryFee:0 + sort:DELIVERY_FEE; 'fast / within X minutes' → maxDeliveryTimeMinutes + sort:DELIVERY_TIME; 'well-rated' → minRating + sort:RATING; 'open now' → onlyOpen:true; 'with promotion / on sale' → onlyWithPromotion:true.\",\"properties\":{\"itemRestrictions\":{\"description\":\"Dietary/nutritional item restrictions. For resultKind=ITEM only. Conversational mapping: 'vegan' → VEGAN; 'lactose-free' → LAC_FREE; 'gluten-free' → GLUTEN_FREE.\",\"items\":{\"enum\":[\"LAC_FREE\",\"SUGAR_FREE\",\"VEGAN\",\"VEGETARIAN\",\"ORGANIC\",\"GLUTEN_FREE\"],\"type\":\"string\"},\"type\":\"array\"},\"itemTaxonomy\":{\"description\":\"Optional. String array of taxonomy ids from facets in a prior response; do not invent values. Each string is either a single level-2 id (no slash) or parent/child as \\\"level2/level3\\\" with exactly one slash. Several slash-free ids mean results may match any of those level-2 categories. Strings with more than one slash are skipped.\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"maxDeliveryFee\":{\"description\":\"Maximum delivery fee (BRL).\",\"type\":\"number\"},\"maxDeliveryTimeMinutes\":{\"description\":\"Maximum delivery time ceiling (minutes), applied to deliveryTimeMinutes.max of the quoted delivery method.\",\"type\":\"integer\"},\"maxDistanceKm\":{\"description\":\"Maximum geodesic distance to the merchant (km).\",\"type\":\"number\"},\"maxItemPrice\":{\"description\":\"Maximum item price (BRL). For resultKind=MERCHANT, returns merchants with at least one item within this limit.\",\"type\":\"number\"},\"maxMinimumOrderAmount\":{\"description\":\"Ceiling for the merchant's minimum order amount (BRL), zero or greater. Keeps merchants whose minimum is at or below this value; a merchant that reports no minimum always passes. Independent of maxItemPrice and maxDeliveryFee — each caps its own value, none caps their sum.\",\"minimum\":0,\"type\":\"number\"},\"merchantId\":{\"description\":\"UUID v4. Restricts results to this merchant. For resultKind=ITEM, canonical path to search or browse within a store after the user picks a merchant (combine with merchantType when needed).\",\"type\":\"string\"},\"minRating\":{\"description\":\"Minimum rating score (0–5).\",\"type\":\"number\"},\"onlyOpen\":{\"description\":\"If true, returns only merchants that are currently open.\",\"type\":\"boolean\"},\"onlyWithPromotion\":{\"description\":\"If true, returns only promotional content. With resultKind=MERCHANT, merchants with an active voucher; with resultKind=ITEM, items with a promotional price.\",\"type\":\"boolean\"},\"sort\":{\"description\":\"Ordering: RELEVANCE (default), DELIVERY_FEE, DELIVERY_TIME, DISTANCE, PRICE.\",\"enum\":[\"RELEVANCE\",\"DELIVERY_FEE\",\"DELIVERY_TIME\",\"DISTANCE\",\"PRICE\"],\"type\":\"string\"}},\"type\":\"object\"},\"resultKind\":{\"description\":\"Desired result type: MERCHANT (stores) or ITEM (items/products). Defaults to MERCHANT when omitted.\",\"enum\":[\"MERCHANT\",\"ITEM\"],\"type\":\"string\"},\"userLocation\":{\"description\":\"User coordinates: { \\\"latitude\\\": float, \\\"longitude\\\": float }.\",\"properties\":{\"latitude\":{\"description\":\"Latitude in [-90, 90].\",\"type\":\"number\"},\"longitude\":{\"description\":\"Longitude in [-180, 180].\",\"type\":\"number\"}},\"type\":\"object\"}},\"required\":[\"userLocation\",\"query\"]}",
+      "obrigatorios": [
+        "userLocation",
+        "query"
+      ],
+      "parametros": {
+        "experiment": "string",
+        "includeFacets": "boolean",
+        "intention": "enum",
+        "merchantType": "enum",
+        "nextPageToken": "string",
+        "pageSize": "number",
+        "query": "string",
+        "refinements": "object",
+        "resultKind": "enum",
+        "userLocation": "object"
+      }
+    },
+    {
+      "name": "listVouchers",
+      "description": "Lists the vouchers available for the cart. Call this when the user wants to see which coupons or promo codes they can apply.",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"cartId\":{\"type\":\"string\",\"format\":\"uuid\",\"description\":\"The cart ID from a previous createCart or getCart response\"}},\"required\":[\"cartId\"],\"$schema\":\"https://json-schema.org/draft/2020-12/schema\"}",
+      "obrigatorios": [
+        "cartId"
+      ],
+      "parametros": {
+        "cartId": "string"
+      }
+    },
+    {
+      "name": "setVoucher",
+      "description": "Applies a voucher or discount code to the cart. Call this when the user wants to apply a coupon or promo code they selected. Use a code and campaignId returned by the listVouchers tool.",
+      "esquema": "{\"type\":\"object\",\"properties\":{\"cartId\":{\"type\":\"string\",\"format\":\"uuid\",\"description\":\"The cart ID from a previous createCart or getCart response\"},\"code\":{\"type\":\"string\",\"description\":\"The voucher code to apply, as returned by the listVouchers tool\"},\"campaignId\":{\"type\":\"string\",\"format\":\"uuid\",\"description\":\"The campaign ID of the voucher, as returned by the listVouchers tool.\"}},\"required\":[\"cartId\",\"code\",\"campaignId\"],\"$schema\":\"https://json-schema.org/draft/2020-12/schema\"}",
+      "obrigatorios": [
+        "cartId",
+        "code",
+        "campaignId"
+      ],
+      "parametros": {
+        "cartId": "string",
+        "code": "string",
+        "campaignId": "string"
+      }
+    }
+  ],
+  "sondagens": [
+    {
+      "ferramenta": "listAddresses",
+      "argumentos": {},
+      "ok": true,
+      "ms": 1535,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          },
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 171
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "getUser",
+      "argumentos": {},
+      "ok": false,
+      "ms": 1116,
+      "erro": "MCP_TOOL_ERRO:getUser:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "pizza",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1078,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksItem": {
+                "tipo": "texto",
+                "comprimentoMax": 104,
+                "exemplos": [
+                  "Retrieve full item details — option groups and applicable pr"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 5,
+            "exemplos": [
+              "pizza"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "itemEan": {
+                  "tipo": "texto",
+                  "comprimentoMax": 0,
+                  "exemplos": [
+                    ""
+                  ]
+                },
+                "itemId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "5c4fea58-7c95-4cdd-8fa5-39f3cb457629",
+                    "2d74725e-8dd4-44da-8f29-f015084cb37d",
+                    "184af40c-58aa-4308-a61d-13b4dcc92962"
+                  ]
+                },
+                "itemImageUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 124,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_medium/pra"
+                  ]
+                },
+                "itemName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 61,
+                  "exemplos": [
+                    "Pizza",
+                    "Dog Pizza Requejex",
+                    "Dog especial pizza"
+                  ]
+                },
+                "merchant": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethod": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "deliveryMethodId": {
+                          "tipo": "texto",
+                          "comprimentoMax": 7,
+                          "exemplos": [
+                            "DEFAULT"
+                          ]
+                        },
+                        "deliveryMethodMode": {
+                          "tipo": "texto",
+                          "comprimentoMax": 8,
+                          "exemplos": [
+                            "DELIVERY"
+                          ]
+                        },
+                        "estimatedMinutes": {
+                          "tipo": "objeto",
+                          "campos": {
+                            "max": {
+                              "tipo": "numero",
+                              "min": 25,
+                              "max": 70
+                            },
+                            "min": {
+                              "tipo": "numero",
+                              "min": 10,
+                              "max": 60
+                            }
+                          }
+                        },
+                        "fee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 8.5
+                        },
+                        "promotionalFee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 8.5
+                        }
+                      }
+                    },
+                    "isOpen": {
+                      "tipo": "booleano"
+                    },
+                    "merchantId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 36,
+                      "exemplos": [
+                        "12d701fe-07cb-43d6-bd60-03fb44a40b08",
+                        "d79782fc-98ba-42c4-a4f8-588cf71df41e",
+                        "54615ed7-5697-413b-a508-9156e3f5ec70"
+                      ]
+                    },
+                    "merchantLogoUrl": {
+                      "tipo": "texto",
+                      "comprimentoMax": 129,
+                      "exemplos": [
+                        "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                      ]
+                    },
+                    "merchantName": {
+                      "tipo": "texto",
+                      "comprimentoMax": 42,
+                      "exemplos": [
+                        "PASTELARIA BRASIL BEBIDAS ",
+                        "Tropical lanches loja Matriz cidade jardim",
+                        "Ponto da Esfiha São Carlos"
+                      ]
+                    },
+                    "minimumOrderAmount": {
+                      "tipo": "numero",
+                      "min": 5,
+                      "max": 35
+                    },
+                    "ratingCount": {
+                      "tipo": "numero",
+                      "min": 66,
+                      "max": 438
+                    },
+                    "reviewRating": {
+                      "tipo": "numero",
+                      "min": 4.699999809265137,
+                      "max": 5
+                    },
+                    "straightLineDistanceKm": {
+                      "tipo": "numero",
+                      "min": 0.51,
+                      "max": 3.15
+                    }
+                  }
+                },
+                "promotionalUnitPrice": {
+                  "tipo": "numero",
+                  "min": 8.99,
+                  "max": 159.99
+                },
+                "unitPrice": {
+                  "tipo": "numero",
+                  "min": 8.99,
+                  "max": 159.99
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "pizza",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1515,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 5,
+            "exemplos": [
+              "pizza"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 1,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 7,
+                      "exemplos": [
+                        "DEFAULT"
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8,
+                      "exemplos": [
+                        "DELIVERY"
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 40,
+                          "max": 40
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 30,
+                          "max": 30
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 7,
+                      "max": 7
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 7,
+                      "max": 7
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "25c6970d-02f7-4f44-995b-a60205bc35c7"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 30,
+                  "exemplos": [
+                    "Max Burguer, Marmitas, Pizzas "
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 35,
+                  "max": 35
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 66,
+                  "max": 66
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 5,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 2.68,
+                  "max": 2.68
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "hamburguer",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1072,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksItem": {
+                "tipo": "texto",
+                "comprimentoMax": 104,
+                "exemplos": [
+                  "Retrieve full item details — option groups and applicable pr"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 10,
+            "exemplos": [
+              "hamburguer"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "itemEan": {
+                  "tipo": "texto",
+                  "comprimentoMax": 0,
+                  "exemplos": [
+                    ""
+                  ]
+                },
+                "itemId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "76ae0160-7362-4891-a210-80a5807ae93e",
+                    "e3c66613-5367-4342-a2de-6f60e1203067",
+                    "e9e9dc01-c97c-4f9e-8b32-cfbb3e59d43e"
+                  ]
+                },
+                "itemImageUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_medium/pra"
+                  ]
+                },
+                "itemName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 52,
+                  "exemplos": [
+                    "X-Bacon",
+                    "Rodeio",
+                    "X-Calabresa"
+                  ]
+                },
+                "merchant": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethod": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "deliveryMethodId": {
+                          "tipo": "texto",
+                          "comprimentoMax": 12,
+                          "exemplos": [
+                            "DEFAULT",
+                            "HIGH_DENSITY"
+                          ]
+                        },
+                        "deliveryMethodMode": {
+                          "tipo": "texto",
+                          "comprimentoMax": 8,
+                          "exemplos": [
+                            "DELIVERY"
+                          ]
+                        },
+                        "estimatedMinutes": {
+                          "tipo": "objeto",
+                          "campos": {
+                            "max": {
+                              "tipo": "numero",
+                              "min": 35,
+                              "max": 87
+                            },
+                            "min": {
+                              "tipo": "numero",
+                              "min": 25,
+                              "max": 72
+                            }
+                          }
+                        },
+                        "fee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 8.5
+                        },
+                        "promotionalFee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 8.5
+                        }
+                      }
+                    },
+                    "isOpen": {
+                      "tipo": "booleano"
+                    },
+                    "merchantId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 36,
+                      "exemplos": [
+                        "54615ed7-5697-413b-a508-9156e3f5ec70",
+                        "29720a37-3158-4e25-9a32-a6ef5d3437de",
+                        "265b35eb-f873-4acf-9a03-95fa992fe4d0"
+                      ]
+                    },
+                    "merchantLogoUrl": {
+                      "tipo": "texto",
+                      "comprimentoMax": 129,
+                      "exemplos": [
+                        "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                      ]
+                    },
+                    "merchantName": {
+                      "tipo": "texto",
+                      "comprimentoMax": 39,
+                      "exemplos": [
+                        "Ponto da Esfiha São Carlos",
+                        "Burger King - Passeio São Carlos",
+                        "Mcdonald's - São Carlos Drive (scd)"
+                      ]
+                    },
+                    "minimumOrderAmount": {
+                      "tipo": "numero",
+                      "min": 15,
+                      "max": 20
+                    },
+                    "ratingCount": {
+                      "tipo": "numero",
+                      "min": 385,
+                      "max": 2189
+                    },
+                    "reviewRating": {
+                      "tipo": "numero",
+                      "min": 4.699999809265137,
+                      "max": 4.800000190734863
+                    },
+                    "straightLineDistanceKm": {
+                      "tipo": "numero",
+                      "min": 0.42,
+                      "max": 3.15
+                    }
+                  }
+                },
+                "promotionalUnitPrice": {
+                  "tipo": "numero",
+                  "min": 8,
+                  "max": 49.9
+                },
+                "unitPrice": {
+                  "tipo": "numero",
+                  "min": 24.99,
+                  "max": 49.9
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "hamburguer",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1496,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 10,
+            "exemplos": [
+              "hamburguer"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 2,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 7,
+                      "exemplos": [
+                        "DEFAULT"
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8,
+                      "exemplos": [
+                        "DELIVERY"
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 40,
+                          "max": 56
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 30,
+                          "max": 41
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 7,
+                      "max": 7.99
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 7,
+                      "max": 7.99
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "29720a37-3158-4e25-9a32-a6ef5d3437de",
+                    "25c6970d-02f7-4f44-995b-a60205bc35c7"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 32,
+                  "exemplos": [
+                    "Burger King - Passeio São Carlos",
+                    "Max Burguer, Marmitas, Pizzas "
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 20,
+                  "max": 35
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 66,
+                  "max": 915
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 4.800000190734863,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 1.03,
+                  "max": 2.68
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "leite",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "GROCERIES",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 2129,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 170,
+                "exemplos": [
+                  "No results found for \"leite\" with the active filters in this"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 5,
+            "exemplos": [
+              "leite"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "leite",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1621,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 170,
+                "exemplos": [
+                  "No results found for \"leite\" with the active filters in this"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 5,
+            "exemplos": [
+              "leite"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "ovos",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "GROCERIES",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 2006,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 169,
+                "exemplos": [
+                  "No results found for \"ovos\" with the active filters in this "
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ovos"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "ovos",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1728,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 169,
+                "exemplos": [
+                  "No results found for \"ovos\" with the active filters in this "
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ovos"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "presente",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "SHOPPING",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1812,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 173,
+                "exemplos": [
+                  "No results found for \"presente\" with the active filters in t"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "presente"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "presente",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "SHOPPING",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1756,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 173,
+                "exemplos": [
+                  "No results found for \"presente\" with the active filters in t"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "presente"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "ração",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "PETSTORE",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 2759,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 170,
+                "exemplos": [
+                  "No results found for \"ração\" with the active filters in this"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 5,
+            "exemplos": [
+              "ração"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "searchOffers",
+      "argumentos": {
+        "query": "ração",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "PETSTORE",
+        "pageSize": 10,
+        "refinements": {
+          "onlyOpen": true
+        }
+      },
+      "ok": true,
+      "ms": 1624,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "noResultsGuidance": {
+                "tipo": "texto",
+                "comprimentoMax": 170,
+                "exemplos": [
+                  "No results found for \"ração\" with the active filters in this"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "interpretedQuery": {
+            "tipo": "texto",
+            "comprimentoMax": 5,
+            "exemplos": [
+              "ração"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "nulo"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 0
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "browseOffers",
+      "argumentos": {
+        "userLocation": "<oculto>",
+        "merchantType": "RESTAURANT",
+        "resultKind": "MERCHANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 2056,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "merchantType": {
+            "tipo": "texto",
+            "comprimentoMax": 10,
+            "exemplos": [
+              "RESTAURANT"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 7,
+                      "exemplos": [
+                        "DEFAULT"
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8,
+                      "exemplos": [
+                        "DELIVERY"
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 24,
+                          "max": 92
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 10,
+                          "max": 77
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 7.99
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 7.99
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "c73249b1-4d31-448b-a5ef-04520f95f3ad",
+                    "cab0589a-53df-4a5f-b9a6-383377a5d74d",
+                    "265b35eb-f873-4acf-9a03-95fa992fe4d0"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 42,
+                  "exemplos": [
+                    "Avenue Lanches e Açai",
+                    "Mccafé o Dia Todo - São Carlos Drive (scd)",
+                    "Mcdonald's - São Carlos Drive (scd)"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 5,
+                  "max": 25
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 2,
+                  "max": 2189
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 4.5,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.39,
+                  "max": 1.65
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "listItemTaxonomy",
+      "argumentos": {
+        "merchantType": "RESTAURANT",
+        "pageSize": 20
+      },
+      "ok": false,
+      "ms": 1547,
+      "erro": "MCP_TOOL_ERRO:listItemTaxonomy:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "browseOffers",
+      "argumentos": {
+        "userLocation": "<oculto>",
+        "merchantType": "GROCERIES",
+        "resultKind": "MERCHANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1850,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "merchantType": {
+            "tipo": "texto",
+            "comprimentoMax": 9,
+            "exemplos": [
+              "GROCERIES"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "accc6368-229d-4754-beb4-c27ac61ac1a5",
+                    "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+                    "6af300f4-e672-43ca-8ae8-9ee96a501894"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 45,
+                  "exemplos": [
+                    "Americanas | São Carlos",
+                    "Nissei Mercado - 431",
+                    "Extra - São Carlos"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 30,
+                  "max": 60
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 40,
+                  "max": 1867,
+                  "opcional": true
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 0,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.68,
+                  "max": 2.76
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "listItemTaxonomy",
+      "argumentos": {
+        "merchantType": "GROCERIES",
+        "pageSize": 20
+      },
+      "ok": false,
+      "ms": 1478,
+      "erro": "MCP_TOOL_ERRO:listItemTaxonomy:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "browseOffers",
+      "argumentos": {
+        "userLocation": "<oculto>",
+        "merchantType": "SHOPPING",
+        "resultKind": "MERCHANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1853,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "merchantType": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "SHOPPING"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "d624396e-a8b0-413d-8f53-86d9f38dddb2",
+                    "a845cbf0-3097-4559-941d-b130a00fd205",
+                    "518ba652-668d-4f18-ba31-7907f9362950"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ],
+                  "opcional": true
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 39,
+                  "exemplos": [
+                    "Lojas 1a99 - São Carlos",
+                    "Moreira & da Ribeira Materiais Diversos",
+                    "Nature More Store"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 0,
+                  "max": 30
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 0,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 1.06,
+                  "max": 2.72
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 1,
+                  "max": 6,
+                  "opcional": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "listItemTaxonomy",
+      "argumentos": {
+        "merchantType": "SHOPPING",
+        "pageSize": 20
+      },
+      "ok": false,
+      "ms": 2068,
+      "erro": "MCP_TOOL_ERRO:listItemTaxonomy:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "browseOffers",
+      "argumentos": {
+        "userLocation": "<oculto>",
+        "merchantType": "PETSTORE",
+        "resultKind": "MERCHANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1914,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "merchantType": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "PETSTORE"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "427d24ff-44f9-4544-9e4e-916da50d44e3",
+                    "d517d478-ae66-48ba-ba0a-431da9ad4dbf",
+                    "f015ddf4-cd73-4540-ba0f-ab79661c924f"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 28,
+                  "exemplos": [
+                    "Casale Pet",
+                    "Petz Sao Carlos",
+                    "Zee Now -  Sao Carlos"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 20,
+                  "max": 40
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 2,
+                  "max": 145,
+                  "opcional": true
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 0,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.22,
+                  "max": 3.52
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "listItemTaxonomy",
+      "argumentos": {
+        "merchantType": "PETSTORE",
+        "pageSize": 20
+      },
+      "ok": false,
+      "ms": 1386,
+      "erro": "MCP_TOOL_ERRO:listItemTaxonomy:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "browseOffers",
+      "argumentos": {
+        "userLocation": "<oculto>",
+        "merchantType": "DRUGSTORE",
+        "resultKind": "MERCHANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1611,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "merchantType": {
+            "tipo": "texto",
+            "comprimentoMax": 9,
+            "exemplos": [
+              "DRUGSTORE"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 13,
+                      "exemplos": [
+                        "FAST_DELIVERY",
+                        ""
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8,
+                      "exemplos": [
+                        "DELIVERY",
+                        ""
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 22
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 12
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 13.49
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 4
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "df1b47e0-eab9-47a5-bb51-e3482ce6fb45",
+                    "aec840ea-723c-47ac-adfa-58152745700e",
+                    "80c773cf-0273-4209-9ac9-3d50608fff48"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "Drogaria São Paulo - Sao Carlos",
+                    "Drogão Super - São Carlos C. Botelho",
+                    "Raia - Sao Carlos - C - 354"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 20,
+                  "max": 80
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 3,
+                  "max": 741
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 4.900000095367432,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.49,
+                  "max": 3.88
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "listItemTaxonomy",
+      "argumentos": {
+        "merchantType": "DRUGSTORE",
+        "pageSize": 20
+      },
+      "ok": false,
+      "ms": 1466,
+      "erro": "MCP_TOOL_ERRO:listItemTaxonomy:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "browseOffers",
+      "argumentos": {
+        "userLocation": "<oculto>",
+        "merchantType": "LIQUORSTORE",
+        "resultKind": "MERCHANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1717,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "merchantType": {
+            "tipo": "texto",
+            "comprimentoMax": 11,
+            "exemplos": [
+              "LIQUORSTORE"
+            ]
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 7,
+                      "exemplos": [
+                        "DEFAULT",
+                        ""
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8,
+                      "exemplos": [
+                        "DELIVERY",
+                        ""
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 45
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 35
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 5.99
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 5.99
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "0ca39f43-d1f5-4c7c-81a2-214636cad42b",
+                    "64966a2f-8119-4410-8e6d-b84b722a7404",
+                    "49f0baa6-dffc-475a-b4d8-a0dc421a8be3"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ],
+                  "opcional": true
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 33,
+                  "exemplos": [
+                    "Pare Aqui Bebidas 24 Horas",
+                    "Pare aqui conveniência 24 horas",
+                    "Bonde Bebidas Vila Nery"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 10,
+                  "max": 39.9
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 8,
+                  "max": 127,
+                  "opcional": true
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 0,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.39,
+                  "max": 3.16
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "listItemTaxonomy",
+      "argumentos": {
+        "merchantType": "LIQUORSTORE",
+        "pageSize": 20
+      },
+      "ok": false,
+      "ms": 1551,
+      "erro": "MCP_TOOL_ERRO:listItemTaxonomy:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 2013,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "contentMode": {
+            "tipo": "texto",
+            "comprimentoMax": 11,
+            "exemplos": [
+              "RECOMMENDED"
+            ]
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 7,
+                      "exemplos": [
+                        "DEFAULT"
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8,
+                      "exemplos": [
+                        "DELIVERY"
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 24,
+                          "max": 73
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 10,
+                          "max": 60
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 8.5
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 8.5
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "54615ed7-5697-413b-a508-9156e3f5ec70",
+                    "12d701fe-07cb-43d6-bd60-03fb44a40b08",
+                    "8cf775ef-f612-45ec-b4a5-e90845662306"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 42,
+                  "exemplos": [
+                    "Ponto da Esfiha São Carlos",
+                    "PASTELARIA BRASIL BEBIDAS ",
+                    "Mascavado Bakery"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 5,
+                  "max": 25
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 56,
+                  "max": 2189
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 4.5,
+                  "max": 4.900000095367432
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.39,
+                  "max": 3.15
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1758,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142,
+                "exemplos": [
+                  "Retrieve detailed information about this merchant — operatin"
+                ]
+              }
+            }
+          },
+          "contentMode": {
+            "tipo": "texto",
+            "comprimentoMax": 11,
+            "exemplos": [
+              "RECOMMENDED"
+            ]
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8,
+            "exemplos": [
+              "MERCHANT"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 0,
+                      "exemplos": [
+                        ""
+                      ]
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 0
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "accc6368-229d-4754-beb4-c27ac61ac1a5",
+                    "e8e2e095-f435-4930-b16f-eac7b7d1d880",
+                    "6af300f4-e672-43ca-8ae8-9ee96a501894"
+                  ]
+                },
+                "merchantLogoUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 129,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                  ]
+                },
+                "merchantName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 45,
+                  "exemplos": [
+                    "Americanas | São Carlos",
+                    "Nissei Mercado - 431",
+                    "Extra - São Carlos"
+                  ]
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 30,
+                  "max": 60
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 40,
+                  "max": 1867,
+                  "opcional": true
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 0,
+                  "max": 5
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.68,
+                  "max": 2.76
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1935,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksItem": {
+                "tipo": "texto",
+                "comprimentoMax": 104,
+                "exemplos": [
+                  "Retrieve full item details — option groups and applicable pr"
+                ]
+              }
+            }
+          },
+          "contentMode": {
+            "tipo": "texto",
+            "comprimentoMax": 11,
+            "exemplos": [
+              "RECOMMENDED"
+            ]
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "itemId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "35b1129f-17d0-4185-9705-df815c12b77c",
+                    "2d3198ed-64fe-4158-8fbf-9ec6bc8ec077",
+                    "9cc381b0-82ef-46a6-9ecc-6951a03532af"
+                  ]
+                },
+                "itemImageUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 128,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_medium/pra"
+                  ]
+                },
+                "itemName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 24,
+                  "exemplos": [
+                    "X-Catupiry",
+                    "Americano",
+                    "Tudo"
+                  ]
+                },
+                "merchant": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethod": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "deliveryMethodId": {
+                          "tipo": "texto",
+                          "comprimentoMax": 7,
+                          "exemplos": [
+                            "DEFAULT"
+                          ]
+                        },
+                        "deliveryMethodMode": {
+                          "tipo": "texto",
+                          "comprimentoMax": 8,
+                          "exemplos": [
+                            "DELIVERY"
+                          ]
+                        },
+                        "estimatedMinutes": {
+                          "tipo": "objeto",
+                          "campos": {
+                            "max": {
+                              "tipo": "numero",
+                              "min": 24,
+                              "max": 24
+                            },
+                            "min": {
+                              "tipo": "numero",
+                              "min": 14,
+                              "max": 14
+                            }
+                          }
+                        },
+                        "fee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        },
+                        "promotionalFee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        }
+                      }
+                    },
+                    "isOpen": {
+                      "tipo": "booleano"
+                    },
+                    "merchantId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 36,
+                      "exemplos": [
+                        "13406404-984c-458d-94e7-7fcc339d1c4f"
+                      ]
+                    },
+                    "merchantLogoUrl": {
+                      "tipo": "texto",
+                      "comprimentoMax": 129,
+                      "exemplos": [
+                        "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                      ]
+                    },
+                    "merchantName": {
+                      "tipo": "texto",
+                      "comprimentoMax": 40,
+                      "exemplos": [
+                        "Lanchonete Tropical Original Lj2 Corujão"
+                      ]
+                    },
+                    "minimumOrderAmount": {
+                      "tipo": "numero",
+                      "min": 25,
+                      "max": 25
+                    },
+                    "ratingCount": {
+                      "tipo": "numero",
+                      "min": 207,
+                      "max": 207
+                    },
+                    "reviewRating": {
+                      "tipo": "numero",
+                      "min": 4.5,
+                      "max": 4.5
+                    },
+                    "straightLineDistanceKm": {
+                      "tipo": "numero",
+                      "min": 1.66,
+                      "max": 1.66
+                    }
+                  }
+                },
+                "promotionalUnitPrice": {
+                  "tipo": "numero",
+                  "min": 9.99,
+                  "max": 49.99
+                },
+                "unitPrice": {
+                  "tipo": "numero",
+                  "min": 9.99,
+                  "max": 49.99
+                },
+                "itemEan": {
+                  "tipo": "texto",
+                  "comprimentoMax": 13,
+                  "exemplos": [
+                    "5000000070022"
+                  ],
+                  "opcional": true
+                },
+                "itemSkuId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 13,
+                  "exemplos": [
+                    "SKU-SKOV85330"
+                  ],
+                  "opcional": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": true,
+      "ms": 1403,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksItem": {
+                "tipo": "texto",
+                "comprimentoMax": 104,
+                "exemplos": [
+                  "Retrieve full item details — option groups and applicable pr"
+                ]
+              }
+            }
+          },
+          "contentMode": {
+            "tipo": "texto",
+            "comprimentoMax": 11,
+            "exemplos": [
+              "RECOMMENDED"
+            ]
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 4,
+            "exemplos": [
+              "ITEM"
+            ]
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "itemEan": {
+                  "tipo": "texto",
+                  "comprimentoMax": 13,
+                  "exemplos": [
+                    "7898080640611",
+                    "7898080640222",
+                    "7896110008653"
+                  ]
+                },
+                "itemId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "93cbe592-cb86-4f84-a78c-c32fe4017387",
+                    "14209c5d-e3f6-478b-954a-cc9fffa57297",
+                    "2083cfe4-8204-4ccd-9521-b2721918778c"
+                  ]
+                },
+                "itemImageUrl": {
+                  "tipo": "texto",
+                  "comprimentoMax": 130,
+                  "exemplos": [
+                    "https://static.ifood-static.com.br/image/upload/t_medium/pra"
+                  ]
+                },
+                "itemName": {
+                  "tipo": "texto",
+                  "comprimentoMax": 84,
+                  "exemplos": [
+                    "Leite Uht Integral com Tampa Italac 1l",
+                    "Creme de Leite Italac 200g",
+                    "Papel Higiênico Folha Dupla Neutro Personal Vip 30m Pacote L"
+                  ]
+                },
+                "itemSkuId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36,
+                  "exemplos": [
+                    "SKU-SBIP32711",
+                    "SKU-TAUR93662",
+                    "01a05e0a-fa66-7f31-b610-dc8116ae2d78"
+                  ]
+                },
+                "merchant": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethod": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "deliveryMethodId": {
+                          "tipo": "texto",
+                          "comprimentoMax": 0,
+                          "exemplos": [
+                            ""
+                          ]
+                        },
+                        "deliveryMethodMode": {
+                          "tipo": "texto",
+                          "comprimentoMax": 0,
+                          "exemplos": [
+                            ""
+                          ]
+                        },
+                        "estimatedMinutes": {
+                          "tipo": "objeto",
+                          "campos": {
+                            "max": {
+                              "tipo": "numero",
+                              "min": 0,
+                              "max": 0
+                            },
+                            "min": {
+                              "tipo": "numero",
+                              "min": 0,
+                              "max": 0
+                            }
+                          }
+                        },
+                        "fee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        },
+                        "promotionalFee": {
+                          "tipo": "numero",
+                          "min": 0,
+                          "max": 0
+                        }
+                      }
+                    },
+                    "isOpen": {
+                      "tipo": "booleano"
+                    },
+                    "merchantId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 36,
+                      "exemplos": [
+                        "2454a662-ab7d-4cb8-91c9-c69720983886"
+                      ]
+                    },
+                    "merchantLogoUrl": {
+                      "tipo": "texto",
+                      "comprimentoMax": 127,
+                      "exemplos": [
+                        "https://static.ifood-static.com.br/image/upload/t_thumbnail/"
+                      ]
+                    },
+                    "merchantName": {
+                      "tipo": "texto",
+                      "comprimentoMax": 19,
+                      "exemplos": [
+                        "Atacadão São Carlos"
+                      ]
+                    },
+                    "minimumOrderAmount": {
+                      "tipo": "numero",
+                      "min": 90,
+                      "max": 90
+                    },
+                    "ratingCount": {
+                      "tipo": "numero",
+                      "min": 211,
+                      "max": 211
+                    },
+                    "reviewRating": {
+                      "tipo": "numero",
+                      "min": 4.800000190734863,
+                      "max": 4.800000190734863
+                    },
+                    "straightLineDistanceKm": {
+                      "tipo": "numero",
+                      "min": 4.74,
+                      "max": 4.74
+                    }
+                  }
+                },
+                "promotionalUnitPrice": {
+                  "tipo": "numero",
+                  "min": 2.23,
+                  "max": 18.31
+                },
+                "unitPrice": {
+                  "tipo": "numero",
+                  "min": 2.49,
+                  "max": 18.31
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>",
+        "merchantType": "RESTAURANT"
+      },
+      "ok": true,
+      "ms": 2137,
+      "forma": {
+        "tipo": "objeto",
+        "campos": {
+          "agentHints": {
+            "tipo": "objeto",
+            "campos": {
+              "nextStepWhenUserPicksMerchant": {
+                "tipo": "texto",
+                "comprimentoMax": 142
+              }
+            }
+          },
+          "contentMode": {
+            "tipo": "texto",
+            "comprimentoMax": 11
+          },
+          "hasMore": {
+            "tipo": "booleano"
+          },
+          "nextPageToken": {
+            "tipo": "oculto"
+          },
+          "resultKind": {
+            "tipo": "texto",
+            "comprimentoMax": 8
+          },
+          "results": {
+            "tipo": "lista",
+            "tamanho": 10,
+            "item": {
+              "tipo": "objeto",
+              "campos": {
+                "deliveryMethod": {
+                  "tipo": "objeto",
+                  "campos": {
+                    "deliveryMethodId": {
+                      "tipo": "texto",
+                      "comprimentoMax": 7
+                    },
+                    "deliveryMethodMode": {
+                      "tipo": "texto",
+                      "comprimentoMax": 8
+                    },
+                    "estimatedMinutes": {
+                      "tipo": "objeto",
+                      "campos": {
+                        "max": {
+                          "tipo": "numero",
+                          "min": 24,
+                          "max": 73
+                        },
+                        "min": {
+                          "tipo": "numero",
+                          "min": 10,
+                          "max": 60
+                        }
+                      }
+                    },
+                    "fee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 8.5
+                    },
+                    "promotionalFee": {
+                      "tipo": "numero",
+                      "min": 0,
+                      "max": 8.5
+                    }
+                  }
+                },
+                "isOpen": {
+                  "tipo": "booleano"
+                },
+                "merchantId": {
+                  "tipo": "texto",
+                  "comprimentoMax": 36
+                },
+                "merchantLogoUrl": {
+                  "tipo": "oculto"
+                },
+                "merchantName": {
+                  "tipo": "oculto"
+                },
+                "minimumOrderAmount": {
+                  "tipo": "numero",
+                  "min": 5,
+                  "max": 25
+                },
+                "ratingCount": {
+                  "tipo": "numero",
+                  "min": 56,
+                  "max": 2189
+                },
+                "reviewRating": {
+                  "tipo": "numero",
+                  "min": 4.5,
+                  "max": 4.900000095367432
+                },
+                "straightLineDistanceKm": {
+                  "tipo": "numero",
+                  "min": 0.39,
+                  "max": 3.15
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>",
+        "merchantType": "GROCERIES"
+      },
+      "ok": false,
+      "ms": 1114,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECOMMENDED",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1164,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1170,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1166,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1143,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1100,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>",
+        "merchantType": "RESTAURANT"
+      },
+      "ok": false,
+      "ms": 1249,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>",
+        "merchantType": "GROCERIES"
+      },
+      "ok": false,
+      "ms": 1138,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "RECENT_ORDERS",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1116,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FAVORITE_MERCHANTS",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1119,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FAVORITE_MERCHANTS",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1200,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FAVORITE_MERCHANTS",
+        "userLocation": "<oculto>",
+        "merchantType": "RESTAURANT"
+      },
+      "ok": false,
+      "ms": 1108,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FAVORITE_MERCHANTS",
+        "userLocation": "<oculto>",
+        "merchantType": "GROCERIES"
+      },
+      "ok": false,
+      "ms": 1172,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FAVORITE_MERCHANTS",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1141,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1140,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1115,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1170,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>",
+        "resultKind": "ITEM",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1126,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>",
+        "merchantType": "RESTAURANT"
+      },
+      "ok": false,
+      "ms": 1106,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>",
+        "merchantType": "GROCERIES"
+      },
+      "ok": false,
+      "ms": 1096,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "BEST_DEALS",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1199,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FEATURED_LOCAL",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "RESTAURANT",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1099,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FEATURED_LOCAL",
+        "userLocation": "<oculto>",
+        "resultKind": "MERCHANT",
+        "merchantType": "GROCERIES",
+        "pageSize": 10
+      },
+      "ok": false,
+      "ms": 1139,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FEATURED_LOCAL",
+        "userLocation": "<oculto>",
+        "merchantType": "RESTAURANT"
+      },
+      "ok": false,
+      "ms": 1121,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FEATURED_LOCAL",
+        "userLocation": "<oculto>",
+        "merchantType": "GROCERIES"
+      },
+      "ok": false,
+      "ms": 1119,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getRecommendations",
+      "argumentos": {
+        "contentMode": "FEATURED_LOCAL",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1072,
+      "erro": "MCP_TOOL_ERRO:getRecommendations:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getMerchant",
+      "argumentos": {
+        "merchantId": "<id>",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1114,
+      "erro": "MCP_TOOL_ERRO:getMerchant:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    },
+    {
+      "ferramenta": "getItem",
+      "argumentos": {
+        "merchantId": "<id>",
+        "itemId": "<id>",
+        "userLocation": "<oculto>"
+      },
+      "ok": false,
+      "ms": 1147,
+      "erro": "MCP_TOOL_ERRO:getItem:{\"code\": \"INTERNAL\", \"message\": \"An internal failure at an upstream service prevented the request from completing.\", \"agent_instruction\": \"Do not retry immediately. Report the failure and continue without this tool.\"}"
+    }
+  ],
+  "naoChamadas": [
+    {
+      "ferramenta": "createCart",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "getCart",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "getCartDeliveryMethods",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "addItemToCart",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "updateCartItem",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "removeItemFromCart",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "removeVoucher",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "listVouchers",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "setVoucher",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "setCartDelivery",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "listPaymentMethods",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "setCartPayment",
+      "motivo": "Cart: carrinho é escrita (o agente só propõe; a compra termina no iFood)"
+    },
+    {
+      "ferramenta": "submitOrder",
+      "motivo": "cria pedido: nunca"
+    },
+    {
+      "ferramenta": "createAddress",
+      "motivo": "persiste endereço: nunca"
+    }
+  ],
+  "divergenciasComADoc": [
+    "documentada mas AUSENTE no MCP ao vivo: getUser",
+    "documentada mas AUSENTE no MCP ao vivo: createAddress",
+    "documentada mas AUSENTE no MCP ao vivo: listItemTaxonomy",
+    "documentada mas AUSENTE no MCP ao vivo: createCart",
+    "documentada mas AUSENTE no MCP ao vivo: getCart",
+    "documentada mas AUSENTE no MCP ao vivo: getCartDeliveryMethods",
+    "documentada mas AUSENTE no MCP ao vivo: addItemToCart",
+    "documentada mas AUSENTE no MCP ao vivo: updateCartItem",
+    "documentada mas AUSENTE no MCP ao vivo: removeItemFromCart",
+    "documentada mas AUSENTE no MCP ao vivo: removeVoucher",
+    "documentada mas AUSENTE no MCP ao vivo: setCartDelivery",
+    "documentada mas AUSENTE no MCP ao vivo: listPaymentMethods",
+    "documentada mas AUSENTE no MCP ao vivo: setCartPayment",
+    "documentada mas AUSENTE no MCP ao vivo: submitOrder",
+    "documentada mas AUSENTE no MCP ao vivo: trackOrder",
+    "documentada mas AUSENTE no MCP ao vivo: getOrder"
+  ]
+}
