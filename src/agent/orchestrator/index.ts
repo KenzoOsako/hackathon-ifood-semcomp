@@ -15,7 +15,6 @@ import type { AgentReply, AgentSession, ConverseInput, DomainPort, EventoFeedbac
 export const MAX_PERGUNTAS = 3;
 const MAX_PERGUNTAS_L1 = 1;
 const MAX_CONFIRMACOES_SEGUIDAS = 2;
-const SAUDACAO = /^(oi+|ola+|opa|salve|e ai|bom dia|boa tarde|boa noite)( (oi+|ola+|bom dia|boa tarde|boa noite|tudo bem|tudo bom|guide))*$/;
 const TIMEOUT_INTERPRETAR_MS = 8000;
 const TIMEOUT_RESPONDER_MS = 8000;
 const HISTORICO = 12;
@@ -129,13 +128,6 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
   if (pendente && AFIRMA.test(puro)) return despachar(s, input, deps, pendente.turno, pendente.texto, pendente.pressa, tempos, t0);
   if (pendente && AFIRMA_INICIO.test(puro)) aplicarEstado(s, pendente.turno);
 
-  // Cumprimento puro não precisa de modelo: responde na hora (era 3 a 4 s de LLM para dizer "oi").
-  if (!pendente && SAUDACAO.test(puro)) {
-    s.ultimaIntencao = "conversa";
-    if (s.estado === "S0") s.estado = "S1";
-    return fechar(s, input, deps, { resposta: FRASES.oQueFaco }, tempos, t0);
-  }
-
   let turno: TurnoInterpretado;
   try {
     turno = await comTimeout(TIMEOUT_INTERPRETAR_MS, (signal) => deps.llm.interpretar({
@@ -172,11 +164,11 @@ function despachar(s: AgentSession, input: ConverseInput, deps: Deps, turno: Tur
   switch (turno.intencao) {
     case "fora_escopo":
       if (s.estado === "S0") s.estado = "S1";
-      return fechar(s, input, deps, { resposta: FRASES.foraEscopo }, tempos, t0);
+      return fechar(s, input, deps, { resposta: falaLivre(turno.resposta, FRASES.foraEscopo) }, tempos, t0);
 
     case "conversa":
       if (s.estado === "S0") s.estado = "S1";
-      return fechar(s, input, deps, { resposta: FRASES.oQueFaco }, tempos, t0);
+      return fechar(s, input, deps, { resposta: falaLivre(turno.resposta, FRASES.oQueFaco) }, tempos, t0);
 
     case "incerto":
       return processarIncerto(s, input, deps, turno, tempos, t0);
@@ -195,6 +187,12 @@ function despachar(s: AgentSession, input: ConverseInput, deps: Deps, turno: Tur
     default:
       return processarPedidoOuResposta(s, input, deps, turno, pressa, tempos, t0);
   }
+}
+
+// Conversa e fora de escopo: vale a fala do modelo (natural, na linguagem da pessoa) se for segura; senão, a frase fixa.
+function falaLivre(fala: string | undefined, reserva: string): string {
+  const f = fala ? limparNome(fala, 300) : "";
+  return f && falaSegura(f) ? f : reserva;
 }
 
 function processarIncerto(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): AgentReply {
@@ -358,11 +356,9 @@ async function ajustar(s: AgentSession, input: ConverseInput, deps: Deps, turno:
 async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; assumido: string[] }, tempos: AgentReply["tempos"], s: AgentSession): Promise<string> {
   const now = deps.now ?? (() => performance.now());
   const tr = now();
-  // Plano simples (até 2 itens pedidos, sem sugestão, aproximação ou falta; até 2 suposições, que o template diz): a frase do template já é curta,
-  // natural e verdadeira, e dispensa uma ida ao modelo (0,7 s a 3 s por turno). RESPONDER_LLM=1 força o modelo.
-  if (planoSimples(input) && process.env.RESPONDER_LLM !== "1") { tempos.responderMs = 0; return seguraOuTemplate(input, s); }
   try {
-    const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder(input, signal));
+    const anteriores = s.history.filter((h) => h.role === "agent").slice(-2).map((h) => h.text);
+    const fala = await comTimeout(TIMEOUT_RESPONDER_MS, (signal) => deps.llm.responder({ ...input, anteriores }, signal));
     // A fala do LLM só vale vinculada aos fatos do plano (guardas-fala.ts); senão, o template.
     const v = falaDoPlanoValida(fala ?? "", input.plano, deps.nome ? [deps.nome] : []);
     if (!v.ok) { anotar(s, `plano:${v.motivo}`); return seguraOuTemplate(input, s); }
@@ -373,12 +369,6 @@ async function falar(deps: Deps, input: { plano: PlanoSnapshot; mudou?: string; 
   } finally {
     tempos.responderMs = Math.round(now() - tr);
   }
-}
-
-function planoSimples(input: { plano: PlanoSnapshot; assumido: string[] }): boolean {
-  const { plano } = input;
-  return plano.blocos.length > 0 && plano.blocos.length <= 2 && input.assumido.length <= 2 && plano.naoAtendidas.length === 0 && plano.pendencias.length === 0
-    && plano.blocos.every((b) => !b.sugestao && b.cobertura !== "proxima");
 }
 
 // O template também passa pela guarda: se nem ele serve (plano estranho), a fala é a mais simples e verdadeira possível.

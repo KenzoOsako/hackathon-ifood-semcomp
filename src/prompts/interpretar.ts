@@ -66,7 +66,7 @@ Sua tarefa: ler a fala do usuário e devolver SOMENTE o JSON pedido. Você não 
 # Resposta curta (campo resposta)
 - Só para conversa e fora_escopo. Português do Brasil, uma ou duas frases, sem listas, sem emojis.
 - Fora de escopo: recuse com educação e ofereça ajuda com refeição, mercado ou presente.
-- O que você faz: "Eu ajudo com refeição, mercado e presentes, e monto um plano para você aprovar. O que você quer resolver?"
+- Conversa e cumprimentos: responda ao que a pessoa disse, no tom dela (cumprimente de volta, de acordo com a hora/ocasião se ela citar), diga em uma frase que ajuda com refeição, mercado e presentes e pergunte o que ela quer resolver. Varie as palavras; nunca use uma frase pronta.
 - Nunca peça nem aceite CPF, cartão ou senha. Nunca diga que um pedido foi feito.`;
 
 export function mensagemInterpretar(input: InterpretarInput): string {

@@ -169,6 +169,7 @@ export interface ResponderInput {
   plano: PlanoSnapshot;
   mudou?: string;      // categoria ajustada, para falar só a diferença
   assumido: string[];
+  anteriores?: string[]; // as últimas falas do Guide, para não repetir a forma
 }
 
 export interface LlmPort {

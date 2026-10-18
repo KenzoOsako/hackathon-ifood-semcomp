@@ -55,7 +55,7 @@ describe("preço inválido nunca vira zero", () => {
   });
 });
 
-describe("plano simples dispensa o modelo na fala (latência)", () => {
+describe("a fala do plano é do modelo", () => {
   const montar = (blocos: PlanoSnapshot["blocos"], naoAtendidas: PlanoSnapshot["naoAtendidas"] = []) => {
     let chamadas = 0;
     const domain: DomainPort = { buscarNecessidade: async () => [], montarPlano: async () => ({ ...plano(blocos), naoAtendidas }), ajustarPlano: async () => plano(blocos), registrarEvento: async () => undefined };
@@ -67,15 +67,7 @@ describe("plano simples dispensa o modelo na fala (latência)", () => {
     return { chamadas: () => chamadas, fale: () => executarTurno(novaSessao("s"), { texto: "quero leite", origem: "texto" }, { llm, domain }) };
   };
 
-  it("um item, sem faltas: fala vem do template, sem chamar o modelo", async () => {
-    const t = montar([bloco("leite", opcao("Leite", 500))]);
-    const r = await t.fale();
-    expect(t.chamadas()).toBe(0);
-    expect(r.resposta).toMatch(/Leite da Mercado/);
-    expect(r.resposta).toMatch(/Quer ajustar algo\?$/);
-  });
-
-  it("com item não atendido, a fala ainda passa pelo modelo", async () => {
+  it("o modelo fala o plano, inclusive com item não atendido", async () => {
     const t = montar([bloco("leite", opcao("Leite", 500))], [{ categoria: "queijo", motivo: "sem opção" }]);
     await t.fale();
     expect(t.chamadas()).toBe(1);
