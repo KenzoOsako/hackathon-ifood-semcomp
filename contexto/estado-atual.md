@@ -1,3 +1,10 @@
+## Imagens reais — validação autenticada em 18/10/2026
+
+- Kenzo: MCP real + Gemini local, fotos/logos oficiais carregados no plano/revisão/sacola; texto e fala “Prefiro a opção mais rápida” verificados. Sacola é simulação e nenhuma compra ocorreu.
+- 556 testes aprovados/10 ignorados, typecheck/lint/build; lint com avisos preexistentes. Revisão independente concluída. Evidências e limites em docs/IMAGENS_REAIS_IFOOD.md.
+- Refinamento por critério manteve opção atual; troca de categoria não interpretada pelo agente (fora da feature). Associação de mídia em trocas/versionamento coberta automaticamente.
+- .env preservado e ignorado. MCP_MODE=real apenas no processo. PR da feature será preparado para merge humano; produção exige configuração/redirect e validação no destino.
+
 ## Imagens do catálogo — 18/10/2026 (Kenzo)
 
 - Transferência explícita: responsabilidades de Hyago passam a Kenzo; autoria histórica preservada.
