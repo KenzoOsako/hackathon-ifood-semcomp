@@ -12,7 +12,7 @@ const local = { latitude: -22.0069, longitude: -47.8946, fonte: "fixa" as const 
 const nec = (categoria: string, consultas?: string[]): Necessidade => ({ id: "n1", vertical: "RESTAURANT", categoria, restricoes: [], ...(consultas ? { consultas } : {}) });
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-afterEach(() => { delete process.env.ATENDENTE_CACHE; });
+afterEach(() => { delete process.env.ATENDENTE_CACHE; delete process.env.MCP_RETRY_MS; });
 
 describe("limite de concorrência", () => {
   it("nunca passa de 3 chamadas ao mesmo tempo e todas terminam", async () => {
@@ -24,7 +24,17 @@ describe("limite de concorrência", () => {
 });
 
 describe("nova tentativa em INTERNAL", () => {
+  it("espera antes de repetir (o iFood pede para não repetir de imediato) e repete uma vez só", async () => {
+    process.env.MCP_RETRY_MS = "80";
+    const instantes: number[] = [];
+    const tools: McpTools = { callTool: async () => { instantes.push(Date.now()); throw new Error('MCP_TOOL_ERRO:searchOffers:{"code": "INTERNAL"}'); } };
+    await expect(new McpDomain(tools, local).buscarNecessidade(nec("pizza"), {})).rejects.toThrow("INTERNAL");
+    expect(instantes).toHaveLength(2); // 1 tentativa + 1 repetição, nunca mais
+    expect(instantes[1] - instantes[0]).toBeGreaterThanOrEqual(70);
+  });
+
   it("tenta uma segunda vez e conta no relatório; outros erros não repetem", async () => {
+    process.env.MCP_RETRY_MS = "1";
     let chamadas = 0;
     const tools: McpTools = { callTool: async () => { chamadas++; if (chamadas === 1) throw new Error('MCP_TOOL_ERRO:searchOffers:{"code": "INTERNAL"}'); return { results: [item("1", "Pizza X", 3000)] }; } };
     const rel = novoRelatorio();

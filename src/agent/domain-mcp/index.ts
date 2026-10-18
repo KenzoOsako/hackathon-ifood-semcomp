@@ -30,7 +30,8 @@ export async function comLimite<T>(fn: () => Promise<T>, max = MAX_CONCORRENTES)
   finally { const prox = fila.espera.shift(); if (prox) prox(); else fila.ativos--; }
 }
 const ehInterno = (e: unknown) => /INTERNAL/.test(String(e));
-const PAUSA_RETRY_MS = 300;
+// O próprio iFood devolve, junto do INTERNAL: "Do not retry immediately". Por isso a nova tentativa espera (padrão 2 s) e é UMA só.
+const pausaRetryMs = () => { const v = Number(process.env.MCP_RETRY_MS); return Number.isFinite(v) && v >= 0 ? v : 2000; };
 
 // Cache de busca: só resposta COM itens, por consulta + vertical + restrições + local, 3 min. Vazio e erro nunca entram
 // (um "não existe" falso, vindo de erro do iFood, ficaria repetido por minutos). getItem nunca é cacheado: confere preço e
@@ -194,8 +195,8 @@ export class McpDomain implements DomainPort {
         catch (e) {
           if (!ehInterno(e)) throw e;
           if (rel) rel.retries++;
-          console.warn(`[mcp] ${nome} INTERNAL; nova tentativa`);
-          await new Promise((r) => setTimeout(r, PAUSA_RETRY_MS));
+          console.warn(`[mcp] ${nome} INTERNAL; nova tentativa em ${pausaRetryMs()} ms (o iFood pede para não repetir de imediato)`);
+          await new Promise((r) => setTimeout(r, pausaRetryMs()));
           return await this.tools.callTool(nome, args);
         }
       });
