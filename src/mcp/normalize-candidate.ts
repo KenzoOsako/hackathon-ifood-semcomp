@@ -359,6 +359,9 @@ export function toLegacyCandidate(candidate: NormalizedCandidate): Candidate {
       ? { deliveryTimeMinutes: candidate.deliveryTimeMinutes }
       : {}),
     ...(candidate.deliveryFee !== undefined ? { deliveryFee: candidate.deliveryFee } : {}),
+    ...(candidate.cost.fees !== undefined ? { fees: candidate.cost.fees.cents / 100 } : {}),
+    ...(candidate.cost.status !== "unknown" ? { costStatus: candidate.cost.status } : {}),
+    ...(candidate.composition !== undefined ? { composition: candidate.composition } : {}),
     itemId: candidate.itemId,
     itemName: candidate.itemName,
     price: candidate.price,
