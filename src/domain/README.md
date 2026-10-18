@@ -1,6 +1,6 @@
 # src/domain — Ocasião, necessidades e plano versionado
 
-**Dono:** Kenzo. **Status:** não implementado (os contratos de Ocasião, Necessidade e Plano ainda precisam ser publicados, congelamento às 21h30).
+**Dono:** Kenzo. **Status:** workflow de proposta, handoff e contrato/store de plano composto implementados. Integração do plano ao agente/rotas/voz/UI ainda pendente; detalhes em `docs/K3_PLANO_COMPOSTO.md`.
 
 **Responsabilidade:** regras críticas e estado do pedido. É a única camada que decide o que pode ser aprovado.
 

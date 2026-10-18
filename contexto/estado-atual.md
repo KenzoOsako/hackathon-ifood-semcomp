@@ -1,5 +1,11 @@
 # Estado atual — 17/10/2026
 
+## K-3 — contrato e domínio local do plano composto
+- Base 18d0aec, branch feat/kenzo-k3-plano-composto. Contratos aditivos em src/contracts/occasion-plan.ts e OccasionPlanStore em src/domain/occasion-plan-store.ts. Detalhes: docs/K3_PLANO_COMPOSTO.md. Card OCS-01: https://trello.com/c/txTvVAKy.
+- Compõe snapshots CartProposal por necessidade, sujeito/endereço únicos, estabelecimentos distintos, origem por bloco e validade mínima. Revisão e aprovação de todos os blocos são uma única mutação local; edição incrementa versão e invalida aprovação; replay/versão antiga/expiração/custo desconhecido não aprovam parcialmente.
+- DTO público remove sujeito/endereço internos; soma preserva unknown/estimated e valida centavos seguros. Restrições declaradas permanecem bloqueadas até composição/eligibilidade verificada ser ligada ao contrato. Fontes de blocos/origem devem ser confiáveis no servidor; validade não comprova atualidade externa.
+- Validação final: 271 testes/26 arquivos, typecheck, lint, build e git diff --check passaram. Revisões independentes de arquitetura e segurança realizadas. Contratos de apresentação atuais e rotas não foram alterados: ligação com /api/converse, aprovação HTTP e consumidores permanece próxima etapa. Nenhuma escrita MCP, compra ou publicação de app habilitada.
+
 Base auditada: main 0867abc; esqueleto no PR #4 / 6c1b414. Esta atualização reconcilia documentação e limpa o template; não implementa a proposta inteira.
 
 ## Decisões e fontes
