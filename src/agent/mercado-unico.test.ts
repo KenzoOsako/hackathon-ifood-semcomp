@@ -72,6 +72,22 @@ describe("mercado único", () => {
 });
 
 describe("mercado único no atendente (mock)", () => {
+  it("pedido mínimo é o da loja escolhida, não o da 1ª opção da busca", async () => {
+    // Pipoca: a 1ª do mock é a do Mercado do Bairro (mínimo R$ 25); a pessoa escolhe a do Mercado Central (mínimo R$ 30).
+    const fila = [
+      new AIMessage({ content: "", tool_calls: [{ id: "t", type: "tool_call" as const, name: "mostrar_plano", args: { itens: [{ categoria: "pipoca", vertical: "GROCERIES", ref: "central-pipoca" }] } }] }),
+      new AIMessage("Montei. É isso?"),
+    ];
+    const modelo = { bindTools: () => ({ invoke: async () => fila.shift()! }) } as unknown as BaseChatModel;
+    const s = novaSessao(`minimo-${Math.random()}`);
+    reiniciarAtendente(s.subjectRef);
+    const r = await executarAtendente(s, { texto: "quero pipoca", origem: "texto" }, { modelo, nomeModelo: "roteiro", domain: new FakeDomain() });
+    const pend = r.tela!.plano.pendencias.join(" | ");
+    expect(r.tela!.plano.blocos[0].principal.loja).toBe("Mercado Central");
+    expect(pend).toMatch(/Mercado Central tem pedido mínimo de R\$ 30,00/);
+    expect(pend).not.toMatch(/Mercado do Bairro/);
+  });
+
   it("ingredientes do bolo saem de um mercado só; as flores continuam na floricultura", async () => {
     // Prova de que o mock espalha: sozinha, a farinha mais rápida é do Empório, não do Mercado do Bairro.
     expect((await new FakeDomain().buscarNecessidade({ id: "n", categoria: "farinha de trigo", vertical: "GROCERIES", restricoes: [] }, {}))[0].loja).toBe("Empório Express");

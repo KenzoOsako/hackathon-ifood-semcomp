@@ -5,7 +5,6 @@
 import { randomUUID } from "node:crypto";
 import { brlToMoney } from "@/mcp/costs";
 import { normalizeCandidate, type NormalizedCandidate } from "@/mcp/normalize-candidate";
-import { compareEligibleCandidates } from "@/reco/rank-eligible";
 import { filterEligibleCandidates, type CandidateEligibilityResult } from "@/reco/eligibility";
 import { soOsEspecificos } from "../especificidade";
 import { descricaoDe } from "../descricao";
@@ -213,10 +212,13 @@ export class McpDomain implements DomainPort {
       missingCompositionPolicy: "exclude-from-safe-claims",
     });
     const porId = new Map(convertidos.map((c) => [c.normalizado.itemId, c]));
+    // Ordem de relevância do próprio iFood (a da busca), não a de menor custo: ordenar por preço punha fatia e porção
+    // pequena na frente do que a pessoa pediu. Mais barata/rápida/avaliada continuam como critério pedido e como rótulo.
+    const posicao = new Map(convertidos.map((c, i) => [c.normalizado.itemId, i]));
     const ordenados = filtro.eligible
       .filter((e) => e.candidate.available !== false)
-      .sort((a: CandidateEligibilityResult, b: CandidateEligibilityResult) => compareEligibleCandidates(a, b));
-        const elegiveis = ordenados.slice(0, MAX_CANDIDATOS);
+      .sort((a: CandidateEligibilityResult, b: CandidateEligibilityResult) => posicao.get(a.candidate.itemId)! - posicao.get(b.candidate.itemId)!);
+    const elegiveis = ordenados.slice(0, MAX_CANDIDATOS);
     const pool: Candidato[] = elegiveis.map((e) => {
       const c = porId.get(e.candidate.itemId)!;
       const prazo = c.base.prazoMin;
@@ -236,9 +238,10 @@ export class McpDomain implements DomainPort {
     const cobertura = "exata" as "exata" | "proxima";
     // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
     const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
-    // A primeira continua sendo a do ranking do domínio (custo, depois nota e prazo); o rótulo diz em que ela ganha.
+    // A primeira é a mais relevante na busca do iFood; o rótulo diz em que cada uma ganha (ou que é a primeira da busca).
     const opcoes = candidatos.map((c, i) => {
-      const o = rotular(c, candidatos, i === 0 ? "mais_barata" : undefined);
+      const r = rotular(c, candidatos);
+      const o = i === 0 && r.rotulo === "alternativa" ? { ...r, rotulo: "mais relevante", motivo: "primeira na busca do iFood" } : r;
       // "Mais parecida" não é "mais barata": o rótulo diz a verdade sobre por que esta opção está aqui.
       return cobertura === "proxima" ? { ...o, rotulo: "mais parecida", motivo: `não encontrei "${n.categoria}"; esta é a opção mais parecida`, cobertura } : o;
     });
