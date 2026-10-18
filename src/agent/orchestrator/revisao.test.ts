@@ -73,3 +73,18 @@ describe("a fala do plano é do modelo", () => {
     expect(t.chamadas()).toBe(1);
   });
 });
+
+import { pedidoDireto } from ".";
+describe("pedido direto quando o modelo falha", () => {
+  it.each([
+    ["Eu quero hot roll", "hot roll"],
+    ["quero comer comida japonesa.", "comida japonesa"],
+    ["queria uma pizza de calabresa", "pizza de calabresa"],
+    ["vou querer um açaí", "açaí"],
+  ])("%s", (fala, categoria) => {
+    expect(pedidoDireto(fala)?.necessidades[0].categoria).toBe(categoria);
+  });
+  it.each(["não sei o que quero", "quero saber se vocês entregam amanhã porque estou longe", "oi tudo bem", "quero"])("não adivinha: %s", (fala) => {
+    expect(pedidoDireto(fala)).toBeUndefined();
+  });
+});

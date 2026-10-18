@@ -39,9 +39,10 @@ export class LangChainLlm implements LlmPort {
   // Vai direto ao modelo de reserva, se houver; sem reserva, o erro sobe e o orquestrador usa o plano B (template).
   // Latência de cauda: se o principal passa de ATRASO_RESERVA_MS sem responder, a reserva é chamada em paralelo e vale
   // quem responder primeiro (a lentidão do provedor oscila de 1 s a 25 s no mesmo modelo).
-  private async tentar<T>(fn: (m: BaseChatModel) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    const reserva = this.reserva;
-    if (!reserva) return fn(this.model);
+  // Saída estruturada só é confiável no modelo principal (os de raciocínio devolvem sem o objeto); então, nesses casos, a
+  // segunda via é uma nova chamada ao MESMO modelo (a sobrecarga 503 é por requisição). A reserva é só para texto livre.
+  private async tentar<T>(fn: (m: BaseChatModel) => Promise<T>, signal?: AbortSignal, estruturado = true): Promise<T> {
+    const reserva = estruturado ? this.model : (this.reserva ?? this.model);
     return new Promise<T>((resolve, reject) => {
       let falhas = 0, ultimo: unknown, resolvido = false;
       const ok = (v: T) => { if (!resolvido) { resolvido = true; clearTimeout(timer); resolve(v); } };
@@ -82,7 +83,7 @@ export class LangChainLlm implements LlmPort {
   }
 
   async responder(input: ResponderInput, signal?: AbortSignal): Promise<string> {
-    const msg = await this.tentar((m) => m.invoke([["system", SYSTEM_RESPONDER], ["human", mensagemResponder(input)]], { signal }), signal);
+    const msg = await this.tentar((m) => m.invoke([["system", SYSTEM_RESPONDER], ["human", mensagemResponder(input)]], { signal }), signal, false);
     const texto = typeof msg.content === "string" ? msg.content : msg.content.map((p) => ("text" in p ? p.text : "")).join("");
     return texto.trim();
   }

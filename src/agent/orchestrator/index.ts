@@ -139,7 +139,10 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
     tempos.interpretarMs = Math.round(now() - t0);
     console.warn(`[agente] interpretar falhou em ${tempos.interpretarMs}ms: ${motivoFalha(error)}`);
     anotar(s, "modelo:interpretar_falhou");
-    return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
+    // Sem o modelo, o pedido direto ("quero hot roll") ainda anda: busca pelo que a pessoa disse, no nível mais curto.
+    const direto = pedidoDireto(input.texto);
+    if (!direto) return fechar(s, input, deps, { resposta: FRASES.naoEntendi }, tempos, t0);
+    turno = direto;
   }
   tempos.interpretarMs = Math.round(now() - t0);
   const antes = turno.necessidades.length;
@@ -156,6 +159,15 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
     return fechar(s, input, deps, { resposta: resumo }, tempos, t0);
   }
   return despachar(s, input, deps, turno, texto, pressa, tempos, t0);
+}
+
+// Reserva sem modelo: "quero/queria/vou querer <algo>" vira uma necessidade de restaurante com as palavras da pessoa.
+// Só pedidos curtos e diretos; qualquer outra coisa continua pedindo para repetir.
+export function pedidoDireto(texto: string): TurnoInterpretado | undefined {
+  const m = /\b(?:eu\s+)?(?:quero|queria|vou\s+querer|me\s+v[eê]|me\s+traz|pode\s+ser)\s+(?:comer\s+|pedir\s+)?(?:(?:um|uma|uns|umas|o|a)\s+)?([\p{L}][\p{L}\s'-]{1,40}?)\s*[.!?]*$/iu.exec(texto.trim());
+  const categoria = m ? limparNome(m[1], 40).toLowerCase() : "";
+  if (categoria.length < 3 || categoria.split(" ").length > 5 || /\b(que|porque|mas|não|nao|talvez)\b/.test(norm(categoria))) return undefined;
+  return { intencao: "pedido", nivel: "L0", ocasiao: {}, necessidades: [{ id: "n1", vertical: "RESTAURANT", categoria, restricoes: [], consultas: [categoria] }], assumido: [] };
 }
 
 function despachar(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, texto: string, pressa: boolean, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> | AgentReply {
