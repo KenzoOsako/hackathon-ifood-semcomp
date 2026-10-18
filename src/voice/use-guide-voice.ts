@@ -13,13 +13,17 @@
 //   g.rounds / g.stats // rodadas de latência medidas e p50/p95 por etapa (laboratório)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LOGIN_PATH, needsLogin } from "./auth-status";
+import { buildConversationExport, type TurnLog } from "./conversation-export";
 import { summarizeRounds, type LatencySummary } from "./latency";
 import { termsFromPlan } from "./plan-terms";
 import type { VoiceSignals } from "./signals";
 import { runTurn, type TurnCtl } from "./turn";
 import { useVoice, type Utterance } from "./use-voice";
 
+export type { TurnLog };
 export type GuideStats = ReturnType<typeof summarizeRounds>;
+// Uma rodada de latência + a confiança do reconhecimento da fala (sem o texto: não guardamos o que a pessoa disse).
+export type GuideRound = LatencySummary & { confianca?: number };
 export interface GuideLine { id: string; from: "voce" | "agente"; text: string }
 export interface GuideScreen { event: string; payload: unknown }
 
@@ -37,7 +41,10 @@ export function useGuideVoice() {
   const [unclear, setUnclear] = useState<string | null>(null);
   const [utterance, setUtterance] = useState<Utterance | null>(null);
   const [busy, setBusy] = useState(false);
-  const [rounds, setRounds] = useState<LatencySummary[]>([]);
+  const [rounds, setRounds] = useState<GuideRound[]>([]);
+  const [turns, setTurns] = useState<TurnLog[]>([]); // o que cada turno falou e o que o agente decidiu
+  const [dados, setDados] = useState<string | undefined>(undefined); // modo dos dados do agente: mock | real
+  const lastConfidence = useRef<number | undefined>(undefined);
   const [skipFirstRound, setSkipFirstRound] = useState(true);
   const terms = useRef<string[]>([]); // nomes do plano na tela: ajudam o reconhecimento na próxima fala
   const seq = useRef(0);
@@ -48,7 +55,11 @@ export function useGuideVoice() {
     let alive = true;
     fetch("/api/auth/status")
       .then((r) => (r.ok ? r.json() : null))
-      .then((s) => { if (alive && needsLogin(s)) setLogin({ url: LOGIN_PATH }); })
+      .then((s) => {
+        if (!alive) return;
+        if (s?.modo === "mock" || s?.modo === "real") setDados(s.modo);
+        if (needsLogin(s)) setLogin({ url: LOGIN_PATH });
+      })
       .catch(() => undefined); // sem status, o 401 do agente ainda cobre o caso
     return () => { alive = false; };
   }, []);
@@ -65,12 +76,17 @@ export function useGuideVoice() {
     turnAbort.current?.abort();
     const ac = new AbortController();
     turnAbort.current = ac;
+    if (origem === "texto") lastConfidence.current = undefined; // texto digitado não tem confiança de reconhecimento: não herda a da fala anterior
     setBusy(true);
     setUnclear(null);
     setLines((l) => [...l, { id: nextId("u"), from: "voce", text: texto }]);
+    const turnId = nextId("t");
+    const patch = (p: Partial<TurnLog>) => setTurns((all) => all.map((t) => (t.id === turnId ? { ...t, ...p } : t)));
+    setTurns((all) => [...all, { id: turnId, usuario: texto, origem, ...(sinais?.confianca !== undefined ? { confianca: sinais.confianca } : {}) }]);
     try {
       await runTurn({ texto, origem, sinais }, ctl, {
-        onAgentText: (text) => setLines((l) => [...l, { id: nextId("a"), from: "agente", text }]),
+        onAgentText: (text) => { patch({ resposta: text }); setLines((l) => [...l, { id: nextId("a"), from: "agente", text }]); },
+        onMeta: (meta) => patch({ meta }),
         onScreen: (event, payload) => { terms.current = termsFromPlan(payload); setScreen({ event, payload }); },
         onLogin: (url) => setLogin({ url }),
       }, { after, signal: ac.signal });
@@ -82,6 +98,7 @@ export function useGuideVoice() {
   const voice = useVoice(
     (u, api) => {
       setUtterance(u);
+      lastConfidence.current = u.confianca;
       void run(u.texto, "voz", u.sinais, { mark: api.mark, enqueue: (t) => api.enqueue(t), done: api.turnDone, end: api.turnEnded });
     },
     {
@@ -89,7 +106,7 @@ export function useGuideVoice() {
       onUnclear: (t) => setUnclear(t),
       onListening: abortTurn,
       // Cada turno com áudio termina com um resumo de latência: guarda para o p50/p95.
-      onLatency: (s) => { if (s.timeToFirstAudioMs !== undefined) setRounds((r) => [...r, s]); },
+      onLatency: (s) => { if (s.timeToFirstAudioMs !== undefined) setRounds((r) => [...r, { ...s, confianca: lastConfidence.current }]); },
     },
   );
 
@@ -105,7 +122,8 @@ export function useGuideVoice() {
   }, [run, voiceStopSpeaking, mark, enqueue, turnDone, turnEnded, beginTurn]);
 
   const stats = useMemo(() => summarizeRounds(rounds, { skipFirst: skipFirstRound }), [rounds, skipFirstRound]);
-  const clearRounds = useCallback(() => setRounds([]), []);
+  const clearRounds = useCallback(() => { setRounds([]); setTurns([]); }, []);
+  const exportConversation = useCallback(() => buildConversationExport(turns, { dados }), [turns, dados]);
 
   const { state, cancel } = voice;
 
@@ -130,5 +148,5 @@ export function useGuideVoice() {
   }, [state, stop, stopSpeaking, start]);
   const label = { idle: voice.handsFree ? "Escutando…" : "Falar", listening: voice.handsFree ? "Ouvindo… (toque para encerrar)" : "Parar", transcribing: "Reconhecendo…", speaking: "Falando… (toque para interromper)", error: "Falar" }[voice.state];
 
-  return { ...voice, stopSpeaking, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
+  return { ...voice, stopSpeaking, turns, dados, exportConversation, lines, screen, login, unclear, utterance, busy, listening, toggle, label, sendText, rounds, stats, skipFirstRound, setSkipFirstRound, clearRounds };
 }

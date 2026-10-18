@@ -10,6 +10,7 @@ export const BASE_KEYTERMS = [
 
 const MAX_TERMS = 100;
 const MAX_LEN = 50;
+const MAX_WORDS = 5; // medido em 18/10: o Scribe recusa (HTTP 4xx) o pedido inteiro com um termo de 6 palavras ou mais
 
 export function sanitizeTerm(raw: string): string | null {
   const t = raw
@@ -17,7 +18,9 @@ export function sanitizeTerm(raw: string): string | null {
     .replace(/[^\p{L}\p{N} '-]/gu, " ") // só letras (com acento), números, espaço, hífen e apóstrofo
     .replace(/\s{2,}/g, " ")
     .trim();
-  return t.length >= 2 && t.length <= MAX_LEN ? t : null;
+  // Termo comprido (ex.: "pipoca de micro-ondas, pacote com 3") perde a cauda em vez de derrubar o reconhecimento.
+  const short = t.split(" ").slice(0, MAX_WORDS).join(" ");
+  return short.length >= 2 && short.length <= MAX_LEN ? short : null;
 }
 
 export function buildKeyterms(dynamic: unknown = []): string[] {
