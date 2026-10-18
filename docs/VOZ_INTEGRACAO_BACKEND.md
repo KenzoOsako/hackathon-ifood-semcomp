@@ -80,7 +80,13 @@ Orçamento de latência até a primeira palavra: STT ≤ 600 ms + 1º pedaço do
 ## 7. Como ligar na interface (Malveste)
 `const g = useGuideVoice();` e use `g.toggle` no orb (um botão: falar, parar ou interromper), `g.label` como texto de apoio, `g.lines` para a conversa, `g.screen` para o plano e `g.login` para o botão "Conectar iFood". O texto sempre funciona (`g.sendText`). Esc descarta a gravação ou interrompe a fala.
 
-## 8. Pendências conhecidas
+## 8. Teste integrado (voz + agente real)
+Pré-requisitos: `LLM_PROVIDER=google` e `LLM_MODEL=gemini-3.5-flash-lite` no `.env` local (a chave do Gemini com faturamento ativo; sem faturamento a cota gratuita dá 429 depois de ~15 chamadas por minuto) e, para dados reais, `MCP_MODE=real` com o app na porta 8080 (redirect do OAuth do iFood) e o login em `/api/auth/login`.
+Passos: `npm run build`, `npx next start -p 8080`, abrir `/voz` no Chrome com fone. **A faixa no topo da página diz qual agente respondeu**: "MODO REGRAS (sem LLM)" significa que o teste NÃO avalia a conversa (é a reserva que só cobre o roteiro da demo). Rode a jornada do aniversário falada, 5+ rodadas, e cole o JSON da tabela de rodadas (latência e confiança) e o "Copiar conversa (JSON)" (o que o agente decidiu em cada turno).
+
+## 9. Pendências conhecidas
+- **Modo conversa (sem as mãos) é experimental:** no teste de 18/10 às vezes foi preciso apertar Parar e às vezes a gravação cancelava sozinha (suspeita: ruído de fundo alto subindo o limite de voz, 0,0243, e a desistência por falta de fala). Para a demo, usar o botão Falar/Parar como padrão. Não corrigido.
+- **Palavras-chave do reconhecimento:** o Scribe recusa termo com mais de 5 palavras (medido); a voz corta em 5 e, se o provedor ainda recusar, tenta sem palavras-chave.
 - Os limiares de confiança (0,6 / 0,85) e os tempos de fim de fala (900 ms / 1,3 s) são pontos de partida: calibrar no teste humano em Chrome, junto com a interrupção por voz e o eco.
 - A rota `/api/converse` ainda não tem limite por visitante nem orçamento de tokens (a voz tem). Importa quando o LLM real entrar.
 - A fala não deve repetir endereço completo (só "Casa"/"Trabalho"): o texto falado vai para a ElevenLabs. A política de retenção do TTS da nossa conta não foi verificada.
