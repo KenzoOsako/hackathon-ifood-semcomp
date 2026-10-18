@@ -2,7 +2,7 @@
 
 **Dono:** Felipe. **Status:** voz ligada ao `/api/converse` do Hyago pelo hook único `use-guide-voice.ts` (microfone, reconhecimento, agente, fala em pedaços, frase de espera local, login, Cancelar/Esc, confiança baixa e modo sem as mãos). Passagem para o backend e para a interface: `docs/VOZ_INTEGRACAO_BACKEND.md`. **Não verificado:** microfone real em Chrome (fim de fala, interrupção por voz, eco); precisa de teste humano. Falta: reconhecimento em tempo real (decisão adiada).
 
-**Responsabilidade:** o usuário fala e ouve o FoodPilot, com baixa latência e sem atrito.
+**Responsabilidade:** o usuário fala e ouve o Mimo, com baixa latência e sem atrito.
 
 ## Entra
 - Resposta do agente (texto em fluxo) e estados da conversa.
@@ -31,7 +31,7 @@
 Microfone negado, ruído, provedor fora do ar, interrupção, queda para texto (aceite AC-12 do plano).
 
 ## Como testar agora
-`npm run dev -- -p 8080` (porta padrão do time, a do redirect do OAuth do iFood) e abrir http://localhost:8080/voz no Chrome. Clique em **Falar**, diga algo e clique em **Parar**. Tocar no botão enquanto o Guide fala **interrompe** a fala. O campo de texto sempre funciona. O diagnóstico da última fala (texto, confiança, sinais, dados sensíveis removidos) aparece embaixo.
+`npm run dev -- -p 8080` (porta padrão do time, a do redirect do OAuth do iFood) e abrir http://localhost:8080/voz no Chrome. Clique em **Falar**, diga algo e clique em **Parar**. Tocar no botão enquanto o Mimo fala **interrompe** a fala. O campo de texto sempre funciona. O diagnóstico da última fala (texto, confiança, sinais, dados sensíveis removidos) aparece embaixo.
 
 ## Variáveis (`.env`, nunca no repositório)
 `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID` (padrão `eleven_flash_v2_5`), `ELEVENLABS_STT_MODEL` (padrão `scribe_v2`), `TTS_CHAR_BUDGET`, `STT_SECONDS_BUDGET`.
@@ -45,4 +45,4 @@ Microfone negado, ruído, provedor fora do ar, interrupção, queda para texto (
 O backend (`/api/converse`, Hyago) responde em **NDJSON**, um evento por linha, conforme `converse-events.ts`: `ack` (reconhecimento imediato, opcional), `speech {seq, text, final?}` (um pedaço para falar), `screen {event, payload}` (para a tela), `done {turnId}` e `error {code, reply}`. A voz toca o primeiro `speech` assim que chega e já busca o áudio dos próximos. Orçamento de latência e regras para o backend: `docs/AGENTE_CONVERSA_E_FLUXO.md` §4.4.
 
 ## Modo conversa (sem as mãos)
-Na página `/voz`, ligar **Modo conversa**: o Guide escuta, **para sozinho** quando você cala (900 ms para falas curtas, 1,3 s para normais), reconhece, espera a resposta e fala, e **escuta de novo**. **Falar por cima** do Guide (voz forte e sustentada por ~350 ms) interrompe a fala. Lógica em `session.ts` e `endpoint.ts`, testada com peças falsas; **os tempos e níveis precisam de ajuste em teste humano**. Limites por visitante em `rate-limit.ts` e palavras-chave em `keyterms.ts`. Plano e provas: `docs/VOZ_PLANO_DE_QUALIDADE.md`.
+Na página `/voz`, ligar **Modo conversa**: o Mimo escuta, **para sozinho** quando você cala (900 ms para falas curtas, 1,3 s para normais), reconhece, espera a resposta e fala, e **escuta de novo**. **Falar por cima** do Mimo (voz forte e sustentada por ~350 ms) interrompe a fala. Lógica em `session.ts` e `endpoint.ts`, testada com peças falsas; **os tempos e níveis precisam de ajuste em teste humano**. Limites por visitante em `rate-limit.ts` e palavras-chave em `keyterms.ts`. Plano e provas: `docs/VOZ_PLANO_DE_QUALIDADE.md`.

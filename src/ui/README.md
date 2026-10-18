@@ -2,7 +2,7 @@
 
 **Dono:** Malveste. **Status:** primeira versão do design implementada (ver `contexto/estado-atual.md`).
 
-**Responsabilidade:** como o usuário vê e controla o FoodPilot.
+**Responsabilidade:** como o usuário vê e controla o Mimo.
 
 ## O que existe
 - **Tela única do agente** (`src/app/agente`, `src/ui/agent/`): em cima o que o agente encontrou (lista de resultados, proposta, continuidade no iFood); embaixo a conversa com o orbe. `AgentProvider` (`agent-context.tsx`) fala com `/api/chat` e `/api/confirm` e decide a tela pelo estado devolvido; `AgentView` é só visual (props), usada também pela prévia.

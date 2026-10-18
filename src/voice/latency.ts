@@ -6,9 +6,9 @@ export type Mark = "mic_stop" | "stt_done" | "request_sent" | "first_chunk" | "t
 export interface LatencySummary {
   sttMs?: number; // fim da gravação até o texto
   backendFirstChunkMs?: number; // pedido enviado até o primeiro pedaço de fala (cérebro + MCP)
-  firstSoundMs?: number; // fim da fala do usuário até QUALQUER som do Guide (a frase de espera conta): o que a pessoa sente de primeira
+  firstSoundMs?: number; // fim da fala do usuário até QUALQUER som do Mimo (a frase de espera conta): o que a pessoa sente de primeira
   ttsFirstByteMs?: number; // pedaço recebido até o primeiro byte de áudio
-  timeToFirstAudioMs?: number; // fim da fala do usuário até a primeira palavra ÚTIL do Guide (a resposta do agente, não a espera)
+  timeToFirstAudioMs?: number; // fim da fala do usuário até a primeira palavra ÚTIL do Mimo (a resposta do agente, não a espera)
 }
 
 export class LatencyTrace {

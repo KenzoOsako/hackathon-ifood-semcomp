@@ -24,7 +24,7 @@ export const NecessidadeSchema = z.object({
   restricoes: z.array(z.string().max(60)).max(10).default([]),
   // min(1) e não positive(): o Gemini rejeita exclusiveMinimum no response_schema.
   orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
-  // "inferido": sugestão do Guide a partir da ocasião; "dito" (ou ausente): o usuário pediu.
+  // "inferido": sugestão do Mimo a partir da ocasião; "dito" (ou ausente): o usuário pediu.
   fonte: z.enum(["dito", "inferido"]).optional(),
   // Termos de busca do planejador: o catálogo busca ITEM por termo, então cada consulta é um produto ou prato.
   consultas: z.array(z.string().max(80)).max(6).optional().describe("1 a 3 termos de busca concretos para ESTE item (um produto ou prato por termo, sinônimos reais). Ex.: leite → leite integral; churrasco → picanha, costela"),
@@ -82,7 +82,7 @@ export type ConverseInput = z.infer<typeof ConverseInputSchema>;
 
 export type Origem = "simulado" | "real";
 
-// "exata": é o que foi pedido; "proxima": o catálogo não tem o pedido, esta é a mais parecida (o Guide diz isso).
+// "exata": é o que foi pedido; "proxima": o catálogo não tem o pedido, esta é a mais parecida (o Mimo diz isso).
 export type Cobertura = "exata" | "proxima";
 
 export interface OpcaoPlano {
@@ -118,7 +118,7 @@ export interface BlocoPlano {
   quantidade: number;
   principal: OpcaoPlano;
   alternativas: OpcaoPlano[];
-  sugestao?: boolean; // necessidade inferida pelo Guide, não pedida pelo usuário
+  sugestao?: boolean; // necessidade inferida pelo Mimo, não pedida pelo usuário
   cobertura?: Cobertura;
 }
 
@@ -169,7 +169,7 @@ export interface AgentSession {
   recusadas: string[];    // categorias sugeridas que o usuário recusou; não voltam na sessão
   nomeUsado?: boolean;
   ultimaIntencao?: string; // para a telemetria
-  guardas?: string[];      // guardas que dispararam NESTE turno (telemetria); limpo ao fechar o turno    // o Guide já chamou a pessoa pelo nome no encaminhamento (uma vez por sessão)
+  guardas?: string[];      // guardas que dispararam NESTE turno (telemetria); limpo ao fechar o turno    // o Mimo já chamou a pessoa pelo nome no encaminhamento (uma vez por sessão)
   // Turno entendido com confiança média do STT: espera "sim" antes de buscar, ajustar ou aprovar.
   confirmacaoPendente?: { turno: TurnoInterpretado; texto: string; pressa: boolean };
 }

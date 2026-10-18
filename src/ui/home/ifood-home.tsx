@@ -141,7 +141,7 @@ export function IfoodHome() {
 
       <Link
         href="/agente"
-        aria-label="Abrir assistente FoodPilot"
+        aria-label="Abrir assistente Mimo"
         className="absolute bottom-20 right-4 flex size-16 items-center justify-center rounded-full shadow-lg"
       >
         <Orb size="fab" />

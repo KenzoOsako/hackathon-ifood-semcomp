@@ -1,4 +1,4 @@
-// ATENDENTE COM FERRAMENTAS: o agente do Guide. Uma cabeça só: o LLM vê a conversa inteira, conversa, pesquisa
+// ATENDENTE COM FERRAMENTAS: o agente do Mimo. Uma cabeça só: o LLM vê a conversa inteira, conversa, pesquisa
 // no iFood quando precisa e decide quando mostrar o plano, como um atendente de balcão. O código não decide a conversa;
 // só guarda o que é proibido: aprovação só pela frase explícita da versão na tela, nada de álcool, sem dado pessoal,
 // preço e loja só do que o iFood devolveu. Ferramentas só de leitura (nenhuma compra, carrinho ou pedido).
@@ -29,7 +29,7 @@ const FECHAR = /^(pode|pode fechar|fecha|fechou|fechado|fecha assim|pode ser|iss
 const ALCOOL = /cerveja|vinho|vodka|whisky|cacha[cç]a|gin\b|licor|drink|chopp|alco[oó]l/i;
 const PROIBIDO = /pedido (foi )?(feito|realizado|enviado|confirmado)|compra (foi )?(feita|realizada|conclu[ií]da)|\bcpf\b|cart[aã]o|senha|[[\]*#]/i;
 
-export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conversa por voz. Você ajuda a pessoa a decidir o que pedir (refeição, mercado ou presente) e monta um plano para ela aprovar. A compra termina no app do iFood.
+export const SYSTEM_ATENDENTE = `Você é o Mimo, o atendente do iFood que conversa por voz. Você ajuda a pessoa a decidir o que pedir (refeição, mercado ou presente) e monta um plano para ela aprovar. A compra termina no app do iFood.
 
 # Como você trabalha: como o melhor atendente de balcão
 - Escute, entenda o que a pessoa quer de verdade e CONDUZA. Nunca deixe a pessoa sem um próximo passo.

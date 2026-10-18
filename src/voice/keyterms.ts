@@ -1,8 +1,8 @@
-// Palavras-chave do reconhecimento: ensinam ao STT os NOMES do nosso mundo (lojas, itens, o próprio "Guide").
+// Palavras-chave do reconhecimento: ensinam ao STT os NOMES do nosso mundo (lojas, itens, o próprio "Mimo").
 // Medido em 17/10: com elas, "Pizzaria Nona" virou "Pizzaria Nonna". Fixas aqui; as dinâmicas (o que está na
 // tela agora) chegam do cliente, sanitizadas. O provedor recusa caracteres estranhos (400), então limpamos.
 export const BASE_KEYTERMS = [
-  "Guide", "iFood", "calabresa", "margherita", "espetinho", "açaí", "smash", "cheddar", "X-Burger",
+  "Mimo", "iFood", "calabresa", "margherita", "espetinho", "açaí", "smash", "cheddar", "X-Burger",
   "Pizzaria Nonna", "Forno e Cia", "Mercado do Bairro", "Mercado Central", "Lanchonete da Praça",
   "Burger do Zé", "Gourmet Smash", "Casa e Sabor", "Gamer Center", "Livraria Central",
   "pipoca de micro-ondas", "refrigerante", "lembrancinha",

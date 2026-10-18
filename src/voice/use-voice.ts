@@ -23,11 +23,11 @@ const MESSAGES: Record<VoiceErrorCode, string> = {
 export interface VoiceOptions {
   // Palavras que estão na tela agora (lojas, itens). Ajudam o reconhecimento a acertar os nomes.
   getTerms?: () => string[];
-  // Reconhecimento incerto: a fala não foi ao agente e o Guide pediu para repetir.
+  // Reconhecimento incerto: a fala não foi ao agente e o Mimo pediu para repetir.
   onUnclear?: (texto: string, confianca: number) => void;
   // Fim de cada turno com áudio: o resumo de latência daquela rodada.
   onLatency?: (s: LatencySummary) => void;
-  // O microfone abriu (a pessoa começou a falar, inclusive por cima do Guide): o turno anterior não vale mais.
+  // O microfone abriu (a pessoa começou a falar, inclusive por cima do Mimo): o turno anterior não vale mais.
   onListening?: () => void;
 }
 
