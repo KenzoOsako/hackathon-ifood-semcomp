@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="745" height="870" viewBox="110 0 745 870" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5C5C5C"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+  </defs>
+  <rect width="900" height="880" fill="#FFFFFF"/>
+
+  <!-- Título -->
+  <text x="150" y="44" font-size="22" font-weight="700" fill="#1E1E1E">Fluxo da solução</text>
+  <text x="150" y="68" font-size="13" fill="#5C5C5C">Da ocasião contada pelo cliente até o checkout do iFood</text>
+
+  <!-- Conectores verticais -->
+  <g stroke="#5C5C5C" stroke-width="1.6" marker-end="url(#a)">
+    <line x1="380" y1="154" x2="380" y2="178"/>
+    <line x1="380" y1="244" x2="380" y2="268"/>
+    <line x1="380" y1="334" x2="380" y2="358"/>
+    <line x1="380" y1="424" x2="380" y2="448"/>
+    <line x1="380" y1="514" x2="380" y2="538"/>
+    <line x1="380" y1="604" x2="380" y2="628"/>
+    <line x1="380" y1="694" x2="380" y2="718"/>
+  </g>
+
+  <!-- Laço: perguntas (2 -> 1) -->
+  <path d="M610,212 H650 V122 H614" fill="none" stroke="#C8102E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+  <text x="662" y="160" font-size="12.5" fill="#C8102E" font-weight="600">Pergunta só se a resposta</text>
+  <text x="662" y="177" font-size="12.5" fill="#C8102E" font-weight="600">mudar o resultado (máx. 3)</text>
+
+  <!-- Laço: ajuste (7 -> 6) -->
+  <path d="M610,662 H650 V572 H614" fill="none" stroke="#C8102E" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+  <text x="662" y="610" font-size="12.5" fill="#C8102E" font-weight="600">Ajuste gera nova versão</text>
+  <text x="662" y="627" font-size="12.5" fill="#C8102E" font-weight="600">do plano para revisão</text>
+
+  <!-- Etapas: y = 90 + i*90, altura 64 -->
+  <!-- 1 Cliente -->
+  <g transform="translate(150,90)">
+    <rect width="460" height="64" rx="10" fill="#FFFFFF" stroke="#1E1E1E" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#1E1E1E"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">O cliente fala a ocasião</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">Por voz ou texto: “aniversário, pizza em casa e um filme”</text>
+  </g>
+  <!-- 2 Mimo -->
+  <g transform="translate(150,180)">
+    <rect width="460" height="64" rx="10" fill="#FDECEE" stroke="#C8102E" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#C8102E"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">O Mimo entende e decide se pergunta</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">De 0 a 3 perguntas, sempre com “pode escolher por mim”</text>
+  </g>
+  <!-- 3 Mimo -->
+  <g transform="translate(150,270)">
+    <rect width="460" height="64" rx="10" fill="#FDECEE" stroke="#C8102E" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#C8102E"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">Separa as necessidades</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">Pizza (restaurante) · pipoca (mercado) · presente (loja)</text>
+  </g>
+  <!-- 4 iFood -->
+  <g transform="translate(150,360)">
+    <rect width="460" height="64" rx="10" fill="#EEF0F2" stroke="#5C5C5C" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#5C5C5C"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">Busca cada uma no catálogo do iFood</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">Lojas, itens e preços reais, consultados pelo MCP</text>
+  </g>
+  <!-- 5 Mimo -->
+  <g transform="translate(150,450)">
+    <rect width="460" height="64" rx="10" fill="#FDECEE" stroke="#C8102E" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#C8102E"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">Aplica as restrições e ordena</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">Alergia e teto de gasto antes; até 3 opções com motivo</text>
+  </g>
+  <!-- 6 Mimo -->
+  <g transform="translate(150,540)">
+    <rect width="460" height="64" rx="10" fill="#FDECEE" stroke="#C8102E" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#C8102E"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">6</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">Monta o plano</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">Um plano único com todas as necessidades e o custo total</text>
+  </g>
+  <!-- 7 Cliente -->
+  <g transform="translate(150,630)">
+    <rect width="460" height="64" rx="10" fill="#FFFFFF" stroke="#1E1E1E" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#1E1E1E"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">7</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">O cliente ajusta e aprova</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">“Mais barato”, “troca a pipoca”; a aprovação vale para esta versão</text>
+  </g>
+  <!-- 8 iFood -->
+  <g transform="translate(150,720)">
+    <rect width="460" height="64" rx="10" fill="#EEF0F2" stroke="#5C5C5C" stroke-width="1.4"/>
+    <circle cx="34" cy="32" r="15" fill="#5C5C5C"/><text x="34" y="37" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">8</text>
+    <text x="62" y="28" font-size="15" font-weight="700" fill="#1E1E1E">Carrinho preparado e checkout do iFood</text>
+    <text x="62" y="47" font-size="12.5" fill="#5C5C5C">Pagamento e entrega no fluxo habitual do app</text>
+  </g>
+
+  <!-- Legenda -->
+  <g transform="translate(150,826)" font-size="12.5" fill="#1E1E1E">
+    <rect x="0" y="-11" width="16" height="16" rx="4" fill="#FFFFFF" stroke="#1E1E1E" stroke-width="1.4"/>
+    <text x="24" y="2">Cliente</text>
+    <rect x="100" y="-11" width="16" height="16" rx="4" fill="#FDECEE" stroke="#C8102E" stroke-width="1.4"/>
+    <text x="124" y="2">Mimo</text>
+    <rect x="192" y="-11" width="16" height="16" rx="4" fill="#EEF0F2" stroke="#5C5C5C" stroke-width="1.4"/>
+    <text x="216" y="2">iFood (MCP e app)</text>
+    <line x1="360" y1="-3" x2="392" y2="-3" stroke="#C8102E" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text x="400" y="2">Retorno opcional</text>
+  </g>
+</svg>

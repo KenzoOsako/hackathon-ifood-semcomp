@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mimo — Entregáveis</title>
+<!--
+  Fonte única dos entregáveis 01 a 06. O PDF é gerado a partir deste arquivo
+  com Chrome headless: chrome --headless --no-pdf-header-footer --print-to-pdf=mimo-entregaveis.pdf mimo-entregaveis.html
+  Rodapé com número de página usa caixas de margem do @page (Chrome 131+).
+  Texto corrido e numerado; hipóteses são ditas no próprio texto.
+-->
+<style>
+  @page {
+    size: A4; margin: 22mm 22mm 24mm;
+    @bottom-left  { content: "Mimo · Entregáveis · Hackathon SEMCOMP × iFood 2026"; font: 7.5pt "Segoe UI", Arial, sans-serif; color: #8A8A8A; }
+    @bottom-right { content: counter(page); font: 7.5pt "Segoe UI", Arial, sans-serif; color: #8A8A8A; }
+  }
+  :root { --red: #C8102E; --ink: #1E1E1E; --soft: #5C5C5C; --line: #D9D9D9; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fff; color: var(--ink);
+    font-family: "Segoe UI", -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 10.3pt; line-height: 1.58; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Bloco de identificação do documento */
+  .titleblock { border-top: 4px solid var(--red); padding-top: 7mm; margin-bottom: 11mm; }
+  .titleblock .kicker { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+  .titleblock h1 { font-size: 28pt; line-height: 1.1; margin: 2.5mm 0 1mm; font-weight: 700; letter-spacing: -.015em; }
+  .titleblock .subtitle { font-size: 12pt; color: var(--soft); margin-bottom: 6mm; }
+  .meta { display: flex; gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .meta div { flex: 1; padding: 2.2mm 0; font-size: 8.6pt; }
+  .meta div + div { padding-left: 4mm; border-left: 1px solid var(--line); }
+  .meta span { display: block; font-size: 7pt; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+
+  /* Títulos */
+  h2.deliv { font-size: 16pt; font-weight: 700; margin: 0 0 6mm; padding-bottom: 2mm; border-bottom: 1px solid var(--ink); }
+  h2.deliv .n { color: var(--red); margin-right: 3mm; }
+  h3 { font-size: 11pt; font-weight: 700; margin: 6.5mm 0 1.8mm; break-after: avoid; }
+  h3 .n { color: var(--red); display: inline-block; width: 10.5mm; }
+
+  p { margin: 0 0 3mm; orphans: 3; widows: 3; }
+  p.run b { font-weight: 650; }
+  .summary { font-size: 11pt; line-height: 1.6; padding: 0 0 1mm 5mm; border-left: 3px solid var(--red); margin-bottom: 2mm; }
+
+  blockquote { margin: 2mm 0 4mm; padding: 3mm 5mm; background: #F7F6F5; break-inside: avoid; font-size: 9.6pt; }
+  blockquote .cap { font-size: 7.5pt; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); margin-bottom: 1.5mm; }
+  blockquote p { margin: 0 0 1mm; }
+  blockquote b { display: inline-block; width: 14mm; font-weight: 650; color: var(--soft); }
+
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 3mm; font-size: 9.4pt; break-inside: avoid; }
+  th { text-align: left; font-weight: 650; font-size: 8pt; letter-spacing: .06em; text-transform: uppercase; color: var(--soft);
+    border-bottom: 1px solid var(--ink); padding: 1.6mm 3mm 1.6mm 0; }
+  td { border-bottom: 1px solid var(--line); padding: 2mm 3mm 2mm 0; vertical-align: top; }
+  td:first-child { width: 36%; font-weight: 600; }
+
+  .newpage { break-before: page; }
+  .figure { display: block; width: 100%; margin: 6mm auto 0; }
+  .disclaimer { font-size: 8.4pt; color: var(--soft); margin-top: 6mm; padding-top: 2.5mm; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="kicker">Hackathon SEMCOMP × iFood 2026 · Vendendo com Agentes</div>
+  <h1>Mimo</h1>
+  <div class="subtitle">Agente de voz para compras por ocasião no iFood</div>
+  <div class="meta">
+    <div style="flex:.6"><span>Grupo</span>Profit</div>
+    <div style="flex:2"><span>Integrantes</span>Arthur Miele Malveste, Felipe Terossi, Hyago Alves e Kenzo Osako</div>
+    <div><span>Local e data</span>USP São Carlos, 17–18/10/2026</div>
+  </div>
+</div>
+
+<section>
+  <h2 class="deliv"><span class="n">01</span>Proposta de Negócio</h2>
+
+  <h3><span class="n">1.1</span>Sumário executivo</h3>
+  <p class="summary">O Mimo é um agente conversacional do iFood, operado por voz, que organiza a compra de uma ocasião completa dentro do aplicativo. A partir de uma descrição em linguagem natural, o agente identifica as necessidades envolvidas, busca no catálogo do iFood, em diferentes verticais, opções justificadas para cada uma e consolida um plano único para aprovação do cliente. A finalização segue o checkout já existente do iFood. Para o negócio, o Mimo converte intenções amplas em pedidos que combinam verticais e gera sinais estruturados sobre o que o cliente procura.</p>
+
+  <h3><span class="n">1.2</span>Problema e oportunidade</h3>
+  <p>A decisão de compra em aplicativos de entrega costuma partir de uma ocasião, e não de um produto isolado. Um aniversário em casa, por exemplo, pode envolver uma refeição de restaurante, itens de mercado e um presente. Hoje, o cliente do iFood precisa traduzir essa situação em buscas independentes por vertical, comparar um volume grande de opções em cada uma e reaplicar a cada etapa as mesmas condições: orçamento, número de pessoas e restrições alimentares.</p>
+  <p>Esse percurso concentra três dificuldades: indecisão diante do excesso de alternativas, esforço elevado entre a intenção e a escolha, e recomendações que desconsideram o contexto do momento. A oportunidade para o iFood está em converter a descrição da ocasião diretamente em uma proposta de compra organizada, capturando pedidos que hoje se perdem no caminho ou ficam restritos a uma única vertical. A frequência e a intensidade dessas dificuldades na base de clientes ainda não foram medidas pela equipe.</p>
+
+  <h3><span class="n">1.3</span>Público-alvo</h3>
+  <p>Para orientar o desenho e os testes, a equipe considera cinco perfis de cliente, que podem coexistir na mesma pessoa: clientes com pouco tempo, clientes orientados a orçamento, indecisos, clientes em busca de variedade e pessoas com restrição alimentar. O valor do Mimo é maior em compras associadas a um contexto, como celebrações, encontros e refeições em grupo, e em situações em que o cliente ainda não tem uma escolha definida.</p>
+
+  <h3><span class="n">1.4</span>Proposta de valor</h3>
+  <p>Para o cliente, a proposta é transformar a descrição de uma ocasião em um plano de compra pronto para revisão. O plano apresenta até três opções por necessidade, cada uma acompanhada da justificativa extraída de dados reais do catálogo. O cliente mantém controle integral: ajusta itens, aprova o plano e conclui a compra no fluxo habitual do aplicativo.</p>
+  <p>Para o iFood, o Mimo é um novo ponto de entrada para pedidos que combinam verticais e uma fonte de informação qualificada sobre a intenção do cliente: motivos de rejeição de opções, demandas sem cobertura no catálogo e combinações recorrentes de categorias por ocasião. Esses benefícios são hipóteses a validar.</p>
+
+  <h3><span class="n">1.5</span>Solução</h3>
+  <p>A interação ocorre preferencialmente por voz, com entrada por texto sempre disponível. O agente interpreta a ocasião, separa as necessidades, busca cada uma no catálogo, ordena as opções e apresenta um plano consolidado.</p>
+  <p class="run"><b>Equilíbrio entre entender e avançar.</b> O Mimo não conduz um questionário. Cada pergunta precisa justificar o seu lugar: o agente só pergunta quando a resposta muda o resultado e, sempre que possível, assume um padrão razoável e informa qual assumiu. Pedidos específicos ou sinais de pressa recebem uma proposta imediata, sem perguntas. Uma lacuna relevante gera uma única pergunta. Ocasiões vagas admitem no máximo três, feitas uma de cada vez e sempre com a opção de delegar a escolha ao agente. O objetivo é conhecer a realidade do cliente o suficiente para acertar a recomendação, sem prolongar a jornada nem atrasar a compra.</p>
+  <blockquote>
+    <div class="cap">Cenário de referência</div>
+    <p><b>Cliente</b>Hoje é aniversário de um amigo. Vamos comer pizza em casa e ver um filme.</p>
+    <p><b>Mimo</b>Ótimo. Para quantas pessoas, aproximadamente?</p>
+    <p><b>Cliente</b>Seis.</p>
+    <p><b>Mimo</b>Então: pizza para seis, pipoca para o filme e um presente. Posso considerar um presente de até R$ 100?</p>
+    <p><b>Cliente</b>Pode.</p>
+    <p><b>Mimo</b>O plano está pronto, com pizza, pipoca e presente e o motivo de cada escolha. Deseja ajustar algum item?</p>
+  </blockquote>
+  <p>Restrições como alergias e teto de gasto são aplicadas antes da ordenação das opções. Custos e regras são calculados por código determinístico; o modelo de linguagem é responsável apenas pela interpretação e pela conversa. Nenhum item é adicionado ao carrinho sem a aprovação explícita da versão vigente do plano, e qualquer alteração relevante exige nova revisão. O agente não paga nem fecha pedidos: essa etapa permanece com o cliente, no checkout do iFood.</p>
+
+  <h3><span class="n">1.6</span>Diferenciais</h3>
+  <p class="run"><b>Contexto obtido pela fala.</b> A conversa captura informações que filtros de interface dificilmente registram, como a natureza da ocasião, o número de pessoas, o orçamento por item e o que deve ser evitado. Esse contexto é estruturado e utilizado para ordenar e justificar as opções.</p>
+  <p class="run"><b>Sinais estruturados para o iFood.</b> Cada interação produz eventos anônimos sobre aceitação, rejeição e demanda não atendida, que podem ser agregados mediante consentimento e usados para melhorar catálogo e recomendações.</p>
+  <p class="run"><b>Confiabilidade por desenho.</b> As justificativas derivam exclusivamente de campos reais do catálogo, informações estimadas são identificadas, e toda ação no carrinho depende de aprovação do cliente.</p>
+
+  <h3><span class="n">1.7</span>Modelo de negócio</h3>
+  <p class="run"><b>Canal e relacionamento.</b> O Mimo é acessado a partir da página inicial do aplicativo do iFood, como uma entrada adicional ao lado da busca tradicional. O relacionamento se apoia em transparência e controle: as justificativas são visíveis, as preferências só são armazenadas com consentimento, e o cliente pode consultá-las, corrigi-las e excluí-las. O feedback é coletado de forma implícita, a partir das ações do cliente, sem formulários.</p>
+  <p class="run"><b>Impacto no negócio.</b> O recurso não tem cobrança adicional para o cliente. O retorno para o iFood vem de ocasiões resolvidas que se convertem em pedidos, frequentemente em mais de uma vertical, com possível aumento de conversão, satisfação, retenção e recompra. Para restaurantes, mercados e lojas parceiros, o benefício esperado é a descoberta por clientes com intenção compatível. Os sinais agregados sobre demanda não atendida podem orientar a expansão do catálogo. Nenhum desses efeitos foi medido.</p>
+  <p class="run"><b>Custos.</b> Os principais custos variáveis são o modelo de linguagem, cobrado por interação, e os serviços de reconhecimento e síntese de voz; somam-se hospedagem e armazenamento de eventos. Frases recorrentes são pré-geradas para reduzir chamadas aos serviços de voz, e custo e latência são monitorados por sessão.</p>
+
+  <p class="disclaimer">Os benefícios descritos neste documento são hipóteses a validar; nenhum indicador de impacto foi observado até esta versão.</p>
+</section>
+
+<section class="newpage">
+  <h2 class="deliv"><span class="n">02</span>Desenho de Solução</h2>
+  <p>O diagrama abaixo mostra como o Mimo resolve uma ocasião, da descrição feita pelo cliente até o checkout do iFood, e quem responde por cada etapa.</p>
+  <img class="figure" src="img/fluxo-solucao.svg" alt="Fluxo da solução do Mimo em oito etapas">
+</section>
+
+</body>
+</html>
