@@ -155,3 +155,12 @@ Motivo: a demo é a jornada falada de ponta a ponta. O turno com busca deve pass
 4. **Fatias 3 e 4:** evals com MCP gravado e cenários novos, como rede de segurança antes do congelamento.
 5. **Fatia 2, preferências da sessão,** se sobrar tempo.
 - Fatia 5 vira só faturamento ativo na chave do Gemini; ritmo e nova tentativa em 429 só se a cota atrapalhar.
+
+### Integração com a voz: ajustes do Felipe (aceitos 18/10 ~00h)
+Plano de implementação em paralelo (fases, donos, ordem de merge): `docs/PLANO_INTEGRACAO_VOZ_AGENTE.md`.
+Esboço visual: https://claude.ai/artifact/7JsbSyNxafps1G9Xzszygn (privado; compartilhar pelo Share).
+1. **Medição de verdade:** build de produção (`next start -p 8080`), do 2º turno em diante (o 1º paga compilação e conexão MCP), 5+ rodadas da jornada do aniversário, p50 e p95 por etapa pelo painel da `/voz` + log do `/api/converse`. Cuidado: 5 jornadas ≈ 40 chamadas ao Gemini; sem faturamento, espaçar as rodadas para não tomar 429.
+2. **Áudio de espera em cache sobe para o passo 2 (Felipe):** toca ~0,1 s depois do STT, antes do Gemini. Ressalva nossa: antes do interpretar não se sabe se o turno vai buscar, perguntar ou recusar, então a frase imediata é **neutra** ("Hum, um instante."). A frase específica ("Deixa eu ver as opções.") continua vindo do agente (`fraseEspera`) só quando ele decide buscar. Se o ack imediato bastar para a meta de 1,8 s, o NDJSON pode não ser necessário.
+3. **Regra de pressa por sinais da voz:** só vale **sem pergunta pendente** do Guide e combinada com a regex de pressa já existente. "Sim" ou "pode" em resposta a uma pergunta não é pressa.
+4. **Reconhecimento incerto em duas faixas:** confiança < ~0,6 → a voz nem envia e pede "Pode repetir?"; 0,6–0,85 → envia e o agente confirma o que entendeu antes de buscar (confirmação não conta no teto de 3 perguntas). `confianca` entra em `sinais` (`src/voice/signals.ts`, do Felipe); o `ConverseInputSchema` já reaproveita esse schema. Limiares a calibrar com gravações reais.
+5. **Privacidade da fala:** o texto falado vai para a ElevenLabs (TTS) e a fala do usuário vai para o Gemini. Regra: a fala do Guide não repete endereço completo, nome nem telefone; endereço vira "Casa"/"Trabalho". Garantir no código do `responder` (fallback se violar), não só no prompt. **A conferir:** política de retenção da ElevenLabs e do Gemini para as nossas contas.
