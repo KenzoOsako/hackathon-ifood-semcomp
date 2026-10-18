@@ -97,21 +97,11 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
       if (s.estado === "S0") s.estado = "S1";
       return fechar(s, input, deps, { resposta: FRASES.oQueFaco }, tempos, t0);
 
-    case "incerto": {
-      // Confirmação de reconhecimento não conta no teto, mas tem limite próprio para não virar pergunta disfarçada.
-      s.confirmacoesSeguidas += 1;
-      if (s.confirmacoesSeguidas > MAX_CONFIRMACOES_SEGUIDAS) return fechar(s, input, deps, { resposta: s.plano ? FRASES.jaEncaminhado : FRASES.semNecessidade }, tempos, t0);
-      const c = turno.confirmacao;
-      return fechar(s, input, deps, { resposta: c && !PROIBIDO.test(c) && c.trim().endsWith("?") ? c : FRASES.repetir }, tempos, t0);
-    }
+    case "incerto":
+      return processarIncerto(s, input, deps, turno, tempos, t0);
 
     case "aprovar":
-      // A classificação do LLM não basta: só a frase explícita, no texto do usuário, sinaliza aprovação.
-      // O agente só devolve planoId + versão; quem valida e aprova é o domínio.
-      if (!APROVACAO_EXPLICITA.test(texto)) return consentir(s, input, deps, turno, tempos, t0);
-      if (!s.plano) return fechar(s, input, deps, { resposta: FRASES.semPlano }, tempos, t0);
-      s.estado = "S5"; s.encaminhado = true;
-      return fechar(s, input, deps, { resposta: FRASES.aprovacaoEnviada, aprovacao: { planoId: s.plano.planoId, versao: s.plano.versao }, tela: { tipo: "aguardando_aprovacao", plano: s.plano } }, tempos, t0);
+      return processarAprovar(s, input, deps, turno, texto, tempos, t0);
 
     case "consentir":
       return consentir(s, input, deps, turno, tempos, t0);
@@ -121,23 +111,50 @@ export async function executarTurno(s: AgentSession, input: ConverseInput, deps:
       aplicarEstado(s, turno);
       return montar(s, input, deps, turno, tempos, t0);
 
-    default: {
-      if (!pressa) s.nivel = rebaixar(s.nivel, turno.nivel);
-      const mudou = aplicarEstado(s, turno);
-      if (s.necessidades.length === 0) {
-        s.estado = "S1";
-        return fechar(s, input, deps, { resposta: FRASES.semNecessidade }, tempos, t0);
-      }
-      if (s.plano && !mudou) return fechar(s, input, deps, { resposta: FRASES.jaEncaminhado, tela: { tipo: "aguardando_aprovacao", plano: s.plano } }, tempos, t0);
-      const limite = s.nivel === "L1" ? MAX_PERGUNTAS_L1 : MAX_PERGUNTAS;
-      // Pergunta com conteúdo proibido é descartada: segue para o plano em vez de falar algo indevido.
-      if (turno.pergunta && !PROIBIDO.test(turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite) {
-        s.perguntasFeitas += 1; s.estado = "S2";
-        return fechar(s, input, deps, { resposta: comSaida(turno.pergunta) }, tempos, t0);
-      }
-      return montar(s, input, deps, turno, tempos, t0);
-    }
+    default:
+      return processarPedidoOuResposta(s, input, deps, turno, pressa, tempos, t0);
   }
+}
+
+function processarIncerto(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): AgentReply {
+  // Confirmação de reconhecimento não conta no teto, mas tem limite próprio para não virar pergunta disfarçada.
+  s.confirmacoesSeguidas += 1;
+  if (s.confirmacoesSeguidas > MAX_CONFIRMACOES_SEGUIDAS) {
+    return fechar(s, input, deps, { resposta: s.plano ? FRASES.jaEncaminhado : FRASES.semNecessidade }, tempos, t0);
+  }
+  const c = turno.confirmacao;
+  const valida = Boolean(c && !PROIBIDO.test(c) && c.trim().endsWith("?"));
+  return fechar(s, input, deps, { resposta: valida && c ? c : FRASES.repetir }, tempos, t0);
+}
+
+function processarAprovar(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, texto: string, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> | AgentReply {
+  // A classificação do LLM não basta: só a frase explícita, no texto do usuário, sinaliza aprovação.
+  // O agente só devolve planoId + versão; quem valida e aprova é o domínio.
+  if (!APROVACAO_EXPLICITA.test(texto)) return consentir(s, input, deps, turno, tempos, t0);
+  if (!s.plano) return fechar(s, input, deps, { resposta: FRASES.semPlano }, tempos, t0);
+  s.estado = "S5"; s.encaminhado = true;
+  return fechar(s, input, deps, { resposta: FRASES.aprovacaoEnviada, aprovacao: { planoId: s.plano.planoId, versao: s.plano.versao }, tela: { tipo: "aguardando_aprovacao", plano: s.plano } }, tempos, t0);
+}
+
+function processarPedidoOuResposta(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, pressa: boolean, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> | AgentReply {
+  if (!pressa) s.nivel = rebaixar(s.nivel, turno.nivel);
+  const mudou = aplicarEstado(s, turno);
+  if (s.necessidades.length === 0) {
+    s.estado = "S1";
+    return fechar(s, input, deps, { resposta: FRASES.semNecessidade }, tempos, t0);
+  }
+  if (s.plano && !mudou) return fechar(s, input, deps, { resposta: FRASES.jaEncaminhado, tela: { tipo: "aguardando_aprovacao", plano: s.plano } }, tempos, t0);
+  if (devePerguntar(s, turno, pressa) && turno.pergunta) {
+    s.perguntasFeitas += 1; s.estado = "S2";
+    return fechar(s, input, deps, { resposta: comSaida(turno.pergunta) }, tempos, t0);
+  }
+  return montar(s, input, deps, turno, tempos, t0);
+}
+
+function devePerguntar(s: AgentSession, turno: TurnoInterpretado, pressa: boolean): boolean {
+  const limite = s.nivel === "L1" ? MAX_PERGUNTAS_L1 : MAX_PERGUNTAS;
+  // Pergunta com conteúdo proibido é descartada: segue para o plano em vez de falar algo indevido.
+  return Boolean(turno.pergunta && !PROIBIDO.test(turno.pergunta) && s.nivel !== "L0" && !pressa && s.perguntasFeitas < limite);
 }
 
 async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> {
@@ -152,7 +169,8 @@ async function consentir(s: AgentSession, input: ConverseInput, deps: Deps, turn
 }
 
 const COMIDA = (n: Necessidade) => n.vertical !== "SHOPPING";
-const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), [...n.restricoes].sort(), n.orcamento ?? null])]);
+const ordenarStrings = (lista: string[]) => [...lista].sort((a, b) => a.localeCompare(b));
+const assinatura = (s: AgentSession) => JSON.stringify([s.ocasiao.pessoas ?? null, s.necessidades.map((n) => [n.vertical, norm(n.categoria), ordenarStrings(n.restricoes), n.orcamento ?? null])]);
 
 // Devolve true se o pedido mudou de fato (aí o plano anterior deixa de valer).
 function aplicarEstado(s: AgentSession, turno: TurnoInterpretado): boolean {
@@ -169,7 +187,7 @@ function aplicarEstado(s: AgentSession, turno: TurnoInterpretado): boolean {
 }
 
 function comSaida(pergunta: string): string {
-  return /escolh/.test(norm(pergunta)) ? pergunta : `${pergunta.replace(/\s*$/, "")} Ou posso escolher por você.`;
+  return /escolh/.test(norm(pergunta)) ? pergunta : `${pergunta.trimEnd()} Ou posso escolher por você.`;
 }
 
 async function montar(s: AgentSession, input: ConverseInput, deps: Deps, turno: TurnoInterpretado, tempos: AgentReply["tempos"], t0: number): Promise<AgentReply> {

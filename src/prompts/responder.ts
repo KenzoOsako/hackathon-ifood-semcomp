@@ -35,7 +35,10 @@ export function mensagemResponder(input: ResponderInput): string {
 // Reserva determinística: usada se o LLM falhar, demorar ou citar número fora do snapshot.
 export function respostaTemplate(input: ResponderInput): string {
   const blocos = input.mudou ? input.plano.blocos.filter((b) => b.categoria === input.mudou) : input.plano.blocos;
-  const partes = blocos.map((b) => `${b.quantidade > 1 ? `${b.quantidade}x ` : ""}${b.principal.item} da ${b.principal.loja}, ${b.principal.rotulo}`);
+  const partes = blocos.map((b) => {
+    const prefixo = b.quantidade > 1 ? `${b.quantidade}x ` : "";
+    return `${prefixo}${b.principal.item} da ${b.principal.loja}, ${b.principal.rotulo}`;
+  });
   const inicio = input.mudou ? "Troquei: " : "Montei assim: ";
   const assumido = input.assumido.length ? ` Assumi ${input.assumido.join(" e ")}.` : "";
   const faltas = input.plano.naoAtendidas.length ? ` Ainda não tenho opção para ${input.plano.naoAtendidas.map((n) => n.categoria).join(" e ")}.` : "";

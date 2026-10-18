@@ -71,28 +71,36 @@ export class FakeDomain implements DomainPort {
       .filter((o) => o.termos.some((t) => cat.includes(t) || t.includes(cat)) || norm(o.item).includes(cat))
       // Filtro rígido: restrição declarada exclui a oferta; nunca é relaxado aqui.
       .filter((o) => !restricoes.some((r) => (o.contem ?? []).some((c) => r.includes(c) || c.includes(r))))
-      .filter((o) => !n.orcamento || n.orcamento.tipo !== "teto" || o.precoCents * qtd <= Math.round(n.orcamento.max * 100));
+      .filter((o) => n.orcamento?.tipo !== "teto" || o.precoCents * qtd <= Math.round(n.orcamento.max * 100));
   }
 
-  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+  buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
     const candidatos = this.candidatos(n, ocasiao);
     const padrao = PADRAO[n.vertical];
     // Sem o dado do critério padrão, cai para o menor preço (sempre presente).
     const criterio = comDado(candidatos, padrao).length > 0 ? padrao : "mais_barata";
     const lista = [...ordenar(comDado(candidatos, criterio), criterio), ...candidatos.filter((o) => !comDado([o], criterio).length)];
-    return lista.slice(0, 3).map((o, i) => (i === 0 ? toOpcao(o, criterio) : alternativa(o, lista)));
+    return Promise.resolve(lista.slice(0, 3).map((o, i) => (i === 0 ? toOpcao(o, criterio) : alternativa(o, lista))));
   }
 
-  async montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot> {
+  montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot> {
     const snapshot = construir(randomUUID(), 1, input.ocasiao, input.itens);
     this.planos.set(snapshot.planoId, { subjectRef: input.subjectRef, snapshot, necessidades: input.itens.map((i) => i.necessidade), ocasiao: input.ocasiao });
     if (this.planos.size > 5000) this.planos.delete(this.planos.keys().next().value!);
-    return structuredClone(snapshot);
+    return Promise.resolve(structuredClone(snapshot));
   }
 
-  async ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot> {
+  ajustarPlano(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): Promise<PlanoSnapshot> {
+    try {
+      return Promise.resolve(this.executarAjuste(input));
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  private executarAjuste(input: { subjectRef: string; planoId: string; versao: number; categoria?: string; criterio: Criterio }): PlanoSnapshot {
     const atual = this.planos.get(input.planoId);
-    if (!atual || atual.subjectRef !== input.subjectRef) throw new Error("PLANO_INEXISTENTE");
+    if (atual?.subjectRef !== input.subjectRef) throw new Error("PLANO_INEXISTENTE");
     if (atual.snapshot.versao !== input.versao) throw new Error("VERSAO_DESATUALIZADA");
     const alvo = input.categoria ? norm(input.categoria) : undefined;
     const bloco = atual.snapshot.blocos.find((b) => alvo && (norm(b.categoria).includes(alvo) || alvo.includes(norm(b.categoria)))) ?? atual.snapshot.blocos[0];
@@ -124,9 +132,10 @@ export class FakeDomain implements DomainPort {
     return structuredClone(snapshot);
   }
 
-  async registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void> {
+  registrarEvento(subjectRef: string, evento: EventoFeedback): Promise<void> {
     this.eventos.push({ subjectRef, evento });
     if (this.eventos.length > 5000) this.eventos.shift();
+    return Promise.resolve();
   }
 }
 

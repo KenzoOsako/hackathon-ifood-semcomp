@@ -94,6 +94,16 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - D-013 (proposta): LangChain.js isolado em `src/agent/llm/`, sem LangGraph. Nenhum código de runtime alterado; dependências ainda não instaladas.
 - Pendente: aceite de D-011/D-012/D-013, parceiro da dupla, provedor/chave de LLM; depende de K-1, K-3, K-5 (Kenzo) e M-1 (Malveste).
 
+## UI: setup do design system — 17/10/2026
+- Branch `feat/malveste-ui-setup`: Tailwind v4, tokens em `globals.css`, componentes base em `src/ui/components`, lucide-react e motion instalados (D-014). Nenhuma tela mudou; `page.tsx` e rotas intactos.
+- Validação: typecheck, lint, testes e build passaram; classes Tailwind e tokens confirmados no CSS servido pelo dev. Verificação visual em 375px e desktop fica para o PR da home, que tem tela nova.
+- Pendente: aviso ao integrador sobre `package.json`/lockfile; dark mode fora do escopo; próximo PR `feat/malveste-ui-home`.
+
+## UI: home fake e moldura de celular — 17/10/2026
+- Branch `feat/malveste-ui-home` (empilhada sobre `feat/malveste-ui-setup`; rebase quando o setup for mesclado). `/` agora é a home estilo iFood, toda estática e com dados genéricos; a única parte funcional é a bolinha (link para `/agente`). Selo "Protótipo · dados simulados" visível.
+- O chat do esqueleto foi movido sem alterações de lógica para `src/app/agente/page.tsx` (só o container de rolagem mudou) e será refeito no PR da tela do agente. `PhoneFrame` no layout: moldura de 390px no desktop, tela cheia abaixo de 640px.
+- Validação: typecheck, lint, 49 testes e build passaram; capturas em Chrome headless a 375px (via iframe, pois a janela headless tem largura mínima) e 1280px conferidas. Texto sobre vermelho usa `--primary` por contraste AA. Teclado: a bolinha é o único foco da home. Falta teste com leitor de tela.
+
 ## Agente: decisões de implementação e preocupações — 17/10/2026, ~20h30 (Hyago)
 - Cérebro no backend: orquestrador (Hyago) decide perguntar/buscar/montar/ajustar; domínio (Kenzo) busca no MCP e ranqueia; LLM interpreta e fala, sem aprovar nem comprar.
 - ElevenLabs só ouve e fala (STT + TTS), sem conduzir a conversa. O agente é entregue funcionando por texto; a voz conecta depois no mesmo endpoint. Provedor/modelo de LLM não fixado (configuração).
@@ -106,3 +116,4 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Regras em código: teto de 3 perguntas (1 em L1), nível só rebaixa, pressa força L0, aprovação só com frase explícita e só devolve planoId+versão, restrição rígida por sessão, plano vazio não é encaminhado, fala do LLM com número fora do snapshot cai para template.
 - Verificação: typecheck, lint, 100 testes (12 cenários de eval + testes do orquestrador) e build passaram; jornada do aniversário e caso rápido rodados no app servido. Revisão independente: 16 achados, altos e médios corrigidos com testes.
 - Não verificado: LLM real (sem LLM_PROVIDER configurado nesta máquina); compatibilidade do schema Zod com withStructuredOutput de cada provedor; domínio real (K-3/K-5) e aprovação na tela (K-1/M-1).
+
