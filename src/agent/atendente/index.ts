@@ -13,6 +13,7 @@ import { configurarItem, detalharPlano, impedimentosPlano, resumoComplementos } 
 import { temDadoPessoal } from "../privacidade";
 import { montarSacola } from "../sacola";
 import type { AgentReply, AgentSession, ConverseInput, DomainPort, GrupoOpcoes, Necessidade, OpcaoPlano, PlanoSnapshot } from "../types";
+import type { Sinal } from "@/data/sinais";
 
 const MAX_PASSOS = 4;          // rodadas de ferramenta por turno (buscar, buscar, mostrar...)
 const TIMEOUT_MS = 12_000;     // por chamada ao modelo
@@ -55,7 +56,8 @@ export const SYSTEM_ATENDENTE = `Você é o Guide, o atendente do iFood que conv
 - Nada de bebida alcoólica, remédio ou conselho médico. Fora de refeição, mercado e presente: recuse com educação e ofereça ajuda.
 - Nunca peça nem repita CPF, cartão, senha, telefone, e-mail ou endereço.`;
 
-export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; domain: DomainPort; nome?: string; now?: () => number }
+// sinal: registro anônimo de demanda (src/data/sinais.ts); opcional para os testes não dependerem dele.
+export interface AtendenteDeps { modelo: BaseChatModel; nomeModelo: string; domain: DomainPort; nome?: string; now?: () => number; sinal?: (s: Sinal) => void }
 
 // Memória do atendente por sessão: opções que o iFood já devolveu (para o plano usar a escolhida) e um resumo delas.
 // grupoDe: cada opção aponta para a lista da busca em que apareceu (as que a pessoa viu juntas na tela).
@@ -68,6 +70,8 @@ function memoriaDe(subjectRef: string): Memoria {
   if (memorias.size > 2000) memorias.delete(memorias.keys().next().value!);
   return m;
 }
+// Sinal é bônus: um registro que falha não pode virar erro de ferramenta nem derrubar o turno.
+function registrar(deps: AtendenteDeps, sinal: Sinal): void { try { deps.sinal?.(sinal); } catch { /* descarta */ } }
 export function reiniciarAtendente(subjectRef: string): void { memorias.delete(subjectRef); }
 
 const reais = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -85,6 +89,7 @@ const buscarSchema = z.object({
 });
 const mostrarSchema = z.object({
   pessoas: z.number().int().min(1).max(50).optional().describe("Quantas pessoas vão comer, se a pessoa disse"),
+  ocasiao: z.string().max(40).optional().describe("Tipo da ocasião em 1 a 3 palavras, se a pessoa disse. Ex.: aniversário, churrasco, jantar a dois"),
   itens: z.array(z.object({
     categoria: z.string().min(1).max(60),
     consultas: z.array(z.string().min(1).max(80)).max(3).optional(),
@@ -175,6 +180,7 @@ export async function executarAtendente(s: AgentSession, input: ConverseInput, d
     if (bloqueios.length) { tela = { tipo: "plano_atualizado", plano: s.plano }; return fim(`Ainda falta configurar os itens. ${bloqueios[0]}`); }
     s.estado = "S5"; s.encaminhado = true;
     aprovacao = { planoId: s.plano.planoId, versao: s.plano.versao };
+    registrar(deps, { tipo: "aprovado", itens: s.plano.blocos.length });
     tela = { tipo: "sacola", plano: { ...s.plano, sacola: montarSacola(s.plano) } };
     return fim(FRASES.aprovacaoEnviada);
   }
@@ -257,6 +263,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const texto = opcoes.length ? `Opções de ${a.categoria}:\n${opcoes.map(linhaOpcao).join("\n")}` : `Nenhuma opção de ${a.categoria} aberta com entrega agora.`;
     mem.resumoBuscas.push(texto.split("\n").slice(0, 4).join(" / "));
     if (mem.resumoBuscas.length > 8) mem.resumoBuscas.shift();
+    registrar(deps, { tipo: "busca", vertical: a.vertical, categoria: a.categoria, restricoes: s.restricoes, resultados: opcoes.length });
     console.info(`[atendente] buscar categoria="${a.categoria}" ordenar=${a.ordenar ?? "relevancia"} opcoes=${opcoes.length}`);
     return { texto, ...(opcoes.length ? { grupo: { categoria: a.categoria, ...(a.ordenar && a.ordenar !== "relevancia" ? { criterio: a.ordenar } : {}), itens: opcoes.slice(0, OPCOES_NA_TELA) } } : {}) };
   }
@@ -280,6 +287,7 @@ async function executarFerramenta(nome: string, args: unknown, s: AgentSession, 
     const atualizado = Boolean(s.plano);
     s.plano = plano; s.necessidades = necessidades; s.estado = atualizado ? "S4" : "S3"; s.encaminhado = false;
     s.ultimaVersaoPlano = plano.versao;
+    registrar(deps, { tipo: "plano", ocasiao: a.ocasiao, pessoas: s.ocasiao.pessoas, categorias: plano.blocos.map((b) => b.categoria), naoAtendidas: plano.naoAtendidas.map((n) => n.categoria) });
     console.info(`[atendente] mostrar_plano itens=${a.itens.length} blocos=${plano.blocos.length} naoAtendidas=${plano.naoAtendidas.length} versao=${plano.versao}`);
     const resumo = plano.blocos.map((b) => `${descreverBloco(b)}; complementos: ${resumoComplementos(b.principal).join(", ") || "a configurar se houver"}`).join("; ");
     const faltas = plano.naoAtendidas.map((n) => n.categoria).join(", ");

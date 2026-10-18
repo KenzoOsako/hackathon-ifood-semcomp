@@ -8,6 +8,7 @@ import { nomeConhecido } from "@/agent/perfil";
 import { reiniciarSessao, sessaoDo } from "@/agent/sessao";
 import { ConverseInputSchema, type DomainPort } from "@/agent/types";
 import { conectado } from "@/mcp/real/oauth";
+import { registrarSinal } from "@/data/sinais";
 
 // Mesmos guardas do chat (origem, JSON limitado, sessão por cookie). Identidade nunca vem do body.
 // MCP_MODE=real: dados do MCP do iFood, só para a sessão que fez login iFood (/api/auth/login).
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
     const reply = await visitorSessions.run(resolved.visitor, async (conversation) => {
       if (input.reiniciar) reiniciarAtendente(conversation.subjectRef);
       const s = (input.reiniciar ? reiniciarSessao : sessaoDo)(conversation.subjectRef);
-      return executarAtendente(s, input, { modelo, nomeModelo, domain, nome: nomeConhecido(subjectRef) });
+      return executarAtendente(s, input, { modelo, nomeModelo, domain, nome: nomeConhecido(subjectRef), sinal: registrarSinal });
     });
     console.info(`[converse] mcp=${real ? "real" : "mock"} llm=${reply.llm} estado=${reply.estado} modelo=${reply.tempos.interpretarMs}ms dominio=${reply.tempos.dominioMs ?? "-"}ms total=${reply.tempos.totalMs}ms`);
     return jsonResponse(reply, 200, cookie);

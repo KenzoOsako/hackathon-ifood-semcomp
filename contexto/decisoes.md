@@ -90,3 +90,8 @@ Escolhas vinculadas a planoId/versão/necessidade/ref; IDs e preços vêm do det
 ## D-018 — Preço não bloqueia opções no atendente (18/10/2026, Kenzo)
 - Decisão explícita: retirar a regra de limite de preço do fluxo do atendente, inclusive exclusão por teto no domínio mock/real. Preços e fretes continuam visíveis para a pessoa escolher; ordenar por preço continua disponível.
 - Restrições alimentares continuam rígidas: opções de buscas anteriores só podem ser reutilizadas sob restrição se ainda constarem nos candidatos elegíveis atuais.
+
+## D-019 — Sinais de demanda agregados, sem guardar conversa (18/10/2026, Malveste)
+- Decisão: aprender com as conversas registrando só sinais estruturados que o código já tem nas ferramentas (categoria, restrição, resultados, ocasião, itens juntos, aprovação), nunca transcrição, texto livre ou identificador. O LLM não gera os sinais.
+- Sem pedido de consentimento por ora (decisão do Malveste: protótipo, os dados não são usados). Diverge da regra do AGENTS.md "consentimento separado para uso agregado"; antes de qualquer uso real, entra um opt-out. Painel só com agregados e selo de origem.
+- Sem banco nem dependência nova: memória do servidor, persistência declarada como pendente.

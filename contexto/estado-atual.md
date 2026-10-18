@@ -309,3 +309,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Removido orçamento dos schemas das ferramentas e sua propagação; domínio real/mock não exclui opções por teto legado. Mantidos preços/fretes e ordenação.
 - Busca posterior no mesmo turno preserva tela de plano/revisão já montada. Com restrição alimentar, memória não reintroduz opções excluídas na busca atual.
 - Cobertura nova: preço sem bloqueio no domínio real e no atendente; precedência da tela de plano; restrição alimentar após busca anterior.
+
+## Sinais de demanda para o iFood — 18/10/2026 (Malveste)
+- Branch feat/malveste-sinais-demanda. O atendente registra sinais estruturados quando as ferramentas rodam: busca (categoria, vertical, restrições, nº de resultados), plano (ocasião, faixa de pessoas, itens, não atendidos) e aprovação. Sem conversa, texto livre, nome, endereço ou ID; termo com cara de dado pessoal é descartado.
+- `src/data/sinais.ts` guarda em memória (limite 5000) e agrega; `GET /api/sinais` devolve só contagens; `/painel` mostra "Pediram e não tinha", mais procurados, restrições, ocasiões e combinações, com selo de catálogo real/simulado. `mostrar_plano` ganhou o campo opcional `ocasiao`.
+- Pendente: persistência entre instâncias e piso de anonimato (hoje 1 para a demo; em produção ≥5). Benefício ao iFood é hipótese.

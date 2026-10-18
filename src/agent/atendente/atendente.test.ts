@@ -6,6 +6,7 @@ import { FakeDomain } from "../domain-fake";
 import { FRASES } from "../frases";
 import { novaSessao } from "../sessao";
 import { executarAtendente, reiniciarAtendente } from ".";
+import type { Sinal } from "@/data/sinais";
 
 type Chamada = { name: string; args: Record<string, unknown> };
 // Modelo roteirizado: cada invoke devolve a próxima resposta (com ou sem chamadas de ferramenta) e conta as chamadas.
@@ -116,5 +117,36 @@ describe("atendente", () => {
     const r = await fale("oi");
     expect(r.resposta).toBe(FRASES.naoEntendi);
     expect(r.tela).toBeUndefined();
+  });
+});
+
+describe("sinais de demanda", () => {
+  it("registra busca, busca vazia, plano e aprovação a partir das ferramentas, sem texto da conversa", async () => {
+    const sinais: Sinal[] = [];
+    const s = novaSessao(`s-${Math.random()}`);
+    reiniciarAtendente(s.subjectRef);
+    const { modelo } = roteiro([
+      [{ name: "buscar_no_ifood", args: pizza }, { name: "buscar_no_ifood", args: { categoria: "comida marciana", vertical: "RESTAURANT" } }],
+      [{ name: "mostrar_plano", args: { ocasiao: "aniversário", pessoas: 6, itens: [{ ...pizza, ref: "nonna-margherita" }] } }],
+      "Montei. É isso?",
+    ]);
+    const deps = { modelo, nomeModelo: "roteiro", domain: new FakeDomain(), sinal: (x: Sinal) => sinais.push(x) };
+    await executarAtendente(s, { texto: "aniversário do meu amigo João, quero pizza", origem: "texto" }, deps);
+    await executarAtendente(s, { texto: "aprovo o plano versão 1", origem: "texto" }, deps);
+    expect(sinais.map((x) => x.tipo)).toEqual(["busca", "busca", "plano", "aprovado"]);
+    expect(sinais[1]).toMatchObject({ categoria: "comida marciana", resultados: 0 });
+    expect(sinais[2]).toMatchObject({ ocasiao: "aniversário", pessoas: 6, categorias: ["pizza"] });
+    expect(JSON.stringify(sinais)).not.toMatch(/João/);
+  });
+
+  it("um registro que falha não derruba a conversa", async () => {
+    const s = novaSessao(`s-${Math.random()}`);
+    reiniciarAtendente(s.subjectRef);
+    const { modelo } = roteiro([[{ name: "buscar_no_ifood", args: pizza }], [{ name: "mostrar_plano", args: { itens: [pizza] } }], "Montei. É isso?"]);
+    const deps = { modelo, nomeModelo: "roteiro", domain: new FakeDomain(), sinal: () => { throw new Error("falhou"); } };
+    const r = await executarAtendente(s, { texto: "quero pizza", origem: "texto" }, deps);
+    // A busca chegou à tela de opções e o plano foi montado: o erro do registro não virou erro de ferramenta.
+    expect(r.tela?.tipo).toBe("mostrar_plano");
+    expect((await executarAtendente(s, { texto: "aprovo o plano versão 1", origem: "texto" }, deps)).tela?.tipo).toBe("sacola");
   });
 });
