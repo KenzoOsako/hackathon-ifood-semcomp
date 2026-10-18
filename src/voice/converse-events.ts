@@ -13,7 +13,7 @@ export const ConverseEventSchema = z.discriminatedUnion("type", [
   // Fim do turno. `turnId` permite descartar eventos de um turno que foi interrompido.
   z.strictObject({ type: z.literal("done"), turnId: z.string().min(1).max(64) }),
   // Falha do turno. `reply` é uma frase curta e segura para mostrar e falar.
-  z.strictObject({ type: z.literal("error"), code: z.string().min(1).max(40), reply: z.string().trim().min(1).max(300) }),
+  z.strictObject({ type: z.literal("error"), code: z.string().min(1).max(40), reply: z.string().trim().min(1).max(300), loginUrl: z.string().max(200).regex(/^\/(?!\/)[\w\-./?=&%]*$/).optional() }),
 ]);
 export type ConverseEvent = z.infer<typeof ConverseEventSchema>;
 
