@@ -127,7 +127,7 @@ describe("orquestrador", () => {
   });
 
   it("falha do LLM vira frase curta sem inventar plano", async () => {
-    const r = await turno(new ScriptedLlm([])).fale("quero uma coisa");
+    const r = await turno(new ScriptedLlm([])).fale("hmm, sei lá");
     expect(r.resposta).toBe(FRASES.naoEntendi);
     expect(r.tela).toBeUndefined();
   });
