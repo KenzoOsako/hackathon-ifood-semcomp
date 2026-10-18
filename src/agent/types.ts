@@ -169,7 +169,10 @@ export interface Sacola {
   simulacao: true;
 }
 
-export type TipoTela = "mostrar_plano" | "plano_atualizado" | "aguardando_aprovacao" | "sacola";
+export type TipoTela = "mostrar_opcoes" | "mostrar_plano" | "plano_atualizado" | "aguardando_aprovacao" | "sacola";
+
+// Opções que o atendente acabou de pesquisar no iFood, para a pessoa ver e escolher tocando (tela "mostrar_opcoes").
+export interface GrupoOpcoes { categoria: string; criterio?: string; itens: OpcaoPlano[] }
 
 export interface AgentReply {
   estado: Estado;
@@ -177,7 +180,7 @@ export interface AgentReply {
   resposta: string;
   fraseEspera?: string;
   // A sacola viaja dentro do payload do plano para chegar à tela pelo mesmo evento `screen` da voz.
-  tela?: { tipo: TipoTela; plano: PlanoSnapshot & { sacola?: Sacola } };
+  tela?: { tipo: TipoTela; plano: PlanoSnapshot & { sacola?: Sacola; opcoes?: GrupoOpcoes[] } };
   aprovacao?: { planoId: string; versao: number };
   origem: Origem;
   llm: string;

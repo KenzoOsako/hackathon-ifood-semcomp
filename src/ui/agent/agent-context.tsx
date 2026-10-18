@@ -28,7 +28,11 @@ export function AgentProvider({ children }: Readonly<{ children: ReactNode }>) {
   // deixou de valer no servidor e não pode continuar na tela com botão de aprovar.
   const estado = [...guide.turns].reverse().find((t) => t.meta)?.meta?.estado;
   const semPlano = estado === "S0" || estado === "S1" || estado === "S2";
-  const tela = useMemo(() => (semPlano ? null : lerTela(guide.screen)), [guide.screen, semPlano]);
+  // Opções pesquisadas aparecem mesmo antes de existir plano: é a conversa mostrando o que o atendente comparou.
+  const tela = useMemo(() => {
+    const t = lerTela(guide.screen);
+    return t && semPlano && t.tipo !== "mostrar_opcoes" ? null : t;
+  }, [guide.screen, semPlano]);
   const value = useMemo(() => ({ ...guide, tela }), [guide, tela]);
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
 }

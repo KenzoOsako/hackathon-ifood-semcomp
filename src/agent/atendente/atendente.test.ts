@@ -44,8 +44,27 @@ describe("atendente", () => {
     const r = await fale("quero a pizza melhor avaliada");
     expect(r.tela?.tipo).toBe("mostrar_plano");
     expect(r.tela?.plano.blocos[0].principal.ref).toBe("nonna-margherita");
+    // As outras opções da busca que a pessoa viu ficam como alternativas, para trocar tocando.
+    expect(r.tela?.plano.blocos[0].alternativas.map((o) => o.ref)).toContain("forno-calabresa");
     expect(r.resposta).toMatch(/É isso/);
     expect(s.plano?.versao).toBe(1);
+  });
+
+  it("o que ele pesquisa aparece na tela de opções (até 3 por busca); um plano na mesma rodada prevalece", async () => {
+    const { fale } = conversa([
+      [{ name: "buscar_no_ifood", args: { ...pizza, ordenar: "melhor_avaliada" } }, { name: "buscar_no_ifood", args: { categoria: "hamburguer", vertical: "RESTAURANT" } }],
+      "A mais bem avaliada é a da Pizzaria Nonna. Qual prefere?",
+      [{ name: "buscar_no_ifood", args: pizza }, { name: "mostrar_plano", args: { itens: [pizza] } }],
+      "Montei. É isso?",
+    ]);
+    const r = await fale("o que tem de bom?");
+    expect(r.tela?.tipo).toBe("mostrar_opcoes");
+    const grupos = r.tela!.plano.opcoes!;
+    expect(grupos.map((g) => g.categoria)).toEqual(["pizza", "hamburguer"]);
+    expect(grupos[0].criterio).toBe("melhor_avaliada");
+    expect(grupos.every((g) => g.itens.length > 0 && g.itens.length <= 3)).toBe(true);
+    expect(grupos[0].itens[0].nota).toBeGreaterThanOrEqual(grupos[0].itens.at(-1)!.nota ?? 0);
+    expect((await fale("quero pizza")).tela?.tipo).toBe("mostrar_plano");
   });
 
   it("'fechou' com plano leva à revisão sem chamar o modelo", async () => {

@@ -1,9 +1,9 @@
 "use client";
-// As três telas que o agente pode pedir (docs/PLANO_TELA_GUIDE.md): plano por item, revisão por loja e sacola.
+// As telas que o agente pode pedir (docs/PLANO_TELA_GUIDE.md): opções pesquisadas, plano por item, revisão por loja e sacola.
 // Os botões não têm rota própria: mandam ao agente a mesma frase que a pessoa diria. Nenhum valor é somado aqui.
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { CircleCheck, Info, ShoppingBag } from "lucide-react";
+import { ChevronDown, ChevronUp, CircleCheck, Info, ShoppingBag } from "lucide-react";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
@@ -12,6 +12,7 @@ import { catalogImage } from "@/ui/lib/catalog-media";
 import { chaveLoja } from "@/agent/sacola";
 import { StoreLogo } from "@/ui/components/store-logo";
 import { fromCents } from "./format";
+import type { OpcaoPlano } from "@/agent/types";
 import { paraOption, porLoja, type PlanoTela } from "./plano-tela";
 import { ResultCard } from "./result-card";
 
@@ -19,6 +20,11 @@ import { ResultCard } from "./result-card";
 // a versão exibida: se o plano mudou no servidor depois, o agente recusa em vez de aprovar a versão nova.
 export const FRASE_REVISAR = "pode";
 export const fraseAprovar = (versao: number) => `aprovo o plano versão ${versao}`;
+// Tocar numa opção é o mesmo que dizer qual se quer; o atendente usa a opção em mostrar_plano.
+export const fraseEscolher = (o: OpcaoPlano) => `quero a ${o.item} da ${o.loja}`;
+export const fraseTrocar = (categoria: string, o: OpcaoPlano) => `troca ${categoria} pela ${o.item} da ${o.loja}`;
+
+const CRITERIO: Record<string, string> = { melhor_avaliada: "melhor avaliadas primeiro", mais_barata: "mais baratas primeiro", mais_rapida: "mais rápidas primeiro" };
 
 type Base = { plano: PlanoTela; busy: boolean; onSend: (texto: string) => void; onAdjust: () => void };
 
@@ -36,9 +42,48 @@ function Avisos({ plano }: Readonly<{ plano: PlanoTela }>) {
 const Origem = ({ origem }: Readonly<{ origem: string }>) =>
   origem === "real" ? <Badge variant="success">iFood real</Badge> : <Badge variant="simulated">Simulado</Badge>;
 
+// Opções que o atendente acabou de pesquisar: a pessoa vê o que ele está falando e escolhe tocando.
+export function OpcoesView({ plano, busy, onSend, onAdjust }: Readonly<Base>) {
+  const reduceMotion = useReducedMotion();
+  const [aberto, setAberto] = useState<string | null>(null);
+  const grupos = (plano.opcoes ?? []).filter((g) => g.itens.length > 0);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mt-1 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-4 pt-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="font-display text-2xl font-semibold">Opções para você</h2>
+          <span className="shrink-0 text-xs text-muted-foreground">toque para escolher</span>
+        </div>
+        {grupos.map((g, gi) => (
+          <section key={`${g.categoria}-${gi}`} className="mt-3" aria-label={`Opções de ${g.categoria}`}>
+            <div className="flex items-center gap-2 px-2">
+              <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">{g.categoria}</h3>
+              {g.criterio && CRITERIO[g.criterio] && <span className="text-xs text-muted-foreground">· {CRITERIO[g.criterio]}</span>}
+              {g.itens[0] && <span className="ml-auto"><Origem origem={g.itens[0].origem} /></span>}
+            </div>
+            <ul className="flex flex-col divide-y divide-border">
+              {g.itens.map((o, i) => {
+                const { option, tag, media } = paraOption(o);
+                return (
+                  <motion.li key={o.ref} className="min-w-0" initial={reduceMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: (gi * 3 + i) * 0.05 }}>
+                    <ResultCard option={option} tag={tag} media={media} first={gi === 0 && i === 0} expanded={aberto === o.ref} disabled={busy}
+                      onToggle={() => setAberto(aberto === o.ref ? null : o.ref)} onSelect={() => onSend(fraseEscolher(o))} onAdjust={onAdjust} />
+                  </motion.li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+        <p className="mt-3 text-center text-xs text-muted-foreground">Preço de cada unidade, direto do iFood. Toque numa opção ou diga qual prefere.</p>
+      </div>
+    </div>
+  );
+}
+
 export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonly<Base & { atualizado: boolean }>) {
   const reduceMotion = useReducedMotion();
   const [aberto, setAberto] = useState<string | null>(null);
+  const [mais, setMais] = useState<string | null>(null);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mt-1 min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-4 pt-4">
@@ -57,9 +102,28 @@ export function PlanoView({ plano, atualizado, busy, onSend, onAdjust }: Readonl
                   {b.sugestao && <Badge>Sugestão</Badge>}
                   <span className="ml-auto"><Origem origem={b.principal.origem} /></span>
                 </div>
-                {/* Sem "Selecionar": trocar de alternativa tocando fica para depois; ajustar é falar ou digitar. */}
+                {/* A escolhida não tem "Selecionar"; as alternativas sim: tocar troca o item no plano (pelo atendente). */}
                 <ResultCard option={option} tag={tag} media={media} first={i === 0} expanded={aberto === b.necessidadeId} disabled={busy}
                   onToggle={() => setAberto(aberto === b.necessidadeId ? null : b.necessidadeId)} onAdjust={onAdjust} />
+                {b.alternativas.length > 0 && (
+                  <Button variant="ghost" size="sm" className="ml-1" aria-expanded={mais === b.necessidadeId} onClick={() => setMais(mais === b.necessidadeId ? null : b.necessidadeId)}>
+                    {mais === b.necessidadeId ? <ChevronUp /> : <ChevronDown />}
+                    {mais === b.necessidadeId ? "Esconder opções" : `Ver mais opções (${b.alternativas.length})`}
+                  </Button>
+                )}
+                {mais === b.necessidadeId && (
+                  <ul className="ml-3 flex flex-col divide-y divide-border border-l-2 border-border pl-2" aria-label={`Outras opções de ${b.categoria}`}>
+                    {b.alternativas.map((o) => {
+                      const alt = paraOption(o);
+                      return (
+                        <li key={o.ref} className="min-w-0">
+                          <ResultCard option={alt.option} tag={alt.tag} media={alt.media} first={false} expanded={aberto === o.ref} disabled={busy}
+                            onToggle={() => setAberto(aberto === o.ref ? null : o.ref)} onSelect={() => onSend(fraseTrocar(b.categoria, o))} onAdjust={onAdjust} />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </motion.li>
             );
           })}
