@@ -77,6 +77,7 @@ export const ConverseInputSchema = z.strictObject({
   // Começa uma conversa nova (zera o estado do agente; o login iFood continua).
   reiniciar: z.boolean().optional(),
   configuracao: ConfiguracaoItemSchema.optional(),
+  consentimentoSinais: z.boolean().optional(),
 });
 export type ConverseInput = z.infer<typeof ConverseInputSchema>;
 

@@ -39,7 +39,7 @@ export interface ConverseOptions {
   onMeta?: (meta: AgentMeta) => void; // quem respondeu e como (modelo, estado, nível, tempos); só no formato JSON atual
 }
 
-export async function* converseTurn(input: Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses" | "configuracao">, opts: ConverseOptions = {}): AsyncGenerator<ConverseEvent> {
+export async function* converseTurn(input: Pick<ConverseInput, "texto" | "origem" | "sinais" | "hipoteses" | "configuracao" | "consentimentoSinais">, opts: ConverseOptions = {}): AsyncGenerator<ConverseEvent> {
   const doFetch = opts.fetchImpl ?? fetch;
   const turnId = (opts.newTurnId ?? (() => `t${Date.now().toString(36)}`))();
   let res: Response;

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const reply = await visitorSessions.run(resolved.visitor, async (conversation) => {
       if (input.reiniciar) reiniciarAtendente(conversation.subjectRef);
       const s = (input.reiniciar ? reiniciarSessao : sessaoDo)(conversation.subjectRef);
-      return executarAtendente(s, input, { modelo, nomeModelo, domain, nome: nomeConhecido(subjectRef), sinal: registrarSinal });
+      return executarAtendente(s, input, { modelo, nomeModelo, domain, nome: nomeConhecido(subjectRef), ...(input.consentimentoSinais === true ? { sinal: registrarSinal } : {}) });
     });
     console.info(`[converse] mcp=${real ? "real" : "mock"} llm=${reply.llm} estado=${reply.estado} modelo=${reply.tempos.interpretarMs}ms dominio=${reply.tempos.dominioMs ?? "-"}ms total=${reply.tempos.totalMs}ms`);
     return jsonResponse(reply, 200, cookie);

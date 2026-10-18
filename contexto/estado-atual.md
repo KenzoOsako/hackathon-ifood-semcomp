@@ -314,3 +314,8 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Branch feat/malveste-sinais-demanda. O atendente registra sinais estruturados quando as ferramentas rodam: busca (categoria, vertical, restrições, nº de resultados), plano (ocasião, faixa de pessoas, itens, não atendidos) e aprovação. Sem conversa, texto livre, nome, endereço ou ID; termo com cara de dado pessoal é descartado.
 - `src/data/sinais.ts` guarda em memória (limite 5000) e agrega; `GET /api/sinais` devolve só contagens; `/painel` mostra "Pediram e não tinha", mais procurados, restrições, ocasiões e combinações, com selo de catálogo real/simulado. `mostrar_plano` ganhou o campo opcional `ocasiao`.
 - Pendente: persistência entre instâncias e piso de anonimato (hoje 1 para a demo; em produção ≥5). Benefício ao iFood é hipótese.
+
+## Correção do PR37 — 18/10/2026
+- Corrigidos os quatro alertas publicados pelo Sonar: sort com localeCompare, Promise explicitamente tratada e props Readonly.
+- Painel trata HTTP não-2xx como erro. Rótulos gerais fechados impedem publicação de nomes/texto livre; coleta só com adesão explícita opcional na conversa, desmarcada por padrão.
+- Nova cobertura: nome em ocasião/agregação direta e rota sem consentimento/com adesão/retirada. Integrada main com renomeação Mimo do PR36.

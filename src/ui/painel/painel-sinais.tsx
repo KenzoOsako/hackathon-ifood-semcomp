@@ -13,8 +13,8 @@ export function PainelSinais() {
   const [dados, setDados] = useState<Resposta | null>(null);
   const [erro, setErro] = useState(false);
 
-  const carregar = () => fetch("/api/sinais").then((r) => r.json()).then((d: Resposta) => { setDados(d); setErro(false); }).catch(() => setErro(true));
-  useEffect(() => { carregar(); }, []);
+  const carregar = () => fetch("/api/sinais").then((r) => { if (!r.ok) throw new Error("Falha ao carregar sinais"); return r.json(); }).then((d: Resposta) => { setDados(d); setErro(false); }).catch(() => setErro(true));
+  useEffect(() => { void carregar(); }, []);
 
   const a = dados?.agregados;
   const vazio = a && a.buscas + a.planos === 0;
@@ -24,7 +24,7 @@ export function PainelSinais() {
       <header className="flex items-center gap-2 px-3 py-2">
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para a conversa"><Link href="/agente"><ArrowLeft /></Link></Button>
         <span className="font-display text-lg font-medium">O que o Mimo aprende</span>
-        <Button variant="ghost" size="icon" className="ml-auto" aria-label="Atualizar" onClick={carregar}><RefreshCw /></Button>
+        <Button variant="ghost" size="icon" className="ml-auto" aria-label="Atualizar" onClick={() => { void carregar(); }}><RefreshCw /></Button>
       </header>
 
       <div className="grid gap-4 px-4 pb-6">
@@ -56,7 +56,7 @@ export function PainelSinais() {
   );
 }
 
-function Numero({ rotulo, valor }: { rotulo: string; valor: number }) {
+function Numero({ rotulo, valor }: Readonly<{ rotulo: string; valor: number }>) {
   return (
     <div className="rounded-xl bg-secondary px-2 py-3">
       <p className="text-2xl font-bold">{valor}</p>
@@ -65,7 +65,7 @@ function Numero({ rotulo, valor }: { rotulo: string; valor: number }) {
   );
 }
 
-function Lista({ titulo, dica, itens, destaque }: { titulo: string; dica?: string; itens: Contagem[]; destaque?: boolean }) {
+function Lista({ titulo, dica, itens, destaque }: Readonly<{ titulo: string; dica?: string; itens: Contagem[]; destaque?: boolean }>) {
   if (!itens.length) return null;
   const max = itens[0].total;
   return (

@@ -95,3 +95,7 @@ Escolhas vinculadas a planoId/versão/necessidade/ref; IDs e preços vêm do det
 - Decisão: aprender com as conversas registrando só sinais estruturados que o código já tem nas ferramentas (categoria, restrição, resultados, ocasião, itens juntos, aprovação), nunca transcrição, texto livre ou identificador. O LLM não gera os sinais.
 - Sem pedido de consentimento por ora (decisão do Malveste: protótipo, os dados não são usados). Diverge da regra do AGENTS.md "consentimento separado para uso agregado"; antes de qualquer uso real, entra um opt-out. Painel só com agregados e selo de origem.
 - Sem banco nem dependência nova: memória do servidor, persistência declarada como pendente.
+
+## D-020 — Correções do PR37: consentimento e rótulos fechados (18/10/2026, execução solicitada pelo Kenzo)
+- Corrige a divergência de D-019 com AGENTS.md: coleta desligada por padrão, caixa opcional separada na conversa; cada turno só registra quando consentimentoSinais=true. Retirar interrompe registros futuros; agregados já coletados não têm identificador para remoção individual.
+- Campos do painel usam vocabulário fechado; texto não reconhecido vira outros e dados pessoais reconhecidos são descartados. A memória usa nova chave para não reutilizar sinais livres antigos. Ainda RAM e contagens da demo, sem alegação de anonimato estatístico formal.
