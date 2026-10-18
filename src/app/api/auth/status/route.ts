@@ -1,13 +1,16 @@
 import { visitorSessions } from "@/agent/visitor-session";
 import { jsonResponse } from "@/agent/http";
 import { conectado } from "@/mcp/real/oauth";
+import { aquecerAgente } from "@/agent/aquecer";
 
 // Para a UI saber se mostra "Conectar iFood". Não expõe token nem dado da conta.
 export async function GET(req: Request) {
   const modo = (process.env.MCP_MODE ?? "mock") === "real" ? "real" : "mock";
   try {
     const { visitor } = visitorSessions.resolve(req, false);
-    return jsonResponse({ modo, conectado: conectado(visitor.conversation.subjectRef) });
+    const ok = conectado(visitor.conversation.subjectRef);
+    if (ok || modo === "mock") aquecerAgente(visitor.conversation.subjectRef, modo === "real" && ok); // em segundo plano
+    return jsonResponse({ modo, conectado: ok });
   } catch {
     return jsonResponse({ modo, conectado: false });
   }
