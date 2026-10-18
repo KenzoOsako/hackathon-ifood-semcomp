@@ -77,3 +77,9 @@
 - **Alternativa rejeitada:** JSON-RPC à mão sobre `fetch` (menos dependência, mas handshake, sessão e SSE manuais).
 - **Consequência:** dependência nova no `package.json`/lockfile. Modo real exige `MCP_MODE=real` e o app na porta do redirect cadastrado (`8080`).
 
+
+## D-017 — O agente vira atendente com ferramentas; sai o agente por regras (18/10/2026 ~05h, Hyago, decidido com o time)
+- **Contexto:** o agente por regras (LLM preenche um formulário; o orquestrador decide o fluxo; outro LLM narra) caía em frases fixas e decisões ruins: pedido em aberto ("algo diferente") virava categoria vaga, busca vazia, pergunta do modelo descartada pelo teto ou por intenção "errada". Testado pelo Hyago no iFood real.
+- **Decisão:** `src/agent/atendente`: uma chamada de LLM com ferramentas só de leitura (`buscar_no_ifood`, `mostrar_plano`, `pedir_revisao`) conduz a conversa, vê o histórico e pesquisa quando precisa. O código só guarda: aprovação pela frase explícita e versão (sacola), "fechou" leva à revisão, sem álcool, sem dado pessoal, sem "pedido feito", preço e loja só do iFood.
+- **Removido:** orquestrador, LLM por regras, prompts de interpretação/resposta/relevância, juiz de relevância, telemetria do orquestrador, evals e testes de qualidade (caos, invariantes, mutação) que só serviam a ele.
+- **Consequência:** sem LLM configurado o /api/converse responde 503 (não há mais modo por regras). `ATENDENTE_MODEL` permite um modelo maior só para o atendente. A latência do Terossi passa a mirar o atendente (1–2 chamadas ao modelo + busca por turno).

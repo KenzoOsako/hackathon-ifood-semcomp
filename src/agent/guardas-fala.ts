@@ -5,7 +5,6 @@
 //     e se citar o plano; se faltar algo ou houver opção aproximada, tem de dizer. Senão cai no template.
 // O oráculo de testes (src/qualidade/invariantes.ts) confere o resultado com regras próprias: duas camadas independentes.
 import { speakableIssues } from "@/voice/speakable";
-import { falaRespeitaSnapshot } from "@/prompts/responder";
 import { temDadoPessoal } from "./privacidade";
 import { MAX_NECESSIDADES } from "./limites";
 import type { OpcaoPlano, PlanoSnapshot, TurnoInterpretado } from "./types";
@@ -152,4 +151,29 @@ export function higienizarAjuste(a: TurnoInterpretado["ajuste"]): TurnoInterpret
   if (!a) return a;
   const categoria = a.categoria ? limparNome(a.categoria, 60) : undefined;
   return { criterio: a.criterio, ...(categoria ? { categoria } : {}) };
+}
+
+// Números citados na fala precisam existir no snapshot (preço, nota, quantidade, prazo).
+export function numerosPermitidos(plano: PlanoSnapshot): Set<string> {
+  const ok = new Set<string>();
+  const add = (s: string) => { for (const m of s.match(/\d+(?:[.,]\d+)?/g) ?? []) ok.add(m.replace(".", ",")); };
+  for (const b of plano.blocos) {
+    add(b.categoria);
+    for (const o of [b.principal, ...b.alternativas]) {
+      add(o.loja); // "Loja 24h", "Padaria 2 Irmãos": o dígito do nome é fato do plano
+      add((o.precoCents / 100).toFixed(2)); add(String(o.precoCents / 100));
+      if (o.freteCents !== undefined) add((o.freteCents / 100).toFixed(2));
+      if (o.nota !== undefined) add(String(o.nota));
+      add(o.item); add(o.prazo ?? "");
+    }
+    add(String(b.quantidade));
+  }
+  plano.pendencias.forEach(add);
+  plano.naoAtendidas.forEach((n) => add(n.categoria));
+  return ok;
+}
+
+export function falaRespeitaSnapshot(fala: string, plano: PlanoSnapshot): boolean {
+  const ok = numerosPermitidos(plano);
+  return (fala.match(/\d+(?:[.,]\d+)?/g) ?? []).every((n) => ok.has(n.replace(".", ",")));
 }

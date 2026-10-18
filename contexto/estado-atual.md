@@ -266,3 +266,9 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Próximo: fluxo de atendente (rascunho do plano com itens e quantidades antes de buscar lojas; direto às lojas só com pressa), em PR separado.
 - Review do Kenzo no #29: lojas agora agrupam por `lojaId` (merchantId do MCP; `fake:<nome>` no mock; nome só como reserva) na sacola e na revisão, com teste de estabelecimentos distintos com o mesmo nome (falha no código antigo). Conflito com o #28 resolvido mantendo as duas linhas (telemetria da falha + volta a S1). Aprovação mantida como está, combinado entre Hyago e Kenzo: aprovar compra no iFood é fictício no hackathon e fica fora do escopo.
 - Validação: typecheck, build e 539 testes passaram; lint sem erros (10 avisos já existentes na main, vindos do #28). Jornada na /agente (mock, Chrome automatizado): plano v1 → v2 → revisão → sacola com 3 lojas por id, total R$ 186,70.
+
+## Atendente com ferramentas substitui o agente por regras — 18/10/2026, ~05h (Hyago, decidido com o time)
+- Branch feat/hyago-atendente. `src/agent/atendente`: o LLM conduz a conversa e pesquisa no iFood com ferramentas só de leitura (`buscar_no_ifood`, `mostrar_plano`, `pedir_revisao`); o código só guarda (aprovação explícita por versão → sacola, "fechou" → revisão, sem álcool, sem dado pessoal, sem "pedido feito"). Tela, voz e sacola sem mudança.
+- Removidos: orquestrador, LLM por regras, prompts antigos, juiz de relevância, telemetria do orquestrador, evals e qualidade (caos/invariantes/mutação). Sessão foi para `src/agent/sessao.ts`.
+- Provas: teste do Hyago no iFood real ("funcionou muito melhor"); conversa em mock pela API (algo diferente → buscou 3 cozinhas sozinho → comparou notas → plano → revisão → sacola); 6 testes novos das guardas do atendente (modelo roteirizado) + 2 da sacola.
+- Conhecido: "pra 2 pessoas" saiu 1x no mock (quantidade); latência 2–4 s quando pesquisa.
