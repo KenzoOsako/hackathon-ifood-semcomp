@@ -123,3 +123,44 @@ Ordem combinada: **medir antes de otimizar**.
 - **Latência medida:** conectar ~2,2 s; cada tool 1,5–2,3 s. O MCP pesa mais que o TTS. Implicações: cliente MCP aberto por sessão, buscas por necessidade em paralelo, frase de espera.
 - Cuidados para o `McpDomain`: filtrar `isOpen` e loja com método de entrega; "presente" é amplo e ruidoso (pede pergunta ou termo mais específico); combos com `optionGroups` obrigatórios viram pendência; nota vem como float (arredondar); `agentHints` do servidor são texto para modelo, não instrução para o nosso código.
 - Teste feito com script isolado (fora do repo); amostras de catálogo guardadas localmente para montar o adaptador.
+
+## Plano seguinte: Gemini, inferência e cenários com MCP (17/10 ~23h30, Hyago)
+
+### Onde estamos
+- PR #17 aberto: agente com MCP real (jornada do aniversário comprovada ao vivo, `origem: real`).
+- Gemini conectado via LangChain. Correção necessária: o Gemini rejeita `exclusiveMinimum` no `response_schema` (`orcamento.max` passou de `positive()` para `min(1)`).
+- Medição nas 11 evals: `gemini-3.5-flash-lite` é o escolhido (1,0–2,1 s por turno). `3.8-flash` estoura o timeout de 8 s; `3.1-flash-lite` é irregular (até 41 s); `2.5-flash` está indisponível para chaves novas.
+- Erro real só no C6: o modelo foi literal e não inferiu pipoca (filme) nem presente (aniversário). As demais falhas foram 429 (cota gratuita por minuto).
+- A interpretação é nossa (Gemini no `/api/converse`). ElevenLabs só faz STT/TTS na branch do Felipe; o `agent-prompt.md` dele é do laboratório da ElevenLabs, não do backend.
+
+### Decisão de produto (Hyago): inferir um pouco, confirmar o que o usuário disser
+- O Guide **infere** necessidades implícitas da ocasião (filme → pipoca; aniversário → presente; churrasco → carvão/bebida sem álcool) e as traz como **sugestão rotulada**.
+- O que o usuário **diz** vira necessidade confirmada e preferência da sessão. Sugestão aceita é promovida; sugestão recusada sai e não volta na sessão.
+- Limites: no máximo 2 sugestões por ocasião; sugestão nunca conta como pergunta (teto de 3 continua); nunca contraria uma restrição dita; o motivo da sugestão é a própria fala ("porque vocês vão ver um filme"), sem inventar dado.
+- Preferências ficam **só na sessão**. Guardar entre sessões é dado pessoal: só com consentimento separado (regra V2), fora deste ciclo.
+
+### Fatias (cada uma termina com evals; ordem de execução logo abaixo)
+1. **Inferência com rótulo.** `Necessidade.fonte: "dito" | "inferido"`; prompt com exemplos; regras em código (máx. 2 inferidas, recusada não volta, aceita vira "dito"); plano e fala marcam "sugestão"; o C6 passa.
+2. **Preferências da sessão.** Sabor, restrição, teto e critério ("sempre a mais rápida") ditos pelo usuário ficam na sessão e entram nas próximas buscas e ajustes.
+3. **Evals contra o MCP.** Gravador opcional no `McpDomain` (`MCP_RECORD=<pasta>` salva as respostas de `searchOffers`) e domínio de *replay* que responde com as gravações: cenários com dados reais, determinísticos, offline e sem cota do MCP. Uma bateria "ao vivo" pequena roda à mão com login.
+4. **Cenários novos (~20).** Restrição (sem lactose), teto rígido/flexível, mudança de ideia, ajustes em sequência, pressa/interrupção, ruído de STT, aprovação de versão antiga/"sim" solto/sem plano, categoria sem loja aberta, sugestão aceita/recusada, preferência reaproveitada.
+5. **Cota do Gemini.** Runner das evals com ritmo (`EVAL_RPM`, pausa entre turnos) e cenário avulso (`-t`); no adaptador, uma nova tentativa curta em 429 dentro do timeout; para a demo, faturamento ativo na chave.
+6. **Ponta a ponta.** Jornada com Gemini + MCP real medindo cada etapa; com os números, decidir o NDJSON em fluxo com o Felipe.
+
+### Ordem de execução (combinada 17/10 ~23h45): integrar com a voz antes de refinar
+Motivo: a demo é a jornada falada de ponta a ponta. O turno com busca deve passar de 4 s (Gemini interpretar + MCP ~2 s + Gemini responder) contra a meta de 1,8 s da voz até a primeira palavra; a medição real decide se streaming vale mais que cenários novos.
+1. **Integração com o Felipe** (~1 h): branch local de teste com PR #17 + PR #18, `/voz` na porta 8080 com Gemini + MCP real, medindo STT, interpretar, MCP, responder e TTS. Merge na `main` continua com o Kenzo.
+2. **Fatia 1, inferência rotulada** (~1 h): diferencial de personalização.
+3. **Latência conforme a medição:** frase de espera e NDJSON em fluxo, com o Felipe (seção "Latência (voz + LLM)").
+4. **Fatias 3 e 4:** evals com MCP gravado e cenários novos, como rede de segurança antes do congelamento.
+5. **Fatia 2, preferências da sessão,** se sobrar tempo.
+- Fatia 5 vira só faturamento ativo na chave do Gemini; ritmo e nova tentativa em 429 só se a cota atrapalhar.
+
+### Integração com a voz: ajustes do Felipe (aceitos 18/10 ~00h)
+Plano de implementação em paralelo (fases, donos, ordem de merge): `docs/PLANO_INTEGRACAO_VOZ_AGENTE.md`.
+Esboço visual: https://claude.ai/artifact/7JsbSyNxafps1G9Xzszygn (privado; compartilhar pelo Share).
+1. **Medição de verdade:** build de produção (`next start -p 8080`), do 2º turno em diante (o 1º paga compilação e conexão MCP), 5+ rodadas da jornada do aniversário, p50 e p95 por etapa pelo painel da `/voz` + log do `/api/converse`. Cuidado: 5 jornadas ≈ 40 chamadas ao Gemini; sem faturamento, espaçar as rodadas para não tomar 429.
+2. **Áudio de espera em cache sobe para o passo 2 (Felipe):** toca ~0,1 s depois do STT, antes do Gemini. Ressalva nossa: antes do interpretar não se sabe se o turno vai buscar, perguntar ou recusar, então a frase imediata é **neutra** ("Hum, um instante."). A frase específica ("Deixa eu ver as opções.") continua vindo do agente (`fraseEspera`) só quando ele decide buscar. Se o ack imediato bastar para a meta de 1,8 s, o NDJSON pode não ser necessário.
+3. **Regra de pressa por sinais da voz:** só vale **sem pergunta pendente** do Guide e combinada com a regex de pressa já existente. "Sim" ou "pode" em resposta a uma pergunta não é pressa.
+4. **Reconhecimento incerto em duas faixas:** confiança < ~0,6 → a voz nem envia e pede "Pode repetir?"; 0,6–0,85 → envia e o agente confirma o que entendeu antes de buscar (confirmação não conta no teto de 3 perguntas). `confianca` entra em `sinais` (`src/voice/signals.ts`, do Felipe); o `ConverseInputSchema` já reaproveita esse schema. Limiares a calibrar com gravações reais.
+5. **Privacidade da fala:** o texto falado vai para a ElevenLabs (TTS) e a fala do usuário vai para o Gemini. Regra: a fala do Guide não repete endereço completo, nome nem telefone; endereço vira "Casa"/"Trabalho". Garantir no código do `responder` (fallback se violar), não só no prompt. **A conferir:** política de retenção da ElevenLabs e do Gemini para as nossas contas.

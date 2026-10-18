@@ -29,3 +29,8 @@ _(nenhum ainda)_
 - Causa: curl no Git Bash do Windows converte o argumento --data para outra codificação (jsonBody exige UTF-8 estrito); parar a tarefa de `npx next start` deixa o processo node filho escutando na porta, e o novo servidor falha ao subir sem ninguém notar.
 - Correção: enviar corpo com acento via --data-binary @arquivo ou cliente Node (fetch); depois de parar o servidor, conferir a porta (Get-NetTCPConnection) e checar o log do novo servidor antes de testar.
 
+
+## E-006 — Gemini: todo turno caía em "Não consegui entender" (17/10/2026)
+- Sintoma: com `LLM_PROVIDER=google`, todas as evals falharam igual em ~600 ms, para qualquer modelo; o orquestrador devolvia a frase de falha.
+- Causa: o Gemini rejeita `exclusiveMinimum` no `response_schema` (gerado por `z.number().positive()`); o erro some no `catch` do orquestrador. Depois apareceram 429 da cota gratuita (~15 chamadas/min) e `gemini-2.5-flash` indisponível para chaves novas.
+- Correção: usar `min(...)` em vez de `positive()`/`gt()` nos schemas que vão ao LLM. Para depurar, envolver `llm.interpretar` e registrar o erro do provedor antes de concluir que é prompt ou modelo. Rodar evals reais em ritmo ou por cenário (`-t`).

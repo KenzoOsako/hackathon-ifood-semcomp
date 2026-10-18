@@ -1,5 +1,11 @@
 # Estado atual — 17/10/2026
 
+## K-3 — contrato e domínio local do plano composto
+- Base 18d0aec, branch feat/kenzo-k3-plano-composto. Contratos aditivos em src/contracts/occasion-plan.ts e OccasionPlanStore em src/domain/occasion-plan-store.ts. Detalhes: docs/K3_PLANO_COMPOSTO.md. Card OCS-01: https://trello.com/c/txTvVAKy.
+- Compõe snapshots CartProposal por necessidade, sujeito/endereço únicos, estabelecimentos distintos, origem por bloco e validade mínima. Revisão e aprovação de todos os blocos são uma única mutação local; edição incrementa versão e invalida aprovação; replay/versão antiga/expiração/custo desconhecido não aprovam parcialmente.
+- DTO público remove sujeito/endereço internos; soma preserva unknown/estimated e valida centavos seguros. Restrições declaradas permanecem bloqueadas até composição/eligibilidade verificada ser ligada ao contrato. Fontes de blocos/origem devem ser confiáveis no servidor; validade não comprova atualidade externa.
+- Validação final: 271 testes/26 arquivos, typecheck, lint, build e git diff --check passaram. Revisões independentes de arquitetura e segurança realizadas. Contratos de apresentação atuais e rotas não foram alterados: ligação com /api/converse, aprovação HTTP e consumidores permanece próxima etapa. Nenhuma escrita MCP, compra ou publicação de app habilitada.
+
 Base auditada: main 0867abc; esqueleto no PR #4 / 6c1b414. Esta atualização reconcilia documentação e limpa o template; não implementa a proposta inteira.
 
 ## Decisões e fontes
@@ -175,6 +181,7 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - `/api/converse` com `MCP_MODE=real` usa o domínio real; sem login iFood devolve 401 `IFOOD_LOGIN` com `loginUrl`.
 - **Prova ao vivo:** login com o usuário de teste, jornada do aniversário pelo `/api/converse`: `mcp=real`, busca real em 2,1 s, plano `origem: real` com loja real de São Carlos; pipoca e presente sem loja aberta à noite (dado real).
 - **Não feito:** LLM real não testado (rodou em modo regras); UI ainda usa `/api/chat`, não `/api/converse`; checar presente/pipoca no horário da demo.
+- PR #17 (`feat/hyago-mcp-real`) mergeado na `main`.
 
 ## K-1 e K-5 — Fluxo aprovável na demo e domínio de proposta integrado (17/10/2026)
 - Branch `feat/kenzo-k1-fluxo-aprovavel` sobre `origin/main` (`32bb5b9`, PR #16 integrado).
@@ -193,12 +200,13 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Estados: carregando (esqueletos), vazio ("Não achei nada nesse limite. Quer subir o orçamento?", com chips que só preenchem o campo), erro (alerta com tentar de novo na legenda), 1 opção (já expandida). O estado vazio ainda não é acionado pelo servidor (sem sinal no contrato); só a prévia o exibe. Prévia `/agente/previa` com dez cenários.
 - Decisões tomadas por mim a pedido do dono da UI: #D91A29 no texto sobre vermelho (AA) e #EA1D2C só em borda/orbe; títulos em peso 500; legenda do agente com o texto completo e rolagem interna quando longo; props `Readonly` e `useMemo` no contexto (padrões do Sonar já usados na main).
 - Validação: typecheck, lint, 144 testes e build passaram; cenários da prévia e jornada real a 375px conferidos, console limpo, sem rolagem horizontal.
-## Agente com MCP real no app — 17/10/2026, ~23h30 (Hyago)
-- `src/agent/domain-mcp/`: `McpDomain` implementa o `DomainPort` com `searchOffers` + normalização, elegibilidade e ranking do Kenzo; rótulos (mais barata = preço + frete, mais rápida, mais bem avaliada) só de campos reais; ajustes reordenam o cache sem nova chamada. 7 testes com respostas reais gravadas (`__fixtures__/search-sao-carlos.json`), incluindo a jornada do aniversário pelo orquestrador.
-- `src/mcp/real/`: OAuth PKCE (token só em memória, refresh único 5 min antes, login preso ao mesmo visitante) e cliente MCP por sujeito (D-016). Rotas `/api/auth/{login,concluir,status}` e `/callback`.
-- `/api/converse` com `MCP_MODE=real` usa o domínio real; sem login iFood devolve 401 `IFOOD_LOGIN` com `loginUrl`.
-- **Prova ao vivo:** login com o usuário de teste, jornada do aniversário pelo `/api/converse`: `mcp=real`, busca real em 2,1 s, plano `origem: real` com loja real de São Carlos; pipoca e presente sem loja aberta à noite (dado real).
-- **Não feito:** LLM real não testado (rodou em modo regras); UI ainda usa `/api/chat`, não `/api/converse`; checar presente/pipoca no horário da demo.
+
+## Gemini no agente — 17/10/2026, ~23h45 (Hyago)
+- Gemini ligado pelo adaptador LangChain (`LLM_PROVIDER=google`). Correção em `src/agent/types.ts`: `orcamento.max` passou de `positive()` para `min(1)`, porque o Gemini rejeita `exclusiveMinimum` no esquema da saída estruturada. Branch `feat/hyago-gemini-inferencia`.
+- Medição nas 11 evals com LLM real: `gemini-3.5-flash-lite` escolhido (1,0–2,1 s por turno; 7 passaram, 1 falha real, 3 falhas por cota). `3.8-flash` estoura o timeout de 8 s; `3.1-flash-lite` irregular (até 41 s); `2.5-flash` indisponível para chaves novas.
+- Falha real: C6 (o modelo não inferiu pipoca/presente da ocasião). Decisão do Hyago: inferir um pouco, como sugestão rotulada, e confirmar o que o usuário disser.
+- Cota gratuita do Gemini dá 429 após ~15 chamadas por minuto: para a demo, ativar faturamento.
+- Próximos passos e ordem: `docs/PLANO_AGENTE.md` ("Plano seguinte") e `docs/PLANO_INTEGRACAO_VOZ_AGENTE.md` (voz × agente em paralelo).
 
 ## UI: correções de front-end (feat/malveste-ui-correcoes) — 17/10/2026
 - Branch empilhada sobre `feat/malveste-ui-resultados` (a primeira versão do design ainda não foi mesclada) com a `main` já trazida. Itens: barras de rolagem escondidas só dentro da moldura (regra `.phone-frame`); legenda do agente em até 2 linhas, sem o prefixo "[Simulado]" na tela e com o texto completo só no `aria-live` (sr-only); revisão e continuidade com a faixa do agente compacta (orbe `mini` ao lado da legenda, sem "Ver conversa"), total como maior elemento e "Pendente" em âmbar; microfone indisponível com ícone cortado e borda tracejada (não parece erro); home com logos redondas por culinária, chips decorativos, cupom baixo com "Pegar" decorativo e item ativo da barra preenchido; `StoreLogo` compartilhado (home e resultados; nos resultados ícone neutro e cor estável por `merchantId`, pois o contrato não traz a categoria).
