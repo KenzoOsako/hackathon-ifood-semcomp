@@ -50,6 +50,10 @@ const OFERTAS: Oferta[] = [
   { ref: "bairro-fermento", vertical: "GROCERIES", loja: "Mercado do Bairro", item: "fermento químico em pó, 100 g", termos: ["fermento","ingrediente","bolo"], precoCents: 450, freteCents: 450, prazoMin: 25, prazo: "25 minutos", nota: 4.5 },
   { ref: "bairro-leite-condensado", vertical: "GROCERIES", loja: "Mercado do Bairro", item: "leite condensado, 395 g", termos: ["leite condensado","condensado","brigadeiro","ingrediente","cobertura"], precoCents: 690, freteCents: 450, prazoMin: 25, prazo: "25 minutos", nota: 4.5, contem: ["lactose", "leite", "acucar"] },
   { ref: "bairro-granulado", vertical: "GROCERIES", loja: "Mercado do Bairro", item: "chocolate granulado, 150 g", termos: ["granulado","brigadeiro","cobertura","ingrediente","confeito"], precoCents: 590, freteCents: 450, prazoMin: 25, prazo: "25 minutos", nota: 4.5, contem: ["acucar"] },
+  // Mercado mais rápido e com estoque parcial: sozinho, cada ingrediente cairia num mercado diferente.
+  { ref: "emporio-farinha", vertical: "GROCERIES", loja: "Empório Express", item: "farinha de trigo tipo 1, 1 kg", termos: ["farinha","trigo","ingrediente","bolo"], precoCents: 549, freteCents: 590, prazoMin: 20, prazo: "20 minutos", nota: 4.3, contem: ["gluten"] },
+  { ref: "emporio-ovos", vertical: "GROCERIES", loja: "Empório Express", item: "ovos brancos, dúzia", termos: ["ovo","ovos","ingrediente","bolo"], precoCents: 1190, freteCents: 590, prazoMin: 20, prazo: "20 minutos", nota: 4.3, contem: ["ovo"] },
+  { ref: "emporio-acucar", vertical: "GROCERIES", loja: "Empório Express", item: "açúcar cristal, 1 kg", termos: ["acucar","ingrediente","bolo"], precoCents: 459, freteCents: 590, prazoMin: 20, prazo: "20 minutos", nota: 4.3, contem: ["acucar"] },
   { ref: "livraria-livro", vertical: "SHOPPING", loja: "Livraria Central", item: "livro de culinária ilustrado", termos: ["presente", "livro", "cozinha"], precoCents: 5990, prazoMin: 2880, prazo: "em dois dias", nota: 4.8 },
 ];
 
@@ -123,6 +127,11 @@ export class FakeDomain implements DomainPort {
     const criterio = comDado(candidatos, padrao).length > 0 ? padrao : "mais_barata";
     const lista = [...ordenar(comDado(candidatos, criterio), criterio), ...candidatos.filter((o) => !comDado([o], criterio).length)];
     return Promise.resolve(lista.slice(0, 3).map((o, i) => (i === 0 ? toOpcao(o, criterio) : alternativa(o, lista))));
+  }
+
+  buscarNaLoja(n: Necessidade, lojaId: string, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+    const daLoja = ordenar(this.candidatos(n, ocasiao).filter((o) => `fake:${o.loja}` === lojaId), "mais_barata");
+    return Promise.resolve(daLoja.map((o) => alternativa(o, daLoja)));
   }
 
   montarPlano(input: { subjectRef: string; ocasiao: Ocasiao; itens: { necessidade: Necessidade; opcoes: OpcaoPlano[] }[] }): Promise<PlanoSnapshot> {

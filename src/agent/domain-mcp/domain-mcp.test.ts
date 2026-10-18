@@ -25,6 +25,18 @@ describe("McpDomain com respostas reais gravadas", () => {
     expect(comTeto.map(o => o.ref)).toEqual(semTeto.map(o => o.ref));
     expect(comTeto.some(o => o.precoCents > 100)).toBe(true);
   });
+  it("busca dentro de uma loja com refinements.merchantId, um termo só, e devolve só dessa loja", async () => {
+    const tools = new ToolsGravadas();
+    const d = new McpDomain(tools, local);
+    const geral = await d.buscarNecessidade(pizza, {});
+    const lojaId = geral[0].lojaId!;
+    tools.chamadas.length = 0;
+    const naLoja = await d.buscarNaLoja({ ...pizza, consultas: ["pizza", "pizza grande"] }, lojaId, {});
+    expect(tools.chamadas).toHaveLength(1);
+    expect(tools.chamadas[0].args).toMatchObject({ query: "pizza", refinements: { onlyOpen: true, merchantId: lojaId } });
+    expect(naLoja.length).toBeGreaterThan(0);
+    expect(naLoja.every((o) => o.lojaId === lojaId)).toBe(true);
+  });
   it("chama searchOffers com o contrato real e só devolve lojas abertas com entrega", async () => {
     const tools = new ToolsGravadas();
     const opcoes = await new McpDomain(tools, local).buscarNecessidade(pizza, {});

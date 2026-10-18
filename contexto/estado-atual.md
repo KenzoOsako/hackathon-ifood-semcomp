@@ -1,3 +1,13 @@
+## Mercado único e pedidos por loja — 18/10/2026 (Hyago)
+
+- Branch feat/hyago-mercado-unico. O iFood fecha um carrinho por loja; antes cada ingrediente ia para o 1º da sua busca (farinha num mercado, leite noutro).
+- `src/agent/mercado-unico.ts`: os itens GROCERIES do plano vão para um mercado só (o que cobre mais itens; empate pelo menor total com um frete). O que a busca geral não trouxe dele é buscado dentro da loja (`buscarNaLoja`, `searchOffers` com `refinements.merchantId`, 1 termo, 2 mercados candidatos). O que ele não tem vira falta (naoAtendidas) com as opções de fora para o modelo perguntar; nunca puxa outra loja sozinho. Item escolhido pela pessoa (ref) não é trocado. Pedido mínimo recalculado por loja.
+- Revisão e sacola dizem "São N pedidos separados no iFood, um por loja" e numeram "Pedido 1/2". Prompt e resultado de `pedir_revisao` avisam o modelo.
+- Mock: Empório Express (mais rápido, só farinha/ovos/açúcar) para provar que sem unificar a lista se espalha.
+- Provas: typecheck, lint, 456 testes (54 arquivos), build. Mock + Gemini: bolo feito em casa + rosas → 7 ingredientes no Mercado do Bairro, rosas na Casa dos Presentes, revisão com "2 pedidos", sacola Pedido 1/Pedido 2.
+- Não verificado: `refinements.merchantId` no iFood real (documentado, nunca chamado por nós).
+- Removido o checkbox de consentimento de sinais da tela `/agente` (pedido do Hyago). Sem ele o consentimento fica sempre falso: as conversas deixam de registrar sinais no painel. Backend de sinais intacto.
+
 ## Complementos por item e guardas — 18/10/2026 (Kenzo)
 
 - Branch local feat/kenzo-complementos, base origin/main d0a688c. Implementados detalhe getItem, grupos/seleções por item, UI, fluxo texto/voz, recálculo de adicionais, revisão e sacola. Detalhes: docs/COMPLEMENTOS_ITENS.md.
