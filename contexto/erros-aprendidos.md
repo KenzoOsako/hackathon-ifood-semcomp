@@ -23,3 +23,9 @@ _(nenhum ainda)_
 - Sintoma: após rodar `npm run dev`, `git status` mostra AGENTS.md modificado com um bloco `nextjs-agent-rules`.
 - Causa: o Next 16 gera esse bloco sozinho no AGENTS.md ao subir o servidor de desenvolvimento.
 - Correção: não commitar a mudança (AGENTS.md é do integrador); desfazer com `git checkout AGENTS.md` antes de `git add`. Conferir `git status` depois de cada `npm run dev`.
+
+## E-005 — Smoke HTTP no Windows: acento no curl e servidor órfão (17/10/2026)
+- Sintoma: /api/converse respondeu INVALID_DATA para falas com acento; depois, o smoke rodou contra código antigo.
+- Causa: curl no Git Bash do Windows converte o argumento --data para outra codificação (jsonBody exige UTF-8 estrito); parar a tarefa de `npx next start` deixa o processo node filho escutando na porta, e o novo servidor falha ao subir sem ninguém notar.
+- Correção: enviar corpo com acento via --data-binary @arquivo ou cliente Node (fetch); depois de parar o servidor, conferir a porta (Get-NetTCPConnection) e checar o log do novo servidor antes de testar.
+
