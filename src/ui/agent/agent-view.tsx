@@ -27,7 +27,7 @@ const STATE_LABEL: Record<OrbState, string> = {
 };
 
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
-const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
+const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 60"];
 // Sem resultado, estas frases só preenchem o campo; quem decide enviar é a pessoa.
 // Abas decorativas da busca (só cenário).
 const TABS = ["Todo o iFood", "Restaurantes", "Mercados", "Farmácias"];
