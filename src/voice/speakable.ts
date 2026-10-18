@@ -1,4 +1,4 @@
-// "Fala válida": verifica se um texto serve para ser FALADO pelo Guide. É um portão de qualidade para testes e evals
+// "Fala válida": verifica se um texto serve para ser FALADO pelo Mimo. É um portão de qualidade para testes e evals
 // (não bloqueia nada em produção). Regras vêm do guia de estilo de voz (docs/AGENTE_CONVERSA_E_FLUXO.md §5).
 export interface SpeakableOptions {
   maxChars?: number; // fala longa cansa; o prompt pede no máximo três frases curtas

@@ -53,7 +53,7 @@ export class EndpointDetector {
   }
 }
 
-// Interrupção por voz enquanto o Guide fala: exige voz SUSTENTADA e mais forte que o normal, para o eco do
+// Interrupção por voz enquanto o Mimo fala: exige voz SUSTENTADA e mais forte que o normal, para o eco do
 // próprio alto-falante (ou um estalo) não cortar a fala.
 export interface BargeInOptions {
   threshold: number;
@@ -102,7 +102,7 @@ export class NoiseFloor {
     return Math.min(max, Math.max(min, this.floor * factor));
   }
 
-  // Interromper o Guide pede voz mais forte (o alto-falante vaza no microfone).
+  // Interromper o Mimo pede voz mais forte (o alto-falante vaza no microfone).
   bargeInThreshold(min = 0.03, max = 0.12, factor = 6): number {
     return Math.min(max, Math.max(min, this.floor * factor));
   }

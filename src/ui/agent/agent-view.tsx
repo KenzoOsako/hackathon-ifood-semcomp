@@ -111,7 +111,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
     <div className="agent-bg flex min-h-0 flex-1 flex-col">
       <header className="flex items-center gap-2 px-3 py-2">
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
-        <span className="font-display text-lg font-medium">FoodPilot</span>
+        <span className="font-display text-lg font-medium">Mimo</span>
         {DATA_ORIGIN === "mock" && <Badge variant="simulated" className="ml-auto">Simulado</Badge>}
       </header>
 
@@ -208,7 +208,7 @@ export function AgentView(p: Readonly<AgentViewProps>) {
                       key={m.id}
                       className={cn("max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm", m.from === "voce" ? "justify-self-end bg-accent text-accent-foreground" : "justify-self-start bg-secondary text-secondary-foreground")}
                     >
-                      <span className="sr-only">{m.from === "voce" ? "Você: " : "FoodPilot: "}</span>
+                      <span className="sr-only">{m.from === "voce" ? "Você: " : "Mimo: "}</span>
                       {m.text}
                     </li>
                   ))}

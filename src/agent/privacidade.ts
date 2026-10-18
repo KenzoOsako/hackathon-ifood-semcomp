@@ -1,4 +1,4 @@
-// A fala do Guide vai para o TTS de terceiros (ElevenLabs): não pode carregar dado pessoal.
+// A fala do Mimo vai para o TTS de terceiros (ElevenLabs): não pode carregar dado pessoal.
 // Checagem em código, não só no prompt. Preço ("R$ 39,90"), tempo ("25 min") e distância ("1,2 km") passam.
 const DADO_PESSOAL = [
   /\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/,                         // CPF

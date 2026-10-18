@@ -15,7 +15,7 @@ export function createBrowserDeps(player: PlayerLike, getTerms?: () => string[],
     supported: () => typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia,
 
     async openMic() {
-      // Cancelamento de eco ligado: o Guide fala no mesmo alto-falante e o navegador subtrai a própria voz.
+      // Cancelamento de eco ligado: o Mimo fala no mesmo alto-falante e o navegador subtrai a própria voz.
       // Ganho automático DESLIGADO: ele amplifica o ruído nas pausas e atrapalha o detector de fim de fala.
       const media = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
       const ctx = new AudioContext();

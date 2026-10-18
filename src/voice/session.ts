@@ -4,8 +4,8 @@
 //
 // Dois modos:
 //  - Manual: Falar / Parar (a pessoa decide quando termina).
-//  - Sem as mãos: o Guide abre o microfone, PARA sozinho depois de um silêncio, reconhece, responde falando e
-//    abre de novo. Falar por cima do Guide (voz sustentada) interrompe a fala.
+//  - Sem as mãos: o Mimo abre o microfone, PARA sozinho depois de um silêncio, reconhece, responde falando e
+//    abre de novo. Falar por cima do Mimo (voz sustentada) interrompe a fala.
 import { LIMIARES_CONFIANCA } from "@/agent/frases";
 import { BargeInDetector, EndpointDetector, NoiseFloor, DEFAULT_ENDPOINT, type EndpointOptions } from "./endpoint";
 import { LatencyTrace, type LatencySummary, type Mark } from "./latency";
@@ -84,7 +84,7 @@ export interface SessionEvents {
   onHandsFree(on: boolean): void;
   onUtterance(u: Utterance, api: VoiceApi): void;
   onLatency?(s: LatencySummary): void;
-  // Reconhecimento incerto: a fala NÃO foi ao agente; o Guide pede para repetir. A tela pode mostrar o que ouviu.
+  // Reconhecimento incerto: a fala NÃO foi ao agente; o Mimo pede para repetir. A tela pode mostrar o que ouviu.
   onUnclear?(texto: string, confianca: number): void;
 }
 
@@ -94,7 +94,7 @@ export const LOW_CONFIDENCE = LIMIARES_CONFIANCA.repetir;
 export { UNCLEAR_PHRASE };
 
 const TICK_MS = 50;
-const COOLDOWN_AFTER_SPEECH_MS = 500; // não reabre o microfone na cauda da fala do Guide (eco)
+const COOLDOWN_AFTER_SPEECH_MS = 500; // não reabre o microfone na cauda da fala do Mimo (eco)
 const MAX_SILENT_ROUNDS = 3; // tentativas seguidas sem fala antes de desligar o modo sem as mãos
 const REPLY_TIMEOUT_MS = 15_000; // esperando a resposta do agente; passado isso, volta a ouvir
 
@@ -274,7 +274,7 @@ export class VoiceSession {
     this.trace = new LatencyTrace();
     this.d.warm?.();
     if (!(await this.ensureMic())) return;
-    // INTERRUPÇÃO: se o Guide está falando, corta a fala e registra que houve interrupção.
+    // INTERRUPÇÃO: se o Mimo está falando, corta a fala e registra que houve interrupção.
     this.interrupted = this.d.player.stop() || viaBargeIn;
     this.clearAwait();
     const t = this.d.now();
@@ -330,7 +330,7 @@ export class VoiceSession {
     const t = this.d.now();
     const level = this.mic.meter.read();
     this.ev.onLevel(level);
-    // Ruído de fundo: só aprende quando ninguém está falando (nem o usuário, nem o Guide).
+    // Ruído de fundo: só aprende quando ninguém está falando (nem o usuário, nem o Mimo).
     const speaking = this.d.player.speaking;
     if (!speaking) this.noise.push(level);
     const thr = this.noise.speechThreshold();
@@ -415,7 +415,7 @@ export class VoiceSession {
     }
   }
 
-  // Texto duvidoso: não vai ao agente. O Guide pede para repetir; depois de 3 seguidas, desiste e avisa (sem laço infinito).
+  // Texto duvidoso: não vai ao agente. O Mimo pede para repetir; depois de 3 seguidas, desiste e avisa (sem laço infinito).
   private afterUnclear(texto: string, confianca: number) {
     this.setState("idle");
     this.unclearRounds++;

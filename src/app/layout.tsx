@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FoodPilot",
+  title: "Mimo",
   description: "Copiloto de voz para pedir no iFood",
 };
 

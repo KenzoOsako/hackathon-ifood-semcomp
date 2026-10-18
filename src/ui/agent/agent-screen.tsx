@@ -15,7 +15,7 @@ import { OpcoesView, PlanoView, RevisaoView, SacolaView } from "./guide-telas";
 // Ocasiões de exemplo (storyboard): enviam a frase como se a pessoa tivesse falado.
 const SUGGESTIONS = ["Aniversário de um amigo, pizza em casa e filme", "Meu filho está gripado, quero algo leve", "Churrasco para 8 pessoas"];
 
-// Tela de produto do Guide. Layout do Malveste (resultados em cima, orbe e conversa embaixo); quem decide o que
+// Tela de produto do Mimo. Layout do Malveste (resultados em cima, orbe e conversa embaixo); quem decide o que
 // aparece em cima é o `tela.tipo` que o agente mandou. Sem tela, só o orbe e a legenda (abertura e perguntas).
 export function AgentScreen() {
   const g = useAgent();
@@ -47,7 +47,7 @@ export function AgentScreen() {
     <div className="agent-bg flex min-h-0 flex-1 flex-col overflow-y-auto">
       <header className="flex items-center gap-2 px-3 py-2">
         <Button asChild variant="ghost" size="icon" aria-label="Voltar para o início"><Link href="/"><ArrowLeft /></Link></Button>
-        <span className="font-display text-lg font-medium">FoodPilot</span>
+        <span className="font-display text-lg font-medium">Mimo</span>
         {simulado ? <Badge variant="simulated" className="ml-auto">Simulado</Badge> : !g.login && <Badge variant="success" className="ml-auto">iFood real</Badge>}
       </header>
 
@@ -97,7 +97,7 @@ export function AgentScreen() {
                 <ul id="conversa" role="log" aria-label="Conversa" className={cn("mb-2 grid gap-2 overflow-y-auto rounded-2xl bg-background/90 p-2", hasView ? "max-h-24" : "max-h-36")}>
                   {g.lines.map((m) => (
                     <li key={m.id} className={cn("max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm", m.from === "voce" ? "justify-self-end bg-accent text-accent-foreground" : "justify-self-start bg-secondary text-secondary-foreground")}>
-                      <span className="sr-only">{m.from === "voce" ? "Você: " : "Guide: "}</span>
+                      <span className="sr-only">{m.from === "voce" ? "Você: " : "Mimo: "}</span>
                       {m.text}
                     </li>
                   ))}
