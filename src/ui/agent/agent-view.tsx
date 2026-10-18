@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, MicOff, Search, Send, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Mic, MicOff, Send } from "lucide-react";
 import type { Option, PublicProposal } from "@/contracts";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
@@ -29,8 +29,6 @@ const STATE_LABEL: Record<OrbState, string> = {
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
 const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 60"];
 // Sem resultado, estas frases só preenchem o campo; quem decide enviar é a pessoa.
-// Abas decorativas da busca (só cenário).
-const TABS = ["Todo o iFood", "Restaurantes", "Mercados", "Farmácias"];
 const EMPTY_HINTS = ["Quero gastar até R$ 60", "Pode ser outra comida"];
 
 export type AgentViewProps = {
@@ -75,7 +73,12 @@ export function AgentView(p: Readonly<AgentViewProps>) {
   // Parado, mostra a última resposta do agente (no modo texto ela é a "fala"); nos demais estados, o estado.
   const spoken = orbState === "idle" || orbState === "speaking" ? (lastReply ?? STATE_LABEL.idle) : STATE_LABEL[orbState];
   // O selo "Simulado" do cabeçalho já rotula o dado; o prefixo só poluiria a legenda visível.
-  const shown = spoken.replace(/^\[Simulado\]\s*/, "");
+  const lastText = spoken.replace(/^\[Simulado\]\s*/, "");
+  // Na lista de opções a legenda é só um convite a escolher: o texto longo do agente (endereço, regras de
+  // limite) continua em "Ver conversa" e no leitor de tela, mas não disputa espaço com as opções.
+  const listing = p.view === "options" && p.options.length > 0 && !p.busy && !p.error;
+  const hint = p.options.length > 1 ? "Toque numa opção ou diga qual prefere" : "Toque na opção para continuar";
+  const shown = listing && (orbState === "idle" || orbState === "speaking") ? hint : lastText;
   // Revisão e continuidade precisam de altura: o orbe vira uma bolinha ao lado da legenda.
   const compact = p.view === "proposal" || p.view === "continue";
 
@@ -119,24 +122,13 @@ export function AgentView(p: Readonly<AgentViewProps>) {
       >
         {(p.view === "options" || p.view === "empty" || searching) && (
           <>
-            <div className="px-4 pb-2">
-              <div className="flex h-11 items-center gap-2 rounded-full bg-card px-4 shadow-sm">
-                <Search className="size-5 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate text-base">{p.query}</span>
-                <span aria-hidden="true" className="flex size-5 items-center justify-center rounded-full bg-muted-foreground text-background"><X className="size-3" /></span>
-              </div>
-              {/* Abas só de cenário, como na busca do iFood: não fazem nada. */}
-              <div aria-hidden="true" className="mt-2.5 flex gap-1 overflow-x-auto text-sm">
-                {TABS.map((tab) => (
-                  <span key={tab} className={cn("shrink-0 rounded-full px-3.5 py-2", tab === "Restaurantes" ? "bg-card font-semibold shadow-sm" : "text-muted-foreground")}>{tab}</span>
-                ))}
-              </div>
-            </div>
             {/* Folha branca de cantos arredondados, como a lista do iFood; o fim esmaece para indicar que há mais. */}
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-10 pt-4 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-t-3xl bg-card px-4 pb-10 pt-4 mt-1 [mask-image:linear-gradient(to_bottom,#000_calc(100%-32px),transparent)]">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-display text-2xl font-semibold">Para você</h2>
-                {p.view === "options" && <span className="text-xs text-muted-foreground">{p.options.length} {p.options.length === 1 ? "opção" : "opções"} · total na revisão</span>}
+                <h2 className="font-display text-2xl font-semibold">
+                  {p.view === "options" ? `${p.options.length} ${p.options.length === 1 ? "opção" : "opções"} para você` : searching ? "Buscando…" : "Nada por aqui"}
+                </h2>
+                {p.view === "options" && <span className="shrink-0 text-xs text-muted-foreground">total na revisão</span>}
               </div>
               {searching && (
                 <div className="mt-2 flex flex-col gap-1"><ResultCardSkeleton /><ResultCardSkeleton /><ResultCardSkeleton /></div>
