@@ -8,20 +8,26 @@ import { normalizeCandidate, type NormalizedCandidate } from "@/mcp/normalize-ca
 import { compareEligibleCandidates } from "@/reco/rank-eligible";
 import { filterEligibleCandidates, type CandidateEligibilityResult } from "@/reco/eligibility";
 import { soOsEspecificos } from "../especificidade";
-import type { BlocoPlano, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
+import { descricaoDe } from "../descricao";
+import { urlDoIfood } from "../guardas-fala";
+import { MAX_CONSULTAS } from "../limites";
+import { vereditoLexico } from "../relevancia";
+import type { BlocoPlano, ContextoBusca, Criterio, DomainPort, EventoFeedback, Necessidade, Ocasiao, OpcaoPlano, PlanoSnapshot, Vertical } from "../types";
 
 // Porta mínima para o cliente MCP: o domínio não conhece transporte nem token.
 export interface McpTools { callTool(name: string, args: Record<string, unknown>): Promise<unknown> }
 export interface Localizacao { latitude: number; longitude: number; fonte: "endereco" | "fixa" }
 
 const MAX_CANDIDATOS = 10;
+// Candidatos que entram na avaliação de relevância (antes de cortar pelo ranking de preço, que sozinho põe lixo barato na frente).
+const MAX_POOL = 40;
 const PAGE_SIZE = 15;
 const RESTRICOES_MCP: Record<string, string> = { lactose: "LAC_FREE", gluten: "GLUTEN_FREE", acucar: "SUGAR_FREE" };
 
 interface ItemBusca {
-  itemId: string; itemName: string; unitPrice: number; promotionalUnitPrice?: number | null;
+  itemId: string; itemName: string; unitPrice: number; promotionalUnitPrice?: number | null; itemImageUrl?: string;
   merchant: {
-    merchantId: string; merchantName: string; isOpen?: boolean; reviewRating?: number; ratingCount?: number;
+    merchantId: string; merchantName: string; merchantLogoUrl?: string; isOpen?: boolean; reviewRating?: number; ratingCount?: number;
     straightLineDistanceKm?: number; minimumOrderAmount?: number;
     deliveryMethod?: { fee?: number; promotionalFee?: number; estimatedMinutes?: { min?: number; max?: number } } | null;
   };
@@ -34,6 +40,39 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCa
 const reais = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 // A API devolve nota como float (4.699999809265137): arredondar antes de exibir ou comparar.
 const nota1 = (n?: number) => (typeof n === "number" && Number.isFinite(n) ? Math.round(n * 10) / 10 : undefined);
+
+// 1 a MAX_CONSULTAS termos de busca, sem repetir e sem vazio; sem consultas do planejador, a própria categoria.
+export function consultasDe(n: Pick<Necessidade, "categoria" | "consultas">): string[] {
+  const lista = [...(n.consultas ?? []), n.categoria].map((q) => q.trim().replace(/\s+/g, " ")).filter((q) => q.length > 0);
+  const vistos = new Set<string>();
+  return lista.filter((q) => { const k = norm(q); if (vistos.has(k)) return false; vistos.add(k); return true; }).slice(0, MAX_CONSULTAS);
+}
+
+// Campos do cartão de sugestão, só do que o MCP devolveu (nenhum texto do modelo).
+function extrasDoCartao(item: ItemBusca, precoCents: number, minimoCents?: number): Partial<OpcaoPlano> {
+  const m = item.merchant;
+  const entrega = m.deliveryMethod ?? undefined;
+  const frete = entrega?.promotionalFee ?? entrega?.fee;
+  const prazoMax = entrega?.estimatedMinutes?.max;
+  const promo = typeof item.promotionalUnitPrice === "number" && item.promotionalUnitPrice < item.unitPrice;
+  const imagemUrl = urlDoIfood(item.itemImageUrl);
+  const logoUrl = urlDoIfood(m.merchantLogoUrl);
+  const extras: Partial<OpcaoPlano> = {
+    ...(imagemUrl ? { imagemUrl } : {}),
+    ...(logoUrl ? { logoUrl } : {}),
+    ...(typeof m.straightLineDistanceKm === "number" && m.straightLineDistanceKm >= 0 ? { distanciaKm: Math.round(m.straightLineDistanceKm * 10) / 10 } : {}),
+    ...(typeof m.ratingCount === "number" && m.ratingCount > 0 ? { avaliacoes: Math.round(m.ratingCount) } : {}),
+    ...(minimoCents ? { pedidoMinimoCents: minimoCents } : {}),
+    ...(promo ? { precoOriginalCents: brlToMoney(item.unitPrice).cents } : {}),
+  };
+  const descricao = descricaoDe({
+    nota: nota1(m.reviewRating), avaliacoes: extras.avaliacoes, distanciaKm: extras.distanciaKm,
+    prazo: typeof prazoMax === "number" && prazoMax > 0 ? `até ${Math.round(prazoMax)} minutos` : undefined,
+    freteCents: typeof frete === "number" ? brlToMoney(frete).cents : undefined,
+    pedidoMinimoCents: extras.pedidoMinimoCents, precoCents, precoOriginalCents: extras.precoOriginalCents,
+  });
+  return { ...extras, ...(descricao ? { descricao } : {}) };
+}
 
 export function quantidadePara(n: Necessidade, ocasiao: Ocasiao): number {
   const pessoas = ocasiao.pessoas ?? 1;
@@ -120,18 +159,25 @@ export class McpDomain implements DomainPort {
     private readonly eventos: (subjectRef: string, e: EventoFeedback) => void = () => undefined,
   ) {}
 
-  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao): Promise<OpcaoPlano[]> {
+  async buscarNecessidade(n: Necessidade, ocasiao: Ocasiao, ctx?: ContextoBusca): Promise<OpcaoPlano[]> {
     const restricoesMcp = n.restricoes.map((r) => RESTRICOES_MCP[norm(r)]).filter(Boolean);
-    const resposta = await this.tools.callTool("searchOffers", {
-      query: n.categoria,
+    // O catálogo busca ITEM por termo: o planejador devolve 1 a 3 termos concretos (sinônimos reais), em paralelo.
+    const consultas = consultasDe(n);
+    const buscas = await Promise.allSettled(consultas.map((query) => this.tools.callTool("searchOffers", {
+      query,
       userLocation: { latitude: this.local.latitude, longitude: this.local.longitude },
       resultKind: "ITEM",
       merchantType: n.vertical as Vertical,
       pageSize: PAGE_SIZE,
       refinements: { onlyOpen: true, ...(restricoesMcp.length ? { itemRestrictions: restricoesMcp } : {}) },
-    });
+    })));
+    const respostas = buscas.flatMap((b) => (b.status === "fulfilled" ? [b.value] : []));
+    // Só falha se TODAS falharam: uma consulta que cai não derruba a necessidade.
+    if (respostas.length === 0) throw (buscas[0] as PromiseRejectedResult).reason;
     const observedAt = new Date().toISOString();
-    const convertidos = extrairItens(resposta).map((i) => paraCandidato(i, observedAt)).filter((c): c is NonNullable<typeof c> => !!c);
+    const unicos = new Map<string, ItemBusca>();
+    for (const r of respostas) for (const i of extrairItens(r)) if (!unicos.has(i.itemId)) unicos.set(i.itemId, i);
+    const convertidos = [...unicos.values()].map((i) => paraCandidato(i, observedAt)).filter((c): c is NonNullable<typeof c> => !!c);
     void ocasiao; // quantidade é calculada ao montar o plano
     // Restrições com filtro oficial do MCP (ex.: LAC_FREE) vão no refinamento; as demais passam pelo filtro
     // rígido do Kenzo, que exclui item sem composição conhecida. Em ambos os casos o plano pede confirmação.
@@ -141,11 +187,12 @@ export class McpDomain implements DomainPort {
       missingCompositionPolicy: "exclude-from-safe-claims",
     }, n.orcamento?.tipo === "teto" ? { hardBudgetLimit: brlToMoney(n.orcamento.max) } : n.orcamento ? { flexibleBudgetLimit: brlToMoney(n.orcamento.max) } : undefined);
     const porId = new Map(convertidos.map((c) => [c.normalizado.itemId, c]));
-    const elegiveis = filtro.eligible
+    const ordenados = filtro.eligible
       .filter((e) => e.candidate.available !== false)
-      .sort((a: CandidateEligibilityResult, b: CandidateEligibilityResult) => compareEligibleCandidates(a, b))
-      .slice(0, MAX_CANDIDATOS);
-    const todos: Candidato[] = elegiveis.map((e) => {
+      .sort((a: CandidateEligibilityResult, b: CandidateEligibilityResult) => compareEligibleCandidates(a, b));
+    // Sem juiz, vale o corte de sempre. Com juiz, o pool é maior: o ranking por preço sozinho põe o item errado e barato na frente.
+    const elegiveis = ordenados.slice(0, ctx?.relevancia ? MAX_POOL : MAX_CANDIDATOS);
+    const pool: Candidato[] = elegiveis.map((e) => {
       const c = porId.get(e.candidate.itemId)!;
       const prazo = c.base.prazoMin;
       return {
@@ -155,13 +202,34 @@ export class McpDomain implements DomainPort {
           precoCents: c.base.precoCents, ...(e.candidate.deliveryFee !== undefined ? { freteCents: brlToMoney(e.candidate.deliveryFee).cents } : {}),
           ...(prazo ? { prazo: `até ${prazo} minutos` } : {}), ...(c.base.nota !== undefined ? { nota: c.base.nota } : {}),
           rotulo: "", motivo: "", origem: "real",
+          ...extrasDoCartao(c.base.item, c.base.precoCents, c.base.minimoCents),
         },
       };
     });
+    // Relevância (mecanismo geral, sem lista de casos): só entra o que SERVE ao pedido. Sem nenhum, o mais parecido
+    // entra marcado como "proxima" (o Guide avisa); sugestão do próprio Guide nunca vira "mais parecida".
+    let todos = pool;
+    let cobertura: "exata" | "proxima" = "exata";
+    if (ctx?.relevancia && pool.length > 0) {
+      // Os de texto mais próximo do pedido vão primeiro: o juiz avalia poucos itens e o ranking por preço não os esconde.
+      const ordem = (c: Candidato) => ({ serve: 0, proximo: 1, nao_serve: 2 })[vereditoLexico(n, c.opcao.item)];
+      const paraJuiz = pool.map((c, i) => ({ c, i })).sort((a, b) => ordem(a.c) - ordem(b.c) || a.i - b.i).map((x) => x.c);
+      const veredito = await ctx.relevancia.julgar(n, paraJuiz.map((c) => ({ ref: c.opcao.ref, item: c.opcao.item, loja: c.opcao.loja })));
+      const serve = pool.filter((c) => veredito.get(c.opcao.ref) === "serve");
+      const proximo = pool.filter((c) => veredito.get(c.opcao.ref) === "proximo");
+      if (serve.length > 0) todos = serve;
+      else if (proximo.length > 0 && n.fonte !== "inferido") { todos = proximo; cobertura = "proxima"; }
+      else todos = [];
+      todos = todos.slice(0, MAX_CANDIDATOS);
+    }
     // A busca do iFood traz outros sabores junto; o pedido específico fica só com o que bate (sem perder a ordem).
     const candidatos = soOsEspecificos(todos, n.categoria, (c) => c.opcao.item);
     // A primeira continua sendo a do ranking do domínio (custo, depois nota e prazo); o rótulo diz em que ela ganha.
-    const opcoes = candidatos.map((c, i) => rotular(c, candidatos, i === 0 ? "mais_barata" : undefined));
+    const opcoes = candidatos.map((c, i) => {
+      const o = rotular(c, candidatos, i === 0 ? "mais_barata" : undefined);
+      // "Mais parecida" não é "mais barata": o rótulo diz a verdade sobre por que esta opção está aqui.
+      return cobertura === "proxima" ? { ...o, rotulo: "mais parecida", motivo: `não encontrei "${n.categoria}"; esta é a opção mais parecida`, cobertura } : o;
+    });
     this.ultimaBusca.set(n.id, candidatos.map((c, i) => ({ ...c, opcao: opcoes[i] })));
     return opcoes;
   }
@@ -222,7 +290,7 @@ function construir(planoId: string, versao: number, ocasiao: Ocasiao, itens: { n
       continue;
     }
     const quantidade = quantidadePara(n, ocasiao);
-    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade, principal: principal.opcao, alternativas: resto.slice(0, 2).map((c) => c.opcao), ...(n.fonte === "inferido" ? { sugestao: true } : {}) });
+    blocos.push({ necessidadeId: n.id, vertical: n.vertical, categoria: n.categoria, quantidade, principal: principal.opcao, alternativas: resto.slice(0, 2).map((c) => c.opcao), ...(n.fonte === "inferido" ? { sugestao: true } : {}), ...(principal.opcao.cobertura ? { cobertura: principal.opcao.cobertura } : {}) });
     if (principal.minimoCents && principal.precoCents * quantidade < principal.minimoCents) {
       pendencias.push(`${principal.opcao.loja} tem pedido mínimo de ${reais(principal.minimoCents)}`);
     }
