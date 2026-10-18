@@ -158,3 +158,11 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - `/api/converse` com `MCP_MODE=real` usa o domínio real; sem login iFood devolve 401 `IFOOD_LOGIN` com `loginUrl`.
 - **Prova ao vivo:** login com o usuário de teste, jornada do aniversário pelo `/api/converse`: `mcp=real`, busca real em 2,1 s, plano `origem: real` com loja real de São Carlos; pipoca e presente sem loja aberta à noite (dado real).
 - **Não feito:** LLM real não testado (rodou em modo regras); UI ainda usa `/api/chat`, não `/api/converse`; checar presente/pipoca no horário da demo.
+- PR #17 aberto (`feat/hyago-mcp-real`), aguardando revisão do Kenzo.
+
+## Gemini no agente — 17/10/2026, ~23h45 (Hyago)
+- Gemini ligado pelo adaptador LangChain (`LLM_PROVIDER=google`). Correção em `src/agent/types.ts`: `orcamento.max` passou de `positive()` para `min(1)`, porque o Gemini rejeita `exclusiveMinimum` no esquema da saída estruturada. Typecheck e 157 testes passam. Na branch `feat/hyago-gemini-inferencia` (criada a partir de `feat/hyago-mcp-real`, depende do PR #17).
+- Medição nas 11 evals com LLM real: `gemini-3.5-flash-lite` escolhido (1,0–2,1 s por turno; 7 passaram, 1 falha real, 3 falhas por cota). `3.8-flash` estoura o timeout de 8 s; `3.1-flash-lite` irregular (até 41 s); `2.5-flash` indisponível para chaves novas.
+- Falha real: C6 (o modelo não inferiu pipoca/presente da ocasião). Decisão do Hyago: inferir um pouco, como sugestão rotulada, e confirmar o que o usuário disser.
+- Cota gratuita do Gemini dá 429 após ~15 chamadas por minuto: para a demo, ativar faturamento.
+- Próximos passos e ordem: `docs/PLANO_AGENTE.md`, seções "Plano seguinte" e "Ordem de execução" (integração com a voz do Felipe primeiro).

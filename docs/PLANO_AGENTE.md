@@ -123,3 +123,35 @@ Ordem combinada: **medir antes de otimizar**.
 - **Latência medida:** conectar ~2,2 s; cada tool 1,5–2,3 s. O MCP pesa mais que o TTS. Implicações: cliente MCP aberto por sessão, buscas por necessidade em paralelo, frase de espera.
 - Cuidados para o `McpDomain`: filtrar `isOpen` e loja com método de entrega; "presente" é amplo e ruidoso (pede pergunta ou termo mais específico); combos com `optionGroups` obrigatórios viram pendência; nota vem como float (arredondar); `agentHints` do servidor são texto para modelo, não instrução para o nosso código.
 - Teste feito com script isolado (fora do repo); amostras de catálogo guardadas localmente para montar o adaptador.
+
+## Plano seguinte: Gemini, inferência e cenários com MCP (17/10 ~23h30, Hyago)
+
+### Onde estamos
+- PR #17 aberto: agente com MCP real (jornada do aniversário comprovada ao vivo, `origem: real`).
+- Gemini conectado via LangChain. Correção necessária: o Gemini rejeita `exclusiveMinimum` no `response_schema` (`orcamento.max` passou de `positive()` para `min(1)`).
+- Medição nas 11 evals: `gemini-3.5-flash-lite` é o escolhido (1,0–2,1 s por turno). `3.8-flash` estoura o timeout de 8 s; `3.1-flash-lite` é irregular (até 41 s); `2.5-flash` está indisponível para chaves novas.
+- Erro real só no C6: o modelo foi literal e não inferiu pipoca (filme) nem presente (aniversário). As demais falhas foram 429 (cota gratuita por minuto).
+- A interpretação é nossa (Gemini no `/api/converse`). ElevenLabs só faz STT/TTS na branch do Felipe; o `agent-prompt.md` dele é do laboratório da ElevenLabs, não do backend.
+
+### Decisão de produto (Hyago): inferir um pouco, confirmar o que o usuário disser
+- O Guide **infere** necessidades implícitas da ocasião (filme → pipoca; aniversário → presente; churrasco → carvão/bebida sem álcool) e as traz como **sugestão rotulada**.
+- O que o usuário **diz** vira necessidade confirmada e preferência da sessão. Sugestão aceita é promovida; sugestão recusada sai e não volta na sessão.
+- Limites: no máximo 2 sugestões por ocasião; sugestão nunca conta como pergunta (teto de 3 continua); nunca contraria uma restrição dita; o motivo da sugestão é a própria fala ("porque vocês vão ver um filme"), sem inventar dado.
+- Preferências ficam **só na sessão**. Guardar entre sessões é dado pessoal: só com consentimento separado (regra V2), fora deste ciclo.
+
+### Fatias (cada uma termina com evals; ordem de execução logo abaixo)
+1. **Inferência com rótulo.** `Necessidade.fonte: "dito" | "inferido"`; prompt com exemplos; regras em código (máx. 2 inferidas, recusada não volta, aceita vira "dito"); plano e fala marcam "sugestão"; o C6 passa.
+2. **Preferências da sessão.** Sabor, restrição, teto e critério ("sempre a mais rápida") ditos pelo usuário ficam na sessão e entram nas próximas buscas e ajustes.
+3. **Evals contra o MCP.** Gravador opcional no `McpDomain` (`MCP_RECORD=<pasta>` salva as respostas de `searchOffers`) e domínio de *replay* que responde com as gravações: cenários com dados reais, determinísticos, offline e sem cota do MCP. Uma bateria "ao vivo" pequena roda à mão com login.
+4. **Cenários novos (~20).** Restrição (sem lactose), teto rígido/flexível, mudança de ideia, ajustes em sequência, pressa/interrupção, ruído de STT, aprovação de versão antiga/"sim" solto/sem plano, categoria sem loja aberta, sugestão aceita/recusada, preferência reaproveitada.
+5. **Cota do Gemini.** Runner das evals com ritmo (`EVAL_RPM`, pausa entre turnos) e cenário avulso (`-t`); no adaptador, uma nova tentativa curta em 429 dentro do timeout; para a demo, faturamento ativo na chave.
+6. **Ponta a ponta.** Jornada com Gemini + MCP real medindo cada etapa; com os números, decidir o NDJSON em fluxo com o Felipe.
+
+### Ordem de execução (combinada 17/10 ~23h45): integrar com a voz antes de refinar
+Motivo: a demo é a jornada falada de ponta a ponta. O turno com busca deve passar de 4 s (Gemini interpretar + MCP ~2 s + Gemini responder) contra a meta de 1,8 s da voz até a primeira palavra; a medição real decide se streaming vale mais que cenários novos.
+1. **Integração com o Felipe** (~1 h): branch local de teste com PR #17 + PR #18, `/voz` na porta 8080 com Gemini + MCP real, medindo STT, interpretar, MCP, responder e TTS. Merge na `main` continua com o Kenzo.
+2. **Fatia 1, inferência rotulada** (~1 h): diferencial de personalização.
+3. **Latência conforme a medição:** frase de espera e NDJSON em fluxo, com o Felipe (seção "Latência (voz + LLM)").
+4. **Fatias 3 e 4:** evals com MCP gravado e cenários novos, como rede de segurança antes do congelamento.
+5. **Fatia 2, preferências da sessão,** se sobrar tempo.
+- Fatia 5 vira só faturamento ativo na chave do Gemini; ritmo e nova tentativa em 429 só se a cota atrapalhar.

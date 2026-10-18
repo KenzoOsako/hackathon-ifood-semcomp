@@ -20,7 +20,8 @@ export const NecessidadeSchema = z.object({
   vertical: VerticalSchema,
   categoria: z.string().min(1).max(60),
   restricoes: z.array(z.string().max(60)).max(10).default([]),
-  orcamento: z.object({ max: z.number().positive(), tipo: z.enum(["teto", "flexivel"]) }).optional(),
+  // min(1) e não positive(): o Gemini rejeita exclusiveMinimum no response_schema.
+  orcamento: z.object({ max: z.number().min(1), tipo: z.enum(["teto", "flexivel"]) }).optional(),
 });
 export type Necessidade = z.infer<typeof NecessidadeSchema>;
 
