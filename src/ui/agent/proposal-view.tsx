@@ -31,7 +31,7 @@ type Props = {
 
 // Mostra o snapshot da proposta como veio do servidor. Aprovar, editar e cancelar são ações separadas
 // e a UI nunca soma custos: ausência de frete/taxas aparece como pendência, não como zero.
-export function ProposalView({ proposal, option, busy, error, approvedReply, onApprove, onCancel, onRetry }: Props) {
+export function ProposalView({ proposal, option, busy, error, approvedReply, onApprove, onCancel, onRetry }: Readonly<Props>) {
   const now = useNow(15_000);
 
   const expiresAt = Date.parse(proposal.expiresAt);

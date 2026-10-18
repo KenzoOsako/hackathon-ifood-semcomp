@@ -19,7 +19,7 @@ const MOTION: Record<OrbState, MotionProps> = {
 type OrbProps = { className?: string; pulse?: boolean; state?: OrbState };
 
 // Sem `state`, é um orbe decorativo (a bolinha da home); com `state`, anima conforme o estado.
-function Orb({ className, pulse = false, state }: OrbProps) {
+function Orb({ className, pulse = false, state }: Readonly<OrbProps>) {
   const reduceMotion = useReducedMotion();
   const classes = cn("orb", pulse && "orb-pulse", state === "error" && "opacity-60 grayscale", className);
   if (!state || reduceMotion) return <span aria-hidden="true" className={classes} />;

@@ -25,7 +25,7 @@ const STATE_LABEL: Record<OrbState, string> = {
 // Frases fixas de atalho: enviam uma mensagem como se o usuário tivesse digitado.
 const SUGGESTIONS = ["Jantar sem gastar muito", "Algo diferente hoje", "Pizza até R$ 45"];
 
-export function AgentScreen({ voiceState, onMicClick }: AgentScreenProps) {
+export function AgentScreen({ voiceState, onMicClick }: Readonly<AgentScreenProps>) {
   const { msgs, turn, busy, error, send, retry } = useAgent();
   const [input, setInput] = useState("");
   const [showLog, setShowLog] = useState(false);

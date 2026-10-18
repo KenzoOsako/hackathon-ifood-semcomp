@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { AgentTurn, Option } from "@/contracts";
 
@@ -32,7 +32,7 @@ export function useAgent() {
 
 // Estado da conversa compartilhado entre as telas de /agente. O servidor guarda a sessão por cookie;
 // aqui só guardamos o que a tela precisa mostrar. Recarregar a página reinicia a conversa.
-export function AgentProvider({ children }: { children: ReactNode }) {
+export function AgentProvider({ children }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
   const pathname = usePathname();
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -108,9 +108,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, [busy, call]);
 
   const retry = useCallback(() => lastAction.current(), []);
+  const value = useMemo(() => ({ msgs, turn, selected, busy, error, send, select, approve, cancel, retry }), [msgs, turn, selected, busy, error, send, select, approve, cancel, retry]);
 
   return (
-    <AgentContext.Provider value={{ msgs, turn, selected, busy, error, send, select, approve, cancel, retry }}>
+    <AgentContext.Provider value={value}>
       {children}
     </AgentContext.Provider>
   );

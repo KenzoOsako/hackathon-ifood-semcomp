@@ -104,6 +104,19 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - O chat do esqueleto foi movido sem alterações de lógica para `src/app/agente/page.tsx` (só o container de rolagem mudou) e será refeito no PR da tela do agente. `PhoneFrame` no layout: moldura de 390px no desktop, tela cheia abaixo de 640px.
 - Validação: typecheck, lint, 49 testes e build passaram; capturas em Chrome headless a 375px (via iframe, pois a janela headless tem largura mínima) e 1280px conferidas. Texto sobre vermelho usa `--primary` por contraste AA. Teclado: a bolinha é o único foco da home. Falta teste com leitor de tela.
 
+## Agente: decisões de implementação e preocupações — 17/10/2026, ~20h30 (Hyago)
+- Cérebro no backend: orquestrador (Hyago) decide perguntar/buscar/montar/ajustar; domínio (Kenzo) busca no MCP e ranqueia; LLM interpreta e fala, sem aprovar nem comprar.
+- ElevenLabs só ouve e fala (STT + TTS), sem conduzir a conversa. O agente é entregue funcionando por texto; a voz conecta depois no mesmo endpoint. Provedor/modelo de LLM não fixado (configuração).
+- Prompt do spike (src/voice/agent-prompt.md) dividido em interpretar/responder; dados de exemplo viram fixtures do domínio fake; teto de perguntas, anti-repetição e S5 garantidos em código.
+- Preocupações registradas: latência (2 chamadas de LLM + MCP + TTS; medir por etapa desde o M1), erros de reconhecimento, fala inventando número, atraso de K-3/K-5/K-1/M-1, provedor e chave de LLM a confirmar.
+- Detalhes: docs/BRIEFING_AGENTE.md e docs/PLANO_AGENTE.md. Nenhum código de runtime alterado.
+
+## Agente Guide no backend — M0/M1 (17/10/2026, ~21h, Hyago)
+- Implementado em feat/hyago-agente: src/agent/types.ts, orquestrador (src/agent/orchestrator), domínio simulado com os dados do spike (src/agent/domain-fake), LLM via LangChain (src/agent/llm, provedor/modelo por LLM_PROVIDER/LLM_MODEL; sem eles, interpretador por regras), prompts (src/prompts), evals (src/evals) e POST /api/converse com os guardas de http.ts e sessão por cookie.
+- Regras em código: teto de 3 perguntas (1 em L1), nível só rebaixa, pressa força L0, aprovação só com frase explícita e só devolve planoId+versão, restrição rígida por sessão, plano vazio não é encaminhado, fala do LLM com número fora do snapshot cai para template.
+- Verificação: typecheck, lint, 100 testes (12 cenários de eval + testes do orquestrador) e build passaram; jornada do aniversário e caso rápido rodados no app servido. Revisão independente: 16 achados, altos e médios corrigidos com testes.
+- Não verificado: LLM real (sem LLM_PROVIDER configurado nesta máquina); compatibilidade do schema Zod com withStructuredOutput de cada provedor; domínio real (K-3/K-5) e aprovação na tela (K-1/M-1).
+
 ## UI: tela do agente — 17/10/2026
 - Branch `feat/malveste-ui-agente` (empilhada sobre `feat/malveste-ui-home`). `/agente` é a tela do assistente: "Qual a sua vibe de hoje?", orbe com cinco estados (idle, listening, thinking, speaking, error) sempre com texto de status, conversa por texto contra `POST /api/chat` (cookie de sessão, sem `sessionId`), transcrição recolhível, erro com "Tentar de novo" e sugestões fixas de atalho.
 - Microfone desabilitado ("voz em breve"): o encaixe é `voiceState` e `onMicClick` em `AgentScreen`, para a frente de voz ligar. Ao receber `options` mostra só um aviso com botão desabilitado; a tela de opções é o próximo PR.
@@ -125,3 +138,4 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 ## UI: orbe orgânico e fundo quente — 17/10/2026
 - A pedido do dono da UI, a tela do agente segue a essência de uma imagem de referência: orbe como massa orgânica com gradiente de malha (vermelho, coral, âmbar, vinho) que muda de forma, quatro contornos ondulados como curvas de nível e ondas que se expandem por estado, sobre fundo creme/pêssego. Novos tokens decorativos `--orb-*`, `--warm` e `--peach` em `globals.css`; a bolinha da home usa o mesmo orbe. Só CSS, `prefers-reduced-motion` respeitado. Não feitos: barra inferior com microfone central e chips com ícones.
 - Validação: typecheck, lint, 49 testes e build passaram; capturas a 375px sem erro de console.
+

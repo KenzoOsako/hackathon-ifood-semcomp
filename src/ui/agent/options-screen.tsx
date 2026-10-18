@@ -22,7 +22,7 @@ const REASON_ICON: Record<Reason["kind"], LucideIcon> = {
   promo: Tag, times_ordered: History, new_for_you: Sparkles, curated: BadgeCheck,
 };
 
-export function OptionCard({ option, onSelect, disabled }: { option: Option; onSelect: () => void; disabled: boolean }) {
+export function OptionCard({ option, onSelect, disabled }: Readonly<{ option: Option; onSelect: () => void; disabled: boolean }>) {
   const { title, Icon } = LABELS[option.label];
   const c = option.candidate;
   const price = c.promotionalPrice ?? c.price;

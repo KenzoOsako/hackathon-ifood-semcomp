@@ -48,13 +48,13 @@ export function PreviewScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div role="group" aria-label="Cenário da prévia" className="flex flex-wrap gap-1.5 bg-muted px-3 py-2">
+      <fieldset aria-label="Cenário da prévia" className="flex flex-wrap gap-1.5 border-0 bg-muted px-3 py-2">
         {SCENARIOS.map((s) => (
           <Button key={s.id} size="sm" variant={scenario === s.id ? "default" : "outline"} aria-pressed={scenario === s.id} onClick={() => setScenario(s.id)}>
             {s.label}
           </Button>
         ))}
-      </div>
+      </fieldset>
       <ProposalView
         proposal={proposal}
         option={OPTION}
