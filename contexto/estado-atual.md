@@ -356,3 +356,12 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Documento consolidado em docs/entregaveis/mimo-entregaveis-completos-final.pdf: 33 páginas, 12 figuras, entregáveis 01–06, painel com dados de demonstração explicitamente simulados e feedback com dores reais sanitizadas.
 - Preserva identificação das revisões: testes históricos 230037e (448 casos/53 arquivos), capturas b5d6c98; fontes selecionadas incorporadas. Revisão visual e estrutural local concluída. Publicação do arquivo via PR, sem alterar o código da aplicação.
 - Checks desta publicação na base b5d6c98: typecheck, lint, 456 testes/54 arquivos e build webpack aprovados. São checks atuais de preparação do PR, distintos dos resultados históricos citados no PDF.
+
+
+## Revisão do portfólio e automação — 24/10/2026 (Codex)
+
+- Base auditada: main `4c5b11da9ec567646030d9ce8ee8a02dc84044b0`. README atualizado para o nome Mimo, autoria coletiva, execução atual e separação entre código, provas históricas e verificações desta revisão. Nenhuma decisão de produto ou regra humana alterada.
+- Cópia limpa somente dos arquivos versionados, sem `.env`: npm ci --ignore-scripts, typecheck, lint, 457 testes/54 arquivos e build passaram em Linux/Node.js 24. Sem chamadas autenticadas a LLM, voz ou iFood; sem compra ou deploy.
+- Adicionado workflow com os quatro checks, ações fixadas por SHA e permissões somente de leitura; validação remota ainda pendente.
+- npm audit atual: duas entradas transitivas (body-parser high; fast-uri moderate), com atualização compatível indicada. Não equivalem a duas vulnerabilidades exploráveis comprovadas do produto; correção e validação de dependências ficam em lote separado.
+- Pendente: confirmar rotação de credenciais históricas, homologar integrações no ambiente de destino, revisar licença com coautores e reconciliar o índice documental antigo. Trello não atualizado por falta de ferramenta/credencial disponível; não foi inventado card ou aprovação. PR em branch própria para revisão do integrador.

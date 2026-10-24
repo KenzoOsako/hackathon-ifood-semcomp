@@ -1,72 +1,79 @@
-# FoodPilot — Hackathon iFood SEMCOMP 29
+# Mimo — assistente de compras por voz e texto
 
-Copiloto de compras por **voz** que resolve uma **ocasião**, e não só uma refeição. Exemplo: *"Hoje é aniversário de um amigo, vamos comer pizza em casa e ver um filme"* → pizza (restaurante), pipoca (mercado) e presente (shopping), cada um com até três opções e o motivo de cada escolha, em uma proposta única. A compra final ocorre no iFood.
+Protótipo desenvolvido em equipe no Hackathon iFood × SEMCOMP 29 (17–18/10/2026). O Mimo ajuda a planejar uma ocasião, comparar opções de restaurantes, mercado e shopping e revisar uma sacola local. **Nenhum pedido é enviado pelo protótipo.**
 
-> **Status da direção:** a **Direção V2** (ocasião, contexto por voz, dados para o iFood) está **proposta e aguarda o aceite do integrador** (D-011 e D-012 em [`contexto/decisoes.md`](contexto/decisoes.md)). Onde houver conflito, valem a [proposta canônica](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e o [plano anterior](docs/PLANO_EXECUCAO_EQUIPE_FOODPILOT.md) até esse aceite. Mapa completo dos documentos: [`docs/INDEX.md`](docs/INDEX.md).
+O projeto reúne Next.js 16, React 19, TypeScript, LangChain, Model Context Protocol (MCP), OAuth com PKCE e adaptadores de voz. A disponibilidade real de catálogo e serviços depende das permissões e da configuração de cada ambiente. Não representa produto oficial ou parceria comercial com o iFood.
 
-## Leitura inicial (nesta ordem)
-1. [Direção V2: ocasião, contexto por voz e dados para o iFood](docs/DIRECAO_V2_OCASIAO.md)
-2. [Plano V2: papéis, interfaces e cronograma](docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md)
-3. [Proposta canônica (decisões 1–39)](docs/PROPOSTA_DE_NEGOCIO_FOODPILOT.md) e [auditoria](docs/AUDITORIA-ALINHAMENTO-2026-10-17.md)
-4. [Contexto do evento e do time](contexto/contexto.md), [estado atual](contexto/estado-atual.md) e [instruções para agentes](AGENTS.md)
-5. [Guia técnico do MCP do iFood](docs/mcp-ifood-referencia.md)
+## Conheça o projeto
 
-## Equipe e funções (proposta V2)
+- [Entregáveis finais: proposta, arquitetura, experiência e relato técnico (PDF)](docs/entregaveis/mimo-entregaveis-completos-final.pdf)
+- [Imagens reais: implementação e evidências históricas](docs/IMAGENS_REAIS_IFOOD.md)
+- [Complementos por item e aprovação versionada](docs/COMPLEMENTOS_ITENS.md)
+- [Mapa da documentação](docs/INDEX.md) e [histórico técnico do time](contexto/estado-atual.md)
 
-| Pessoa | Função | Pastas principais |
+FoodPilot é o nome anterior, preservado nos documentos e decisões históricas. Os planos de 17/10 descrevem requisitos e propostas daquele momento; não são inventário atual de funcionalidades.
+
+## O que existe e o que foi verificado
+
+| Área | Implementação no código | Limite da verificação atual |
 |---|---|---|
-| **Felipe** | Conversação e Voz | `src/voice/` |
-| **Hyago** | System Prompt e Fluxo de Agentes | `src/agent/`, `src/prompts/`, `src/evals/` |
-| **Kenzo** | Request e Dados (integrador) | `src/mcp/`, `src/reco/`, `src/domain/`, `src/data/`, `src/contracts/` |
-| **Malveste** | Interface e Front-End | `src/app/` (exceto `api/`), `src/ui/` |
+| Conversa | Atendente com ferramentas de leitura, planos, opções e revisão em `src/agent/atendente/` | Testes usam modelos roteirizados; a conversa requer um LLM configurado |
+| Catálogo | Domínio simulado e adaptador MCP por visitante em `src/agent/domain-mcp/` | OAuth e catálogo real têm relatos históricos; não foram reexecutados nesta revisão |
+| Autorização | OAuth/PKCE e tokens em memória em `src/mcp/real/` | Exige cliente e redirect autorizados; não é login persistente de produção |
+| Voz | Adaptadores STT/TTS e integração em `src/voice/` | Provedores e microfone não foram testados nesta revisão |
+| Sacola | Cálculos locais, complementos e aprovação vinculada à versão | Aprovar a simulação não cria carrinho remoto nem efetua compra |
+| Dados | Sessões e agregados em memória; painel de demonstração | Sem persistência entre instâncias ou homologação para uso com dados reais |
 
-Detalhes, interfaces entre as funções e cronograma: [`docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md`](docs/PLANO_V2_PAPEIS_E_CRONOGRAMA.md).
+Em 24/10/2026, a base `4c5b11d` passou em tipagem, lint, **457 testes em 54 arquivos** e build de produção em Linux/Node.js 24. São checks locais com dependências de serviços simuladas; não certificam deploy, provedores, acessibilidade completa ou segurança global.
 
-## Estrutura do repositório
+## Executar localmente
 
-```
-contexto/            memória do time (regras, decisões, estado, feedback do MCP)
-docs/                direção, plano, proposta, guia do MCP e entregáveis (índice em docs/INDEX.md)
-docs/entregaveis/    os 6 entregáveis obrigatórios, um arquivo cada
-fixtures/            dados simulados rotulados (formato do MCP)
-src/
-  app/               páginas e rotas (UI: Malveste; rotas de API: dono do módulo que as usa)
-  agent/             orquestrador e fluxos do agente (Hyago)
-  prompts/           system prompt e prompts por etapa (Hyago)
-  evals/             cenários de teste do agente (Hyago)
-  voice/             entrada e saída de voz, interrupção, falhas (Felipe)
-  mcp/               cliente do MCP do iFood, OAuth, adaptadores e mocks (Kenzo)
-  reco/              filtros, ranking e motivos (Kenzo)
-  domain/            ocasião, necessidades e plano versionado (Kenzo)
-  data/              eventos de feedback, consentimento e armazenamento (Kenzo)
-  contracts/         tipos compartilhados (só o Kenzo altera)
-  memory/            memória do usuário (hoje em RAM)
-  ui/                componentes da interface (Malveste)
-```
+Recomendado: **Node.js 24 e npm**, como no workflow de CI. Instale conforme o lockfile:
 
-Cada pasta nova tem um `README.md` com dono, entradas e saídas e regras.
-
-Sequência, dependências e critérios das tarefas de Kenzo: [Plano de implementação de Kenzo](docs/PLANO_IMPLEMENTACAO_KENZO.md).
-
-## Execução local
-Requer Node.js e npm compatíveis com o lockfile. No PowerShell:
-```powershell
-npm ci
-Copy-Item .env.example .env
+```sh
+npm ci --ignore-scripts
+cp .env.example .env
 npm run dev
 ```
-Abra http://localhost:3000 no Chrome. O padrão é **MCP simulado**. Não há OAuth, LLM, voz ou persistência real implementados. O fluxo textual cria apenas proposta local: não cria carrinho remoto, não envia pedido e não consulta tracking. Taxas ausentes no contrato legado deixam o total pendente e impedem aprovação. Compra final no iFood; integração real permanece bloqueada.
 
-Sessão de visitante emitida pelo servidor em cookie HttpOnly (30 minutos absolutos); proposta local válida por cinco minutos. Reinício do processo exige nova conversa. Detalhes e payloads para integrar UI/MCP em [Integração da proposta local](docs/INTEGRACAO_PROPOSTA_LOCAL.md).
+No PowerShell, substitua a cópia por `Copy-Item .env.example .env`. Abra `http://localhost:3000`; a home e as prévias permitem explorar a interface. `/agente/previa` usa dados de demonstração.
 
-```powershell
+O catálogo é simulado por padrão (`MCP_MODE=mock`), mas a conversa em `/agente` **também precisa de um LLM**. Configure `LLM_PROVIDER` (`google`, `openai` ou `anthropic`), `LLM_MODEL` e a chave correspondente apenas no ambiente local. `ATENDENTE_MODEL`, quando definido, prevalece sobre `LLM_MODEL`. Sem configuração, `/api/converse` responde 503 `LLM_NAO_CONFIGURADO`; não há fallback conversacional por regras nesse endpoint.
+
+MCP real exige `MCP_MODE=real`, OAuth e redirect autorizado no ambiente usado; consulte o [guia MCP](docs/mcp-ifood-referencia.md). O cliente legado em `src/mcp/index.ts`, usado por rotas antigas, não equivale ao adaptador real do atendente. Voz externa exige configuração própria. Chamadas a LLM e voz podem consumir créditos; os comandos de qualidade abaixo não precisam dessas chaves.
+
+## Verificar qualidade
+
+```sh
 npm run typecheck
 npm run lint
 npm test
 npm run build
 ```
 
-## Colaboração
-Branch própria → PR → revisão e merge pelo integrador, conforme [AGENTS.md](AGENTS.md). Um card do Trello por PR (quadro **HACKATHON IFOOD**). A proposta aprovada define requisitos; a auditoria define o que existe; os documentos V2 definem o que está em aprovação.
+O workflow `.github/workflows/quality.yml` repete esses quatro checks sem segredos de serviços. O build usa `next/font/google` e precisa baixar fontes; testes automatizados não substituem a validação autenticada das integrações.
 
-Credenciais somente em ambiente local/cofre; `.env.example` contém campos vazios. Valores com formato de credenciais foram removidos do template: se eram válidos, precisam de revogação/rotação nos provedores, pois permanecem no histórico Git.
+## Arquitetura e navegação
+
+```text
+src/app/          páginas e rotas HTTP (converse, auth, voz e painel)
+src/agent/        atendente, sessão, modelos e domínios real/simulado
+src/contracts/    contratos e validações de fronteira
+src/domain/       propostas, aprovação, complementos e continuidade manual
+src/mcp/          adaptação de catálogo, OAuth e cliente MCP
+src/reco/         elegibilidade, ranking e motivos baseados em dados
+src/voice/        reconhecimento, síntese e controle de voz
+src/ui/           componentes e telas
+src/data/         sinais agregados de demonstração em memória
+fixtures/         dados simulados
+docs/             decisões de projeto, desenhos, evidências e entregáveis
+contexto/         memória e governança da equipe
+```
+
+## Autoria, colaboração e limites
+
+Projeto coletivo de **Kenzo, Felipe (Terossi), Hyago e Malveste**. Atribuições e evolução estão registradas no histórico Git e nos documentos; não atribuir toda a implementação a um único integrante. Mudanças seguem branch própria, PR e revisão do integrador, conforme [AGENTS.md](AGENTS.md). Regras humanas de negócio permanecem intactas.
+
+Não foi identificada licença de distribuição na raiz nesta revisão. Autoria coletiva, marcas e materiais de terceiros exigem avaliação antes de licenciar ou reutilizar; a visibilidade pública não concede por si só licença de uso.
+
+Credenciais ficam fora do Git. O histórico documental registra remoção de valores com formato de credenciais: a rotação/revogação nos provedores ainda precisa de confirmação. Não publicar arquivos `.env`, conversas privadas, tokens ou capturas com dados pessoais. A sacola continua simulada e a compra final ocorre no iFood.
