@@ -365,3 +365,10 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - Adicionado workflow com os quatro checks, ações fixadas por SHA e permissões somente de leitura; validação remota ainda pendente.
 - npm audit atual: duas entradas transitivas (body-parser high; fast-uri moderate), com atualização compatível indicada. Não equivalem a duas vulnerabilidades exploráveis comprovadas do produto; correção e validação de dependências ficam em lote separado.
 - Pendente: confirmar rotação de credenciais históricas, homologar integrações no ambiente de destino, revisar licença com coautores e reconciliar o índice documental antigo. Trello não atualizado por falta de ferramenta/credencial disponível; não foi inventado card ou aprovação. PR em branch própria para revisão do integrador.
+
+
+## Atualização das dependências transitivas — 24/10/2026 (Codex)
+
+- body-parser 2.3.0 → 2.4.0 e fast-uri 3.1.8 → 3.1.9, dentro dos intervalos exigidos pelo SDK MCP e seus transitivos; nenhuma dependência direta ou versão principal mudou. Somente duas entradas do lock alteradas.
+- Instalação limpa pelo lock atualizado, typecheck, lint, 457 testes/54 arquivos e build passaram. npm audit retornou zero entradas nesta consulta; isso não certifica ausência de vulnerabilidades ou segurança das integrações. Sem chamadas autenticadas a provedores ou alteração de runtime.
+- CI do commit anterior 7b52d37 aprovado em push e PR; o novo HEAD precisa da própria validação remota.
