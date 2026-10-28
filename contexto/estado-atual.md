@@ -372,3 +372,10 @@ Proposta byte a byte preservada; 39 decisões/22 RF/12 RNF/15 AC e links conferi
 - body-parser 2.3.0 → 2.4.0 e fast-uri 3.1.8 → 3.1.9, dentro dos intervalos exigidos pelo SDK MCP e seus transitivos; nenhuma dependência direta ou versão principal mudou. Somente duas entradas do lock alteradas.
 - Instalação limpa pelo lock atualizado, typecheck, lint, 457 testes/54 arquivos e build passaram. npm audit retornou zero entradas nesta consulta; isso não certifica ausência de vulnerabilidades ou segurança das integrações. Sem chamadas autenticadas a provedores ou alteração de runtime.
 - CI do commit anterior 7b52d37 aprovado em push e PR; o novo HEAD precisa da própria validação remota.
+
+## Revalidação do PR de portfólio — 28/10/2026 (Codex)
+
+- Candidato `aef2f889bc20cf7b97178aa08ed42dcbb7dbe033`: instalação limpa com `npm ci --ignore-scripts`, typecheck, lint, 457 testes/54 arquivos e build aprovados novamente em Windows/Node.js 24. npm audit sem entradas nesta consulta. Avisos de suporte do ESLint e carregamento futuro de configuração Vitest não foram suprimidos.
+- Checks remotos Quality/Sonar do mesmo candidato conferidos; requisitos de negócio, código de produto e dependências preservados. A CI deste registro documental precisa passar no seu novo SHA.
+- OAuth/MCP/LLM/voz estão implementados em caminhos específicos, mas os provedores reais não foram reexecutados. A sacola continua local, sem envio de pedido. O índice e a auditoria de 17/10 não representam, isoladamente, o runtime atual.
+- Trello: acesso ao quadro pelo navegador exigiu login; não foi criado card, vínculo ou aceite fictício. PR #42 continua em rascunho, dependendo do card e da revisão do integrador. Sem merge, deploy, chamada autenticada ou custo de provedor.
